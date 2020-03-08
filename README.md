@@ -20,12 +20,56 @@ If you are using this package to build resource providers for CloudFormation, in
 
 **Installation**
 
+Because this is a developer preview, you still need to install the plugin using [pip](https://pypi.org/project/pip/) from GitHub.
+
 ```shell
 pip3 install git+https://github.com/eduardomourar/cloudformation-cli-typescript-plugin.git#egg=cloudformation-cli-typescript-plugin
 ```
 
 Refer to the [CloudFormation CLI User Guide](https://docs.aws.amazon.com/cloudformation-cli/latest/userguide/resource-types.html) for the [CloudFormation CLI](https://github.com/aws-cloudformation/cloudformation-cli) for usage instructions.
 
+** Howto**
+
+Example run:
+
+```
+$ cfn init
+Initializing new project
+What's the name of your resource type?
+(Organization::Service::Resource)
+>> Foo::Bar::Baz
+Select a language for code generation:
+[1] java
+[2] typescript
+(enter an integer):
+>> 2
+Use docker for platform-independent packaging (Y/n)?
+This is highly recommended unless you are experienced
+with cross-platform Typescript packaging.
+>> y
+Initialized a new project in <>
+$ cfn submit --dry-run
+$ cat test.json
+{
+  "credentials": {
+    "accessKeyId": "",
+    "secretAccessKey": "",
+    "sessionToken": ""
+  },
+  "action": "CREATE",
+  "request": {
+    "clientRequestToken": "ecba020e-b2e6-4742-a7d0-8a06ae7c4b2b",
+    "desiredResourceState": {
+      "Title": "foo",
+      "Description": "bar"
+    },
+    "previousResourceState": null,
+    "logicalResourceIdentifier": null
+  },
+  "callbackContext": null
+}
+$ sam local invoke TestEntrypoint --event test.json
+```
 
 Development
 -----------

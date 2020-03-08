@@ -1,0 +1,10 @@
+# Distribution / packaging
+build/
+dist/
+
+# RPDK logs
+rpdk.log
+
+# Node.js
+node_modules/
+coverage/

@@ -1,0 +1,20 @@
+{
+  "name": "{{ name }}",
+  "version": "1.0.0",
+  "description": "{{ description }}",
+  "main": "index.js",
+  "scripts": {
+    "build": "npx tsc",
+    "postinstall": "npm run build",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "{{lib_name}}": "git+https://github.com/eduardomourar/cloudformation-cli-typescript-plugin.git"
+  },
+  "devDependencies": {
+    "tombok": "git+https://github.com/eduardomourar/tombok.git#feature/basic-implementation",
+    "typescript": "^3.8.3"
+  }
+}
