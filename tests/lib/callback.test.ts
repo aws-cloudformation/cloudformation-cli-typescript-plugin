@@ -30,24 +30,25 @@ describe('when getting callback', () => {
 
     beforeEach(() => {
         recordHandlerProgress = mockResult({
-            ResponseMetadata: {RequestId: 'mock_request'}
+            ResponseMetadata: {RequestId: 'mock-request'}
         });
         const cfn = (CloudFormation as unknown) as jest.Mock;
         cfn.mockImplementation(() => {
+            const returnValue = {
+                recordHandlerProgress
+            };
             return {
+                ...returnValue,
                 makeRequest: (operation: string, params?: {[key: string]: any}) => {
-                    const returnValue = {
-                        recordHandlerProgress
-                    };
                     return returnValue[operation](params);
                 }
             };
         });
         session = new SessionProxy({});
-        
     });
 
     afterEach(() => {
+        jest.clearAllMocks();
         jest.restoreAllMocks();
     });
 
