@@ -1,18 +1,67 @@
+import { AWSError, CredentialProviderChain, Request, Service } from 'aws-sdk';
 import { ConfigurationOptions } from 'aws-sdk/lib/config';
-import { CredentialsOptions } from 'aws-sdk/lib/credentials';
+import { Credentials, CredentialsOptions } from 'aws-sdk/lib/credentials';
+import { ServiceConfigurationOptions } from 'aws-sdk/lib/service';
 import * as Aws from 'aws-sdk/clients/all';
 import { NextToken } from 'aws-sdk/clients/cloudformation';
-import { allArgsConstructor, builder } from 'tombok';
+import { allArgsConstructor, builder, IBuilder} from 'tombok';
 
 import {
+    BaseResourceHandlerRequest,
     BaseResourceModel,
+    Callable,
     HandlerErrorCode,
+    Newable,
     OperationStatus,
 } from './interface';
 
 
 type ClientMap = typeof Aws;
 type Client = InstanceType<ClientMap[keyof ClientMap]>;
+type ClientType<T = ClientMap> = T[keyof T] extends Service ? never : T[keyof T];
+
+// type Async<T> = T extends AsyncGenerator<infer R> ? AsyncGenerator<R> : T extends Generator<infer R> ? AsyncGenerator<R> : T extends Promise<infer R> ? Promise<R> : Promise<T>;
+
+// type ProxyModule<M> = {
+//     [K in keyof M]: M[K] extends (...args: infer A) => infer R ? (...args: A) => Async<R> : never;
+// };
+
+// type Callback<D> = (err: AWSError | undefined, data: D) => void;
+
+// interface AWSRequestMethod<P, D> {
+//     (params: P, callback?: Callback<D>): Request<D, AWSError>;
+//     (callback?: Callback<D>): Request<D, AWSError>;
+// }
+
+// export type CapturedAWSClient<C extends AWSClient> = {
+//     [K in keyof C]: C[K] extends AWSRequestMethod<infer P, infer D>
+//       ? AWSRequestMethod<P, D>
+//       : C[K];
+//   };
+
+//   export type CapturedAWS<T = ClientMap> = {
+//     [K in keyof T]: T[K] extends AWSClient ? CapturedAWSClient<T[K]> : T[K];
+//   };
+
+//   export function captureAWSClient<C extends AWSClient>(
+//     client: C
+//   ): CapturedAWSClient<C>;
+//   export function captureAWS(awssdk: ClientMap): CapturedAWS;
+
+// type Clients = { [K in keyof AwsClientMap]?: AwsClientMap[K] extends Service ? never : AwsClientMap[K] };
+
+class SessionCredentialsProvider {
+
+    private awsSessionCredentials: Credentials;
+
+    public get(): Credentials {
+        return this.awsSessionCredentials;
+    }
+
+    public setCredentials(credentials: CredentialsOptions): void {
+        this.awsSessionCredentials = new Credentials(credentials);
+    }
+}
 
 export class SessionProxy {
 
@@ -26,7 +75,37 @@ export class SessionProxy {
             ...this.options,
             ...options,
         });
-        return service;
+        return service; //this.promisifyReturn(service);
+    }
+
+    // private createService<T extends ClientMap, K extends keyof T>(client: Newable<T[K]>, options: ServiceConfigurationOptions): InstanceType<ClientType> {
+    //     // const clients: { [K in keyof ClientMap]?: ClientMap[K] } = Aws;
+    //     // const name: T;
+
+    //     return new client();
+    // }
+
+    // Wraps an Aws endpoint instance so that you don’t always have to chain `.promise()` onto every function
+    public promisifyReturn(obj: any): ProxyConstructor {
+        return new Proxy(obj, {
+            get(target, propertyKey) {
+                const property = target[propertyKey];
+
+                if (typeof property === "function") {
+                    return function (...args: any[]) {
+                        const result = property.apply(this, args);
+
+                        if (result instanceof Request) {
+                            return result.promise();
+                        } else {
+                            return result;
+                        }
+                    }
+                } else {
+                    return property;
+                }
+            },
+        });
     }
 
     public static getSession(credentials?: CredentialsOptions, region?: string): SessionProxy | null {
@@ -42,24 +121,24 @@ export class SessionProxy {
 
 @allArgsConstructor
 @builder
-export class ProgressEvent<R = BaseResourceModel, T = Map<string, any>> {
+export class ProgressEvent<R extends BaseResourceModel = BaseResourceModel, T = Map<string, any>> {
     /**
      * The status indicates whether the handler has reached a terminal state or is
      * still computing and requires more time to complete
      */
-    private status: OperationStatus;
+    public status: OperationStatus;
 
     /**
      * If OperationStatus is FAILED or IN_PROGRESS, an error code should be provided
      */
-    private errorCode?: HandlerErrorCode;
+    public errorCode?: HandlerErrorCode;
 
     /**
      * The handler can (and should) specify a contextual information message which
      * can be shown to callers to indicate the nature of a progress transition or
      * callback delay; for example a message indicating "propagating to edge"
      */
-    private message: string = '';
+    public message: string = '';
 
     /**
      * The callback context is an arbitrary datum which the handler can return in an
@@ -67,45 +146,75 @@ export class ProgressEvent<R = BaseResourceModel, T = Map<string, any>> {
      * metadata between subsequent retries; for example to pass through a Resource
      * identifier which can be used to continue polling for stabilization
      */
-    private callbackContext?: T;
+    public callbackContext?: T;
 
     /**
      * A callback will be scheduled with an initial delay of no less than the number
      * of seconds specified in the progress event.
      */
-    private callbackDelaySeconds: number;
+    public callbackDelaySeconds: number;
 
     /**
      * The output resource instance populated by a READ for synchronous results and
      * by CREATE/UPDATE/DELETE for final response validation/confirmation
      */
-    private resourceModel?: R;
+    public resourceModel?: R;
 
     /**
      * The output resource instances populated by a LIST for synchronous results
      */
-    private resourceModels?: Array<R>;
+    public resourceModels?: Array<R>;
 
     /**
      * The token used to request additional pages of resources for a LIST operation
      */
-    private nextToken?: NextToken;
+    public nextToken?: NextToken;
+
+    // TODO: remove workaround when decorator mutation implemented: https://github.com/microsoft/TypeScript/issues/4881
+    constructor(...args: any[]) {}
+    public static builder(template?: Partial<ProgressEvent>): IBuilder<ProgressEvent> {return null}
 
     public serialize(
         toTesponse: boolean = false, bearerToken?: string
+    // ): Record<string, any> {
     ): Map<string, any> {
-        // to match Java serialization, which drops `null` values, and the
-        // contract tests currently expect this also
-        let ser: Map<string, any> = JSON.parse(JSON.stringify(this));
-
-        return ser;
+        // To match Java serialization, which drops `null` values, and the
+        // contract tests currently expect this also.
+        const json: Map<string, any> = new Map<string, any>(Object.entries(this));//JSON.parse(JSON.stringify(this)));
+        json.forEach((value: any, key: string) => {
+            if (value == null) {
+                json.delete(key);
+            }
+        });
+        // Object.keys(json).forEach((key) => (json[key] == null) && delete json[key]);
+        // Mutate to what's expected in the response.
+        if (toTesponse) {
+            json.set('bearerToken', bearerToken);
+            json.set('operationStatus', json.get('status'));
+            json.delete('status');
+            if (this.resourceModel) {
+                json.set('resourceModel', this.resourceModel.toObject());
+            }
+            if (this.resourceModels) {
+                const models = this.resourceModels.map((resource: R) => resource.toObject());
+                json.set('resourceModels', models);
+            }
+            json.delete('callbackDelaySeconds');
+            if (json.has('callbackContext')) {
+                json.delete('callbackContext');
+            }
+            if (this.errorCode) {
+                json.set('errorCode', this.errorCode);
+            }
+        }
+        return json;
+        // return new Map(Object.entries(jsonData));
     }
 
     /**
-     * Convenience method for constructing a FAILED response
+     * Convenience method for constructing FAILED response
      */
     public static failed(errorCode: HandlerErrorCode, message: string): ProgressEvent {
-        // @ts-ignore
         const event = ProgressEvent.builder()
             .status(OperationStatus.Failed)
             .errorCode(errorCode)
@@ -115,10 +224,9 @@ export class ProgressEvent<R = BaseResourceModel, T = Map<string, any>> {
     }
 
     /**
-     * Convenience method for constructing a IN_PROGRESS response
+     * Convenience method for constructing IN_PROGRESS response
      */
     public static progress(model: any, cxt: any): ProgressEvent {
-        // @ts-ignore
         const event = ProgressEvent.builder()
             .callbackContext(cxt)
             .resourceModel(model)
@@ -137,15 +245,20 @@ export class ProgressEvent<R = BaseResourceModel, T = Map<string, any>> {
  */
 @allArgsConstructor
 @builder
-export class ResourceHandlerRequest<T> {
-    private clientRequestToken: string;
-    private desiredResourceState: T;
-    private previousResourceState: T;
-    private desiredResourceTags: Map<string, string>;
-    private systemTags: Map<string, string>;
-    private awsAccountId: string;
-    private awsPartition: string;
-    private logicalResourceIdentifier: string;
-    private nextToken: string;
-    private region: string;
+export class ResourceHandlerRequest<T extends BaseResourceModel> extends BaseResourceHandlerRequest<T> {
+    public clientRequestToken: string;
+    public desiredResourceState: T;
+    public previousResourceState: T;
+    public desiredResourceTags: Map<string, string>;
+    public systemTags: Map<string, string>;
+    public awsAccountId: string;
+    public awsPartition: string;
+    public logicalResourceIdentifier: string;
+    public nextToken: string;
+    public region: string;
+
+    constructor(...args: any[]) {super()}
+    public static builder(template?: Partial<ResourceHandlerRequest<any>>): IBuilder<ResourceHandlerRequest<any>> {
+        return null
+    }
 }
