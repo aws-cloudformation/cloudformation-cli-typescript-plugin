@@ -35,6 +35,9 @@ describe('when delivering log', () => {
 
     beforeAll(() => {
         session = new SessionProxy({});
+    });
+
+    beforeEach(() => {
         createLogGroup = mockResult({ ResponseMetadata: { RequestId: 'mock-request' }});
         createLogStream = mockResult({ ResponseMetadata: { RequestId: 'mock-request' }});
         putLogEvents = mockResult({ ResponseMetadata: { RequestId: 'mock-request' }});
@@ -65,16 +68,14 @@ describe('when delivering log', () => {
                 stackId: 'an-arn',
             })));
             ProviderLogHandler.setup(request, session);
-            // Get a copy of the instance to avoid changing the singleton
+            // Get a copy of the instance and remove it from class
+            // to avoid changing the singleton.
             const instance = ProviderLogHandler.getInstance();
             ProviderLogHandler['instance'] = null;
             cwLogs.mockClear();
             return instance;
         });
         providerLogHandler = new Mock();
-    });
-
-    beforeEach(() => {
         payload = new HandlerRequest(new Map(Object.entries({
             action: Action.Create,
             awsAccountId: '123412341234',
@@ -158,36 +159,40 @@ describe('when delivering log', () => {
         expect(logHandler).toBeNull();
     });
 
-    test('log group create success', () => {
-        providerLogHandler.client.createLogGroup();
+    test('log group create success', async () => {
+        await providerLogHandler['createLogGroup']();
         expect(createLogGroup).toHaveBeenCalledTimes(1);
     });
 
-    test('log stream create success', () => {
-        providerLogHandler.client.createLogStream();
+    test('log stream create success', async () => {
+        await providerLogHandler['createLogStream']();
         expect(createLogStream).toHaveBeenCalledTimes(1);
     });
 
     test('create already exists', () => {
-        ['createLogGroup', 'createLogStream'].forEach((methodName: string) => {
-            const mockLogsMethod: jest.Mock = jest.fn().mockImplementationOnce(() => {
-                throw awsUtil.error(new Error(), { code: 'ResourceAlreadyExistsException' });
+        ['createLogGroup', 'createLogStream'].forEach(async (methodName: string) => {
+            const mockLogsMethod: jest.Mock = jest.fn().mockReturnValue({
+                promise: jest.fn().mockRejectedValueOnce(
+                    awsUtil.error(new Error(), { code: 'ResourceAlreadyExistsException' })
+                )
             });
             providerLogHandler.client[methodName] = mockLogsMethod;
             // Should not raise an exception if the log group already exists.
-            providerLogHandler[methodName]();
+            await providerLogHandler[methodName]();
             expect(mockLogsMethod).toHaveBeenCalledTimes(1);
         });
     });
 
     test('put log event success', () => {
-        [null, 'some-seq'].forEach((sequenceToken: string) => {
+        [null, 'some-seq'].forEach(async (sequenceToken: string) => {
             providerLogHandler.sequenceToken = sequenceToken;
-            const mockPut: jest.Mock = jest.fn().mockImplementationOnce(() => {
-                return { nextSequenceToken: 'some-other-seq' };
+            const mockPut: jest.Mock = jest.fn().mockReturnValue({
+                promise: jest.fn().mockResolvedValueOnce(
+                    { nextSequenceToken: 'some-other-seq' }
+                )
             });
             providerLogHandler.client.putLogEvents = mockPut;
-            providerLogHandler['putLogEvent']({
+            await providerLogHandler['putLogEvents']({
                 message: 'log-msg',
                 timestamp: 123,
             });
@@ -195,53 +200,60 @@ describe('when delivering log', () => {
         });
     });
 
-    test('put log event invalid token', () => {
-        const mockPut: jest.Mock = jest.fn().mockImplementationOnce(() => {
-            throw awsUtil.error(new Error(), { code: 'InvalidSequenceTokenException' });
-        })
-        .mockImplementationOnce(() => {
-            throw awsUtil.error(new Error(), { code: 'DataAlreadyAcceptedException' });
-        })
-        .mockImplementation(() => {
-            return { nextSequenceToken: 'some-other-seq' };
+    test('put log event invalid token', async () => {
+        putLogEvents.mockReturnValue({
+            promise: jest.fn().mockRejectedValueOnce(
+                awsUtil.error(new Error(), { code: 'InvalidSequenceTokenException' })
+            ).mockRejectedValueOnce(
+                awsUtil.error(new Error(), { code: 'DataAlreadyAcceptedException' })
+            ).mockResolvedValue(
+                { nextSequenceToken: 'some-other-seq' }
+            )
         });
-        providerLogHandler.client.putLogEvents = mockPut;
         for(let i = 1; i < 4; i++) {
-            providerLogHandler['putLogEvent']({
+            await providerLogHandler['putLogEvents']({
                 message: 'log-msg',
                 timestamp: i,
             });
         }
-        expect(mockPut).toHaveBeenCalledTimes(5);
+        expect(putLogEvents).toHaveBeenCalledTimes(5);
     });
 
-    test('emit existing cwl group stream', () => {
-        const mock: jest.Mock = jest.fn();
-        providerLogHandler['putLogEvent'] = mock;
+    test('emit existing cwl group stream', async () => {
+        const mock: jest.Mock = jest.fn().mockResolvedValue({});
+        providerLogHandler['putLogEvents'] = mock;
         providerLogHandler['emitter'].emit('log', 'log-msg');
+        await new Promise(resolve => setTimeout(resolve, 300));
         expect(mock).toHaveBeenCalledTimes(1);
     });
 
-    test('emit no group stream', () => {
-        const putLogEvent: jest.Mock = jest.fn().mockImplementationOnce(() => {
-            throw awsUtil.error(new Error(), { message: 'log group does not exist' });
-        });
+    test('emit no group stream', async () => {
+        const putLogEvents: jest.Mock = jest.fn().mockResolvedValue({}).mockRejectedValueOnce(
+            awsUtil.error(new Error(), {
+                code: 'ResourceNotFoundException',
+                message: 'log group does not exist',
+            })
+        );
         const createLogGroup: jest.Mock = jest.fn();
         const createLogStream: jest.Mock = jest.fn();
-        providerLogHandler['putLogEvent'] = putLogEvent;
+        providerLogHandler['putLogEvents'] = putLogEvents;
         providerLogHandler['createLogGroup'] = createLogGroup;
         providerLogHandler['createLogStream'] = createLogStream;
-        providerLogHandler['emitter'].emit('log', 'log-msg');
-        expect(putLogEvent).toHaveBeenCalledTimes(2);
+        await providerLogHandler['logListener']('log-msg');
+        expect(putLogEvents).toHaveBeenCalledTimes(2);
         expect(createLogGroup).toHaveBeenCalledTimes(1);
         expect(createLogStream).toHaveBeenCalledTimes(1);
 
         // Function createGroup should not be called again if the group already exists.
-        putLogEvent.mockImplementationOnce(() => {
-            throw awsUtil.error(new Error(), { message: 'log stream does not exist' });
-        });
-        providerLogHandler['emitter'].emit('log', 'log-msg');
-        expect(putLogEvent).toHaveBeenCalledTimes(4);
+        putLogEvents.mockRejectedValueOnce(
+            awsUtil.error(new Error(), {
+                code: 'ResourceNotFoundException',
+                message: 'log stream does not exist',
+            })
+        );
+        console.log('log-msg');
+        await new Promise(resolve => setTimeout(resolve, 300));
+        expect(putLogEvents).toHaveBeenCalledTimes(4);
         expect(createLogGroup).toHaveBeenCalledTimes(1);
         expect(createLogStream).toHaveBeenCalledTimes(2);
     });

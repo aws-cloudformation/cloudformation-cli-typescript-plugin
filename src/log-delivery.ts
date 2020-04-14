@@ -1,4 +1,4 @@
-import { boundMethod } from 'autobind-decorator'
+import { boundMethod } from 'autobind-decorator';
 import { EventEmitter } from 'events';
 import CloudWatchLogs, {
     InputLogEvent,
@@ -6,9 +6,7 @@ import CloudWatchLogs, {
     PutLogEventsResponse,
 } from 'aws-sdk/clients/cloudwatchlogs';
 
-import {
-    SessionProxy,
-} from './proxy';
+import { SessionProxy } from './proxy';
 import { HandlerRequest } from './utils';
 
 
@@ -37,6 +35,7 @@ export class ProviderLogHandler {
      * construction calls with the `new` operator.
      */
     private constructor(options: ILogOptions) {
+        this.groupName = options.groupName;
         this.stream = options.stream.replace(':', '__');
         this.client = options.session.client('CloudWatchLogs') as CloudWatchLogs;
         this.sequenceToken = '';
@@ -44,7 +43,7 @@ export class ProviderLogHandler {
         // Attach the logger methods to localized event emitter.
         const emitter = new LogEmitter();
         this.emitter = emitter;
-        emitter.on('log', this.logListener);
+        this.emitter.on('log', this.logListener);
         // Create maps of each logger Function and then alias that.
         Object.entries(this.logger).forEach(([key, val]) => {
             if (typeof val === 'function') {
@@ -105,7 +104,8 @@ export class ProviderLogHandler {
                 logGroupName: this.groupName,
             }).promise();
         } catch(err) {
-            if (err.code !== 'ResourceAlreadyExistsException') {
+            const errorCode = err.code || err.name;
+            if (errorCode !== 'ResourceAlreadyExistsException') {
                 throw err;
             }
         }
@@ -118,13 +118,14 @@ export class ProviderLogHandler {
                 logStreamName: this.stream,
             }).promise();
         } catch(err) {
-            if (err.code !== 'ResourceAlreadyExistsException') {
+            const errorCode = err.code || err.name;
+            if (errorCode !== 'ResourceAlreadyExistsException') {
                 throw err;
             }
         }
     }
 
-    private async putLogEvent(record: InputLogEvent): Promise<void> {
+    private async putLogEvents(record: InputLogEvent): Promise<void> {
         if (!record.timestamp) {
             const currentTime = new Date(Date.now());
             record.timestamp = Math.round(currentTime.getTime());
@@ -141,28 +142,34 @@ export class ProviderLogHandler {
             const response: PutLogEventsResponse = await this.client.putLogEvents(logEventsParams).promise();
             this.sequenceToken = response.nextSequenceToken;
         } catch(err) {
-            if (err.code === 'DataAlreadyAcceptedException' || err.code === 'InvalidSequenceTokenException') {
-                this.sequenceToken = (err.message || '').split(' ')[0];
-                this.putLogEvent(record);
+            const errorCode = err.code || err.name;
+            if (errorCode === 'DataAlreadyAcceptedException' || errorCode === 'InvalidSequenceTokenException') {
+                this.sequenceToken = (err.message || '').split(' ').pop();
+                this.putLogEvents(record);
+            } else {
+                throw err;
             }
         }
     }
 
     @boundMethod
-    logListener(...args: any[]): void {
+    async logListener(...args: any[]): Promise<void> {
         const currentTime = new Date(Date.now());
         const record: InputLogEvent = {
             message: JSON.stringify(args[0]),
             timestamp: Math.round(currentTime.getTime()),
         }
         try {
-            this.putLogEvent(record);
+            await this.putLogEvents(record);
         } catch(err) {
-            if (err.message.includes('log group does not exist')) {
-                this.createLogGroup();
+            const errorCode = err.code || err.name;
+            if (errorCode === 'ResourceNotFoundException') {
+                if (err.message.includes('log group does not exist')) {
+                    await this.createLogGroup();
+                }
+                await this.createLogStream();
+                await this.putLogEvents(record);
             }
-            this.createLogStream();
-            this.putLogEvent(record);
         }
     }
 }
