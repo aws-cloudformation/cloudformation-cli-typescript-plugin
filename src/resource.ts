@@ -9,11 +9,12 @@ import {
     BaseResourceModel,
     BaseResourceHandlerRequest,
     Callable,
+    CfnResponse,
     Credentials,
     HandlerErrorCode,
     OperationStatus,
     Optional,
-    Response,
+    RequestContext,
 } from './interface';
 import { ProviderLogHandler } from './log-delivery';
 import { MetricsPublisherProxy } from './metrics';
@@ -37,31 +38,36 @@ class HandlerEvents extends Map<Action, string | symbol> {};
 /**
  * Decorates a method to ensure that the JSON input and output are serialized properly.
  *
- * @returns {PropertyDescriptor}
+ * @returns {MethodDecorator}
  */
-function ensureSerialize(target: any, propertyKey: string, descriptor: PropertyDescriptor): PropertyDescriptor {
-
-    // Save a reference to the original method this way we keep the values currently in the
-    // descriptor and don't overwrite what another decorator might have done to the descriptor.
-    if(descriptor === undefined) {
-        descriptor = Object.getOwnPropertyDescriptor(target, propertyKey);
-    }
-    const originalMethod = descriptor.value;
-    // Wrapping the original method with new signature.
-    descriptor.value = async function(event: Object | Map<string, any>, context: any): Promise<any> {
-        let mappedEvent: Map<string, any>;
-        if (event instanceof Map) {
-            mappedEvent = new Map<string, any>(event);
-        } else {
-            mappedEvent = new Map<string, any>(Object.entries(event));
+function ensureSerialize(toResponse: boolean = false): MethodDecorator {
+    return function(target: any, propertyKey: string, descriptor: PropertyDescriptor): PropertyDescriptor {
+        type Resource = typeof target;
+        // Save a reference to the original method this way we keep the values currently in the
+        // descriptor and don't overwrite what another decorator might have done to the descriptor.
+        if(descriptor === undefined) {
+            descriptor = Object.getOwnPropertyDescriptor(target, propertyKey);
         }
-        const progress = await originalMethod.apply(this, [mappedEvent, context]);
-        // Use the raw event data as a last-ditch attempt to call back if the
-        // request is invalid.
-        const serialized = progress.serialize(true, mappedEvent.get('bearerToken'));
-        return serialized.toObject();
+        const originalMethod = descriptor.value;
+        // Wrapping the original method with new signature.
+        descriptor.value = async function(event: Object | Map<string, any>, context: any): Promise<ProgressEvent | CfnResponse<Resource>> {
+            let mappedEvent: Map<string, any>;
+            if (event instanceof Map) {
+                mappedEvent = new Map<string, any>(event);
+            } else {
+                mappedEvent = new Map<string, any>(Object.entries(event));
+            }
+            const progress: ProgressEvent = await originalMethod.apply(this, [mappedEvent, context]);
+            if (toResponse) {
+                // Use the raw event data as a last-ditch attempt to call back if the
+                // request is invalid.
+                const serialized = progress.serialize(true, mappedEvent.get('bearerToken'));
+                return serialized.toObject() as CfnResponse<Resource>;
+            }
+            return progress;
+        }
+        return descriptor;
     }
-    return descriptor;
 }
 
 /**
@@ -112,16 +118,16 @@ export abstract class BaseResource<T extends BaseResourceModel = BaseResourceMod
         if (handlerResponse.status !== OperationStatus.InProgress) {
             return false;
         }
-        // Modify requestContext dict in-place, so that invoke count is bumped on local
-        // reinvoke too
-        const reinvokeContext = handlerRequest.requestContext;
+        // Modify requestContext in-place, so that invoke count is bumped on local
+        // reinvoke too.
+        const reinvokeContext: RequestContext<Map<string, any>> = handlerRequest.requestContext;
         reinvokeContext.invocation = (reinvokeContext.invocation || 0) + 1;
         const callbackDelaySeconds = handlerResponse.callbackDelaySeconds;
         const remainingMs = context.getRemainingTimeInMillis();
 
         // When a handler requests a sub-minute callback delay, and if the lambda
         // invocation has enough runtime (with 20% buffer), we can re-run the handler
-        // locally otherwise we re-invoke through CloudWatchEvents
+        // locally otherwise we re-invoke through CloudWatchEvents.
         const neededMsRemaining = callbackDelaySeconds * 1200 + INVOCATION_TIMEOUT_MS;
         if (callbackDelaySeconds < 60 && remainingMs > neededMsRemaining) {
             const delay = async (ms: number) => {
@@ -196,15 +202,15 @@ export abstract class BaseResource<T extends BaseResourceModel = BaseResourceMod
             throw new InternalFailure(`${err} (${err.name})`);
         }
 
-        return [session, request, action, event.callbackContext || new Map()];
+        return [session, request, action, event.callbackContext || new Map<string, any>()];
     }
 
     // @ts-ignore
     public async testEntrypoint (
         eventData: Object | Map<string, any>, context: any
-    ): Promise<Response<BaseResource>>;
+    ): Promise<ProgressEvent>;
     @boundMethod
-    @ensureSerialize
+    @ensureSerialize()
     public async testEntrypoint(
         eventData: Map<string, any>, context: any
     ): Promise<ProgressEvent> {
@@ -217,10 +223,11 @@ export abstract class BaseResource<T extends BaseResourceModel = BaseResourceMod
             if (err instanceof BaseHandlerException) {
                 LOGGER.error('Handler error')
                 progress = err.toProgressEvent();
+            } else {
+                LOGGER.error('Exception caught');
+                msg = err.message || msg;
+                progress = ProgressEvent.failed(HandlerErrorCode.InternalFailure, msg);
             }
-            LOGGER.error('Exception caught');
-            msg = err.message || msg;
-            progress = ProgressEvent.failed(HandlerErrorCode.InternalFailure, msg);
         }
         return Promise.resolve(progress);
     }
@@ -253,7 +260,7 @@ export abstract class BaseResource<T extends BaseResourceModel = BaseResourceMod
                 throw new Error('No platform credentials');
             }
             action = event.action;
-            callbackContext = event.requestContext.callbackContext || {} as Map<string, any>;
+            callbackContext = event.requestContext?.callbackContext || new Map<string, any>();
         } catch(err) {
             LOGGER.error('Invalid request');
             throw new InvalidRequest(`${err} (${err.name})`);
@@ -286,9 +293,9 @@ export abstract class BaseResource<T extends BaseResourceModel = BaseResourceMod
     // @ts-ignore
     public async entrypoint (
         eventData: Object | Map<string, any>, context: LambdaContext
-    ): Promise<Response<BaseResource>>;
+    ): Promise<CfnResponse<BaseResource>>;
     @boundMethod
-    @ensureSerialize
+    @ensureSerialize(true)
     public async entrypoint (
         eventData: Map<string, any>, context: LambdaContext
     ): Promise<ProgressEvent> {
@@ -357,6 +364,9 @@ export abstract class BaseResource<T extends BaseResourceModel = BaseResourceMod
                 }
                 if (progress.callbackContext) {
                     const callback = progress.callbackContext;
+                    if (!event.requestContext) {
+                        event.requestContext = {} as RequestContext<Map<string, any>>;
+                    }
                     event.requestContext.callbackContext = callback;
                 }
                 if (MUTATING_ACTIONS.includes(event.action)) {
