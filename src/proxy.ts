@@ -1,7 +1,5 @@
-import { AWSError, CredentialProviderChain, Request, Service } from 'aws-sdk';
 import { ConfigurationOptions } from 'aws-sdk/lib/config';
-import { Credentials, CredentialsOptions } from 'aws-sdk/lib/credentials';
-import { ServiceConfigurationOptions } from 'aws-sdk/lib/service';
+import { CredentialsOptions } from 'aws-sdk/lib/credentials';
 import * as Aws from 'aws-sdk/clients/all';
 import { NextToken } from 'aws-sdk/clients/cloudformation';
 import { allArgsConstructor, builder, IBuilder} from 'tombok';
@@ -9,59 +7,13 @@ import { allArgsConstructor, builder, IBuilder} from 'tombok';
 import {
     BaseResourceHandlerRequest,
     BaseResourceModel,
-    Callable,
     HandlerErrorCode,
-    Newable,
     OperationStatus,
 } from './interface';
 
 
 type ClientMap = typeof Aws;
 type Client = InstanceType<ClientMap[keyof ClientMap]>;
-type ClientType<T = ClientMap> = T[keyof T] extends Service ? never : T[keyof T];
-
-// type Async<T> = T extends AsyncGenerator<infer R> ? AsyncGenerator<R> : T extends Generator<infer R> ? AsyncGenerator<R> : T extends Promise<infer R> ? Promise<R> : Promise<T>;
-
-// type ProxyModule<M> = {
-//     [K in keyof M]: M[K] extends (...args: infer A) => infer R ? (...args: A) => Async<R> : never;
-// };
-
-// type Callback<D> = (err: AWSError | undefined, data: D) => void;
-
-// interface AWSRequestMethod<P, D> {
-//     (params: P, callback?: Callback<D>): Request<D, AWSError>;
-//     (callback?: Callback<D>): Request<D, AWSError>;
-// }
-
-// export type CapturedAWSClient<C extends AWSClient> = {
-//     [K in keyof C]: C[K] extends AWSRequestMethod<infer P, infer D>
-//       ? AWSRequestMethod<P, D>
-//       : C[K];
-//   };
-
-//   export type CapturedAWS<T = ClientMap> = {
-//     [K in keyof T]: T[K] extends AWSClient ? CapturedAWSClient<T[K]> : T[K];
-//   };
-
-//   export function captureAWSClient<C extends AWSClient>(
-//     client: C
-//   ): CapturedAWSClient<C>;
-//   export function captureAWS(awssdk: ClientMap): CapturedAWS;
-
-// type Clients = { [K in keyof AwsClientMap]?: AwsClientMap[K] extends Service ? never : AwsClientMap[K] };
-
-class SessionCredentialsProvider {
-
-    private awsSessionCredentials: Credentials;
-
-    public get(): Credentials {
-        return this.awsSessionCredentials;
-    }
-
-    public setCredentials(credentials: CredentialsOptions): void {
-        this.awsSessionCredentials = new Credentials(credentials);
-    }
-}
 
 export class SessionProxy {
 
@@ -75,37 +27,7 @@ export class SessionProxy {
             ...this.options,
             ...options,
         });
-        return service; //this.promisifyReturn(service);
-    }
-
-    // private createService<T extends ClientMap, K extends keyof T>(client: Newable<T[K]>, options: ServiceConfigurationOptions): InstanceType<ClientType> {
-    //     // const clients: { [K in keyof ClientMap]?: ClientMap[K] } = Aws;
-    //     // const name: T;
-
-    //     return new client();
-    // }
-
-    // Wraps an Aws endpoint instance so that you don’t always have to chain `.promise()` onto every function
-    public promisifyReturn(obj: any): ProxyConstructor {
-        return new Proxy(obj, {
-            get(target, propertyKey) {
-                const property = target[propertyKey];
-
-                if (typeof property === "function") {
-                    return function (...args: any[]) {
-                        const result = property.apply(this, args);
-
-                        if (result instanceof Request) {
-                            return result.promise();
-                        } else {
-                            return result;
-                        }
-                    }
-                } else {
-                    return property;
-                }
-            },
-        });
+        return service;
     }
 
     public static getSession(credentials?: CredentialsOptions, region?: string): SessionProxy | null {
@@ -152,7 +74,7 @@ export class ProgressEvent<R extends BaseResourceModel = BaseResourceModel, T = 
      * A callback will be scheduled with an initial delay of no less than the number
      * of seconds specified in the progress event.
      */
-    public callbackDelaySeconds: number;
+    public callbackDelaySeconds: number = 0;
 
     /**
      * The output resource instance populated by a READ for synchronous results and
@@ -176,7 +98,6 @@ export class ProgressEvent<R extends BaseResourceModel = BaseResourceModel, T = 
 
     public serialize(
         toTesponse: boolean = false, bearerToken?: string
-    // ): Record<string, any> {
     ): Map<string, any> {
         // To match Java serialization, which drops `null` values, and the
         // contract tests currently expect this also.
@@ -226,13 +147,32 @@ export class ProgressEvent<R extends BaseResourceModel = BaseResourceModel, T = 
     /**
      * Convenience method for constructing IN_PROGRESS response
      */
-    public static progress(model: any, cxt: any): ProgressEvent {
-        const event = ProgressEvent.builder()
-            .callbackContext(cxt)
-            .resourceModel(model)
-            .status(OperationStatus.InProgress)
-            .build();
+    public static progress(model?: any, ctx?: any): ProgressEvent {
+        const progress = ProgressEvent.builder()
+            .status(OperationStatus.InProgress);
+        if (ctx) {
+            progress.callbackContext(ctx);
+        }
+        if (model) {
+            progress.resourceModel(model);
+        }
+        const event = progress.build();
         return event;
+    }
+
+    /**
+     * Convenience method for constructing a SUCCESS response
+     */
+    public static success(model?: any, ctx?: any): ProgressEvent {
+        const event = ProgressEvent.progress(model, ctx);
+        event.status = OperationStatus.Success;
+        return event;
+    }
+
+    public toObject(): Object {
+        // @ts-ignore
+        const obj: Object = Object.fromEntries(this.serialize().entries());
+        return obj;
     }
 }
 

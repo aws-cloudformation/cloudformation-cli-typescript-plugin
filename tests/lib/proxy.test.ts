@@ -14,33 +14,12 @@ describe('when getting session proxy', () => {
 
     const BEARER_TOKEN: string = 'f3390613-b2b5-4c31-a4c6-66813dff96a6';
 
-    @builder
-    @allArgsConstructor
-    class ResourceModel extends Map<string, any> implements BaseResourceModel {
-    
-        public static typeName: string = 'Test::Resource::Model';
-    
+    class ResourceModel extends BaseResourceModel {
+
+        public static readonly TYPE_NAME: string = 'Test::Resource::Model';
+
         public somekey: Optional<string>;
         public someotherkey: Optional<string>;
-    
-        constructor(...args: any[]) {super()}
-        public static builder(template?: Partial<ResourceModel>): IBuilder<ResourceModel> {return null}
-    
-        serialize(): Map<string, any> {
-            const data: Map<string, any> = new Map<string, any>(Object.entries(JSON.parse(JSON.stringify(this))));
-            data.forEach((value: any, key: string) => {
-                if (value == null) {
-                    data.delete(key);
-                }
-            });
-            return data;
-        }
-        deserialize(): ResourceModel {return <ResourceModel>undefined}
-        toObject(): Object {
-            // @ts-ignore
-            const obj = Object.fromEntries(this.serialize().entries());
-            return obj;
-        }
     }
    
     test('get session returns proxy', () => {
@@ -69,14 +48,14 @@ describe('when getting session proxy', () => {
             status: OperationStatus.Failed,
             errorCode: errorCode,
             message,
-            // callbackDelaySeconds: 0,
+            callbackDelaySeconds: 0,
         })));
     });
 
     test('progress event serialize to response with context', () => {
         const message: string = 'message of event with context';
         const event = ProgressEvent.builder()
-            .callbackContext({ "a": "b" })
+            .callbackContext({ a: 'b' })
             .message(message)
             .status(OperationStatus.Success)
             .build();
@@ -91,7 +70,8 @@ describe('when getting session proxy', () => {
     test('progress event serialize to response with model', () => {
         const message = 'message of event with model';
         const model = new ResourceModel(new Map(Object.entries({
-            "somekey": "a", "someotherkey": "b"
+            somekey: 'a',
+            someotherkey: 'b',
         })));
         const event = new ProgressEvent(new Map(Object.entries({
             status: OperationStatus.Success,
@@ -103,17 +83,22 @@ describe('when getting session proxy', () => {
             operationStatus: OperationStatus.Success,
             message,
             bearerToken: BEARER_TOKEN,
-            resourceModel: {"somekey": "a", "someotherkey": "b"},
+            resourceModel: {
+                somekey: 'a',
+                someotherkey: 'b',
+            },
         })));
     });
 
     test('progress event serialize to response with models', () => {
         const message = 'message of event with models';
         const models = [new ResourceModel(new Map(Object.entries({
-            "somekey": "a", "someotherkey": "b"
+            somekey: 'a',
+            someotherkey: 'b',
         }))),
         new ResourceModel(new Map(Object.entries({
-            "somekey": "c", "someotherkey": "d"
+            somekey: 'c',
+            someotherkey: 'd',
         })))];
         const event = new ProgressEvent(new Map(Object.entries({
             status: OperationStatus.Success,
@@ -126,8 +111,14 @@ describe('when getting session proxy', () => {
             message,
             bearerToken: BEARER_TOKEN,
             resourceModels: [
-                {"somekey": "a", "someotherkey": "b"},
-                {"somekey": "c", "someotherkey": "d"},
+                {
+                    somekey: 'a',
+                    someotherkey: 'b',
+                },
+                {
+                    somekey: 'c',
+                    someotherkey: 'd',
+                },
             ],
         })));
     });
