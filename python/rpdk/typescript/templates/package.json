@@ -2,19 +2,23 @@
   "name": "{{ name }}",
   "version": "1.0.0",
   "description": "{{ description }}",
-  "main": "index.js",
+  "main": "dist/handlers.js",
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "npx tsc",
-    "postinstall": "npm run build",
+    "prepack": "npm run build",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "author": "",
-  "license": "ISC",
   "dependencies": {
-    "{{lib_name}}": "git+https://github.com/eduardomourar/cloudformation-cli-typescript-plugin.git"
+    "{{lib_name}}": "https://github.com/eduardomourar/cloudformation-cli-typescript-plugin/releases/download/v0.0.1/cfn-rpdk-0.0.1.tgz"
   },
   "devDependencies": {
-    "tombok": "git+https://github.com/eduardomourar/tombok.git#feature/basic-implementation",
+    "@types/node": "^12.0.0",
     "typescript": "^3.8.3"
+  },
+  "optionalDependencies": {
+    "aws-sdk": "^2.656.0"
   }
 }

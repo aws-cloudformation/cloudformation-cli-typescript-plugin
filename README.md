@@ -1,6 +1,7 @@
 # DEVELOPER PREVIEW (COMMUNITY DRIVEN)
 
-We're excited to share our progress with adding new languages to the CloudFormation CLI! This plugin is an early preview prepared by the community, and not ready for production use.
+We're excited to share our progress with adding new languages to the CloudFormation CLI!
+> This plugin is an early preview prepared by the community, and not ready for production use.
 
 ## AWS CloudFormation Resource Provider TypeScript Plugin
 
@@ -16,6 +17,7 @@ If you are using this package to build resource providers for CloudFormation, in
 **Prerequisites**
 
  - Python version 3.6 or above
+ - [SAM CLI](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/serverless-sam-cli-install.html)
  - Your choice of TypeScript IDE
 
 **Installation**
@@ -28,7 +30,7 @@ pip3 install git+https://github.com/eduardomourar/cloudformation-cli-typescript-
 
 Refer to the [CloudFormation CLI User Guide](https://docs.aws.amazon.com/cloudformation-cli/latest/userguide/resource-types.html) for the [CloudFormation CLI](https://github.com/aws-cloudformation/cloudformation-cli) for usage instructions.
 
-** Howto**
+**Howto**
 
 Example run:
 

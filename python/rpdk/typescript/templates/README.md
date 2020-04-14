@@ -2,34 +2,36 @@
 
 Congratulations on starting development! Next steps:
 
-1. Write the JSON schema describing your resource, `{{ schema_path.name }}`
-2. Implement your resource handlers in `{{ project_path }}/handlers.ts`
+1. Write the JSON schema describing your resource, [{{ schema_path.name }}](./{{ schema_path.name }})
+2. Implement your resource handlers in [handlers.ts](./{{ project_path }}/handlers.ts)
 
-> Don't modify `models.ts` by hand, any modifications will be overwritten when the `generate` or `package` commands are run.
+> Don't modify [models.ts](./{{ project_path }}/models.ts) by hand, any modifications will be overwritten when the `generate` or `package` commands are run.
 
 Implement CloudFormation resource here. Each function must always return a ProgressEvent.
 
 ```typescript
-const built = ProgressEvent.builder({
+const progress: ProgressEvent = ProgressEvent.builder()
+
     // Required
     // Must be one of OperationStatus.InProgress, OperationStatus.Failed, OperationStatus.Success
-    status: OperationStatus.InProgress,
+    .status(OperationStatus.InProgress)
     // Required on SUCCESS (except for LIST where resourceModels is required)
     // The current resource model after the operation; instance of ResourceModel class
-    resourceModel: model,
-    resourceModels: null,
+    .resourceModel(model)
+    .resourceModels(null)
     // Required on FAILED
     // Customer-facing message, displayed in e.g. CloudFormation stack events
-    message: '',
+    .message('')
     // Required on FAILED a HandlerErrorCode
-    errorCode: HandlerErrorCode.InternalFailure,
+    .errorCode(HandlerErrorCode.InternalFailure)
     // Optional
     // Use to store any state between re-invocation via IN_PROGRESS
-    callbackContext: {},
+    .callbackContext({})
     // Required on IN_PROGRESS
     // The number of seconds to delay before re-invocation
-    callbackDelaySeconds: 0,
-}).build()
+    .callbackDelaySeconds(0)
+    
+    .build()
 ```
 
-Failures can be passed back to CloudFormation by either raising an exception from `{{ lib_name }}.exceptions`, or setting the ProgressEvent's `status` to `OperationStatus.Failed` and `errorCode` to one of `{{ lib_name }}.HandlerErrorCode`. There is a static helper function, `ProgressEvent.failed`, for this common case.
+While importing the [{{ lib_name }}](https://github.com/eduardomourar/cloudformation-cli-typescript-plugin) library, failures can be passed back to CloudFormation by either raising an exception from `exceptions`, or setting the ProgressEvent's `status` to `OperationStatus.Failed` and `errorCode` to one of `HandlerErrorCode`. There is a static helper function, `ProgressEvent.failed`, for this common case.

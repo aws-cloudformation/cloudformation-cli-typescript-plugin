@@ -4,9 +4,10 @@
     "module": "commonjs",
     "noImplicitAny": true,
     "alwaysStrict": true,
+    "declaration": true,
     "esModuleInterop": true,
-    "moduleResolution": "node",
-    "allowJs": true,
+    "removeComments": true,
+    "sourceMap": false,
     "experimentalDecorators": true,
     "outDir": "dist"
   },
