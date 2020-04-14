@@ -25,15 +25,15 @@ export class MetricPublisher {
         this.client = session.client('CloudWatch') as CloudWatch;
     }
 
-    publishMetric(
+    async publishMetric(
         metricName: MetricTypes,
         dimensions: Map<string, string>,
         unit: StandardUnit,
         value: number,
         timestamp: Date,
-    ): void {
+    ): Promise<void> {
         try {
-            this.client.putMetricData({
+            const metric = await this.client.putMetricData({
                 Namespace: this.namespace,
                 MetricData: [{
                     MetricName: metricName,
@@ -42,7 +42,7 @@ export class MetricPublisher {
                     Timestamp: timestamp,
                     Value: value,
                 }],
-            });
+            }).promise();
         } catch(err) {
             LOGGER.error(`An error occurred while publishing metrics: ${err.message}`);
         }
@@ -56,7 +56,7 @@ export class MetricsPublisherProxy {
     constructor(public accountId: string, public resourceType: string) {
         this.namespace = MetricsPublisherProxy.makeNamespace(accountId, resourceType);
         this.resourceType = resourceType;
-        this.publishers = [];   
+        this.publishers = [];
     }
 
     static makeNamespace(accountId: string, resourceType: string): string {

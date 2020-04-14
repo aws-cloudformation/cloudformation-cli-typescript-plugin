@@ -64,21 +64,23 @@ describe('when getting metrics', () => {
         ]);
     });
 
-    test('put metric catches error', () => {
+    test('put metric catches error', async () => {
         const spyConsoleError: jest.SpyInstance = jest
             .spyOn(global.console, 'error').mockImplementation(() => {});
-        putMetricData.mockImplementationOnce(() => {
-            throw awsUtil.error(new Error(), {
-                code: 'InternalServiceError',
-                message: 'An error occurred (InternalServiceError) when '
-                    + 'calling the PutMetricData operation: ',
-            });
+        putMetricData.mockReturnValueOnce({
+            promise: jest.fn().mockRejectedValueOnce(
+                awsUtil.error(new Error(), {
+                    code: 'InternalServiceError',
+                    message: 'An error occurred (InternalServiceError) when '
+                        + 'calling the PutMetricData operation: ',
+                })
+            )
         });
         const publisher = new MetricPublisher(session, NAMESPACE);
         const dimensions = new Map<string, string>();
         dimensions.set('DimensionKeyActionType', Action.Create);
         dimensions.set('DimensionKeyResourceType', RESOURCE_TYPE);
-        publisher.publishMetric(
+        await publisher.publishMetric(
             MetricTypes.HandlerInvocationCount,
             dimensions,
             StandardUnit.Count,
@@ -115,7 +117,7 @@ describe('when getting metrics', () => {
     test('publish exception metric', () => {
         const proxy = new MetricsPublisherProxy(ACCOUNT_ID, RESOURCE_TYPE);
         proxy.addMetricsPublisher(session);
-        proxy.publishExceptionMetric( MOCK_DATE, Action.Create, new Error('fake-err'));
+        proxy.publishExceptionMetric(MOCK_DATE, Action.Create, new Error('fake-err'));
         expect(putMetricData).toHaveBeenCalledTimes(1);
         expect(putMetricData).toHaveBeenCalledWith({
             MetricData: [{
@@ -145,7 +147,7 @@ describe('when getting metrics', () => {
     test('publish invocation metric', () => {
         const proxy = new MetricsPublisherProxy(ACCOUNT_ID, RESOURCE_TYPE);
         proxy.addMetricsPublisher(session);
-        proxy.publishInvocationMetric( MOCK_DATE, Action.Create);
+        proxy.publishInvocationMetric(MOCK_DATE, Action.Create);
         expect(putMetricData).toHaveBeenCalledTimes(1);
         expect(putMetricData).toHaveBeenCalledWith({
             MetricData: [{
@@ -193,7 +195,6 @@ describe('when getting metrics', () => {
             Namespace: 'AWS/CloudFormation/123412341234/Aa/Bb/Cc',
         });
     });
-
 
     test('publish log delivery exception metric', () => {
         const proxy = new MetricsPublisherProxy(ACCOUNT_ID, RESOURCE_TYPE);
