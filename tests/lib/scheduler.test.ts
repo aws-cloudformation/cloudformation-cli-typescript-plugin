@@ -71,9 +71,9 @@ describe('when getting scheduler', () => {
         jest.restoreAllMocks();
     });
 
-    test('reschedule after minutes zero', () => {
+    test('reschedule after minutes zero', async () => {
         // if called with zero, should call cron with a 1
-        rescheduleAfterMinutes(session, 'arn:goes:here', 0, handlerRequest);
+        await rescheduleAfterMinutes(session, 'arn:goes:here', 0, handlerRequest);
 
         expect(cwEvents).toHaveBeenCalledTimes(1);
         expect(cwEvents).toHaveBeenCalledWith('CloudWatchEvents');
@@ -81,9 +81,9 @@ describe('when getting scheduler', () => {
         expect(spyMinToCron).toHaveBeenCalledWith(1);
     });
 
-    test('reschedule after minutes not zero', () => {
+    test('reschedule after minutes not zero', async () => {
         // if called with another number, should use that
-        rescheduleAfterMinutes(session, 'arn:goes:here', 2, handlerRequest);
+        await rescheduleAfterMinutes(session, 'arn:goes:here', 2, handlerRequest);
 
         expect(cwEvents).toHaveBeenCalledTimes(1);
         expect(cwEvents).toHaveBeenCalledWith('CloudWatchEvents');
@@ -91,8 +91,8 @@ describe('when getting scheduler', () => {
         expect(spyMinToCron).toHaveBeenCalledWith(2);
     });
 
-    test('reschedule after minutes success', () => {
-        rescheduleAfterMinutes(session, 'arn:goes:here', 2, handlerRequest);
+    test('reschedule after minutes success', async () => {
+        await rescheduleAfterMinutes(session, 'arn:goes:here', 2, handlerRequest);
 
         expect(cwEvents).toHaveBeenCalledTimes(1);
         expect(cwEvents).toHaveBeenCalledWith('CloudWatchEvents');
@@ -115,9 +115,9 @@ describe('when getting scheduler', () => {
         });
     });
 
-    test('cleanup cloudwatch events empty', () => {
+    test('cleanup cloudwatch events empty', async () => {
         // cleanup should silently pass if rule/target are empty
-        cleanupCloudwatchEvents(session, '', '');
+        await cleanupCloudwatchEvents(session, '', '');
 
         expect(cwEvents).toHaveBeenCalledTimes(1);
         expect(cwEvents).toHaveBeenCalledWith('CloudWatchEvents');
@@ -126,10 +126,10 @@ describe('when getting scheduler', () => {
         expect(spyConsoleError).toHaveBeenCalledTimes(0);
     });
 
-    test('cleanup cloudwatch events success', () => {
+    test('cleanup cloudwatch events success', async () => {
         // when rule_name and target_id are provided we should call events client and not
         // log errors if the deletion succeeds
-        cleanupCloudwatchEvents(session, 'rulename', 'targetid');
+        await cleanupCloudwatchEvents(session, 'rulename', 'targetid');
 
         expect(spyConsoleError).toHaveBeenCalledTimes(0);
         expect(cwEvents).toHaveBeenCalledTimes(1);
@@ -140,13 +140,13 @@ describe('when getting scheduler', () => {
         expect(spyConsoleError).toHaveBeenCalledTimes(0);
     });
 
-    test('cleanup cloudwatch events client error', () => {
+    test('cleanup cloudwatch events client error', async () => {
         // cleanup should catch and log client failures
         const error = awsUtil.error(new Error(), { code: '1' });
         mockRemoveTargets.mockImplementation(() => {throw error});
         mockDeleteRule.mockImplementation(() => {throw error});
 
-        cleanupCloudwatchEvents(session, 'rulename', 'targetid');
+        await cleanupCloudwatchEvents(session, 'rulename', 'targetid');
 
         expect(cwEvents).toHaveBeenCalledTimes(1);
         expect(cwEvents).toHaveBeenCalledWith('CloudWatchEvents');

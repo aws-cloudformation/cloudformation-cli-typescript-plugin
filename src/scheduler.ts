@@ -18,12 +18,12 @@ const LOGGER = console;
  * @param handlerRequest additional context which the handler can provide itself
  *            for re-invocation
  */
-export function rescheduleAfterMinutes(
+export const rescheduleAfterMinutes = async (
     session: SessionProxy,
     functionArn: string,
     minutesFromNow: number,
     handlerRequest: HandlerRequest,
-): void {
+): Promise<void> => {
     const client: CloudWatchEvents = session.client('CloudWatchEvents') as CloudWatchEvents;
     const cron = minToCron(Math.max(minutesFromNow, 1));
     const identifier = uuidv4();
@@ -33,19 +33,19 @@ export function rescheduleAfterMinutes(
     handlerRequest.requestContext.cloudWatchEventsTargetId = targetId;
     const jsonRequest = JSON.stringify(handlerRequest);
     LOGGER.debug(`Scheduling re-invoke at ${cron} (${identifier})`);
-    client.putRule({
+    await client.putRule({
         Name: ruleName,
         ScheduleExpression: cron,
         State: 'ENABLED',
-    });
-    client.putTargets({
+    }).promise();
+    await client.putTargets({
         Rule: ruleName,
         Targets: [{
             Id: targetId,
             Arn: functionArn,
             Input: jsonRequest,
         }],
-    });
+    }).promise();
 }
 
 /**
@@ -56,16 +56,16 @@ export function rescheduleAfterMinutes(
  * @param ruleName the name of the CWE rule which triggered a re-invocation
  * @param targetId the target of the CWE rule which triggered a re-invocation
  */
-export function cleanupCloudwatchEvents(
+export const cleanupCloudwatchEvents = async (
     session: SessionProxy, ruleName: string, targetId: string
-): void {
+): Promise<void> => {
     const client: CloudWatchEvents = session.client('CloudWatchEvents') as CloudWatchEvents;
     try {
         if (targetId && ruleName) {
-            client.removeTargets({
+            await client.removeTargets({
                 Rule: ruleName,
                 Ids: [targetId],
-            });
+            }).promise();
         }
     } catch(err) {
         LOGGER.error(
@@ -75,10 +75,10 @@ export function cleanupCloudwatchEvents(
 
     try {
         if (ruleName) {
-            client.deleteRule({
+            await client.deleteRule({
                 Name: ruleName,
                 Force: true,
-            });
+            }).promise();
         }
     } catch(err) {
         LOGGER.error(
