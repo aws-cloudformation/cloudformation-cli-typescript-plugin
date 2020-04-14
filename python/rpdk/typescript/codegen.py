@@ -5,8 +5,6 @@ from pathlib import PurePosixPath
 from subprocess import PIPE, CalledProcessError, run as subprocess_run  # nosec
 from tempfile import TemporaryFile
 
-import docker
-from docker.errors import APIError, ContainerError, ImageLoadError
 from requests.exceptions import ConnectionError as RequestsConnectionError
 from rpdk.core.data_loaders import resource_stream
 from rpdk.core.exceptions import DownstreamError, SysExitRecommendedError
@@ -21,6 +19,7 @@ LOG = logging.getLogger(__name__)
 
 EXECUTABLE = "cfn"
 SUPPORT_LIB_NAME = "cfn-rpdk"
+MAIN_HANDLER_FUNCTION = "TypeFunction"
 
 
 class StandardDistNotFoundError(SysExitRecommendedError):
@@ -35,9 +34,9 @@ class TypescriptLanguagePlugin(LanguagePlugin):
     MODULE_NAME = __name__
     NAME = "typescript"
     RUNTIME = "nodejs12.x"
-    ENTRY_POINT = "handlers.resource"
-    TEST_ENTRY_POINT = "handlers.testEntrypoint"
-    CODE_URI = "build/"
+    ENTRY_POINT = "dist/handlers.entrypoint"
+    TEST_ENTRY_POINT = "dist/handlers.testEntrypoint"
+    CODE_URI = "./"
 
     def __init__(self):
         self.env = self._setup_jinja_env(
@@ -50,12 +49,14 @@ class TypescriptLanguagePlugin(LanguagePlugin):
         self.package_name = None
         self.package_root = None
         self._use_docker = True
+        self._build_command = None
 
     def _init_from_project(self, project):
         self.namespace = tuple(s.lower() for s in project.type_info)
         self.package_name = "-".join(self.namespace)
-        self._use_docker = project.settings.get("use_docker", True)
+        self._use_docker = project.settings.get("useDocker", True)
         self.package_root = project.root / "src"
+        self._build_command = project.settings.get("buildCommand", None)
 
     def _prompt_for_use_docker(self, project):
         self._use_docker = input_with_validation(
@@ -64,7 +65,7 @@ class TypescriptLanguagePlugin(LanguagePlugin):
             "This is highly recommended unless you are experienced \n"
             "with cross-platform Typescript packaging.",
         )
-        project.settings["use_docker"] = self._use_docker
+        project.settings["useDocker"] = self._use_docker
 
     def init(self, project):
         LOG.debug("Init started")
@@ -102,6 +103,7 @@ class TypescriptLanguagePlugin(LanguagePlugin):
 
         # project support files
         _copy_resource(project.root / ".gitignore", "typescript.gitignore")
+        _copy_resource(project.root / ".npmrc", ".npmrc")
         _copy_resource(project.root / "tsconfig.json", "tsconfig.json")
         _render_template(
             project.root / "package.json",
@@ -124,16 +126,17 @@ class TypescriptLanguagePlugin(LanguagePlugin):
             "Runtime": project.runtime,
             "CodeUri": self.CODE_URI,
         }
+        handler_function = {
+            "TestEntrypoint": {
+                **handler_params,
+                "Handler": project.test_entrypoint,
+            },
+        }
+        handler_function[MAIN_HANDLER_FUNCTION] = handler_params
         _render_template(
             project.root / "template.yml",
             resource_type=project.type_name,
-            functions={
-                "TypeFunction": handler_params,
-                "TestEntrypoint": {
-                    **handler_params,
-                    "Handler": project.test_entrypoint,
-                },
-            },
+            functions=handler_function,
         )
 
         LOG.debug("Init complete")
@@ -183,9 +186,8 @@ class TypescriptLanguagePlugin(LanguagePlugin):
 
         self._remove_build_artifacts(build_path)
         self._build(project.root)
-        shutil.copytree(str(handler_package_path), str(build_path / self.package_name))
 
-        inner_zip = self._pre_package(build_path)
+        inner_zip = self._pre_package(build_path / MAIN_HANDLER_FUNCTION)
         zip_file.writestr("ResourceProvider.zip", inner_zip.read())
         self._recursive_relative_write(handler_package_path, project.root, zip_file)
 
@@ -198,74 +200,33 @@ class TypescriptLanguagePlugin(LanguagePlugin):
         except FileNotFoundError:
             LOG.debug("'%s' not found, skipping removal", deps_path, exc_info=True)
 
+    @staticmethod
+    def _make_build_command(base_path, build_command=None):
+        command = f"sam build --build-dir {base_path}/build"
+        if build_command:
+            command = build_command
+        return command
+
     def _build(self, base_path):
         LOG.debug("Dependencies build started from '%s'", base_path)
+
+        # TODO: We should use the build logic from SAM CLI library, instead:
+        # https://github.com/awslabs/aws-sam-cli/blob/master/samcli/lib/build/app_builder.py
+        command = self._make_build_command(base_path, self._build_command)
         if self._use_docker:
-            self._docker_build(base_path)
-        else:
-            self._npm_build(base_path)
-        LOG.debug("Dependencies build finished")
+            command = command + " --use-container"
+        command = command + " " + MAIN_HANDLER_FUNCTION
 
-    @staticmethod
-    def _make_npm_command(base_path):
-        return [
-            "npm",
-            "install",
-            "--no-optional",
-            str(base_path),
-        ]
-
-    @classmethod
-    def _docker_build(cls, external_path):
-
-        internal_path = PurePosixPath("/project")
-        command = " ".join(cls._make_npm_command(internal_path))
         LOG.debug("command is '%s'", command)
 
-        volumes = {str(external_path): {"bind": str(internal_path), "mode": "rw"}}
-        image = f"lambci/lambda:build-{cls.RUNTIME}"
-        LOG.warning(
-            "Starting Docker build. This may take several minutes if the "
-            "image '%s' needs to be pulled first.",
-            image,
-        )
-        docker_client = docker.from_env()
-        try:
-            logs = docker_client.containers.run(
-                image=image,
-                command=command,
-                auto_remove=True,
-                volumes=volumes,
-                stream=True,
-            )
-        except RequestsConnectionError as e:
-            # it seems quite hard to reliably extract the cause from
-            # ConnectionError. we replace it with a friendlier error message
-            # and preserve the cause for debug traceback
-            cause = RequestsConnectionError(
-                "Could not connect to docker - is it running?"
-            )
-            cause.__cause__ = e
-            raise DownstreamError("Error running docker build") from cause
-        except (ContainerError, ImageLoadError, APIError) as e:
-            raise DownstreamError("Error running docker build") from e
-        LOG.debug("Build running. Output:")
-        for line in logs:
-            LOG.debug(line.rstrip(b"\n").decode("utf-8"))
-
-    @classmethod
-    def _npm_build(cls, base_path):
-
-        command = cls._make_npm_command(base_path)
-        LOG.debug("command is '%s'", command)
-
-        LOG.warning("Starting npm build.")
+        LOG.warning("Starting build.")
         try:
             completed_proc = subprocess_run(  # nosec
-                command, stdout=PIPE, stderr=PIPE, cwd=base_path, check=True
+                ["/bin/bash", "-c", command], stdout=PIPE, stderr=PIPE, cwd=base_path, check=True
             )
         except (FileNotFoundError, CalledProcessError) as e:
-            raise DownstreamError("npm build failed") from e
+            raise DownstreamError("local build failed") from e
 
-        LOG.debug("--- npm stdout:\n%s", completed_proc.stdout)
-        LOG.debug("--- npm stderr:\n%s", completed_proc.stderr)
+        LOG.debug("--- build stdout:\n%s", completed_proc.stdout)
+        LOG.debug("--- build stderr:\n%s", completed_proc.stderr)
+        LOG.debug("Dependencies build finished")

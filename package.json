@@ -7,13 +7,14 @@
     "test": "tests"
   },
   "files": [
-    "dist",
-    "global.d.ts"
+    "dist"
   ],
   "scripts": {
     "build": "npx tsc",
+    "prepack": "npm run build",
     "test": "npx jest",
-    "test:debug": "npx --node-arg=--inspect jest --runInBand"
+    "test:debug": "npx --node-arg=--inspect jest --runInBand",
+    "test:ci": "npx jest --ci --collect-coverage"
   },
   "engines": {
     "node": ">=10.0.0",
@@ -30,16 +31,21 @@
   },
   "homepage": "https://github.com/eduardomourar/cloudformation-cli-typescript-plugin#readme",
   "dependencies": {
-    "aws-sdk": "^2.635.0",
+    "autobind-decorator": "^2.4.0",
+    "reflect-metadata": "^0.1.13",
+    "tombok": "https://github.com/eduardomourar/tombok/releases/download/v0.0.1/tombok-0.0.1.tar.gz",
     "uuid": "^7.0.2"
   },
   "devDependencies": {
+    "@types/aws-sdk": "^2.7.0",
     "@types/jest": "^25.1.0",
     "@types/node": "^12.0.0",
     "@types/uuid": "^7.0.0",
     "jest": "^25.1.0",
-    "tombok": "git+https://github.com/eduardomourar/tombok.git#feature/basic-implementation",
-    "ts-jest": "^25.2.1",
+    "ts-jest": "^25.3.0",
     "typescript": "^3.8.3"
+  },
+  "optionalDependencies": {
+    "aws-sdk": "^2.656.0"
   }
 }

@@ -6,7 +6,8 @@
     "alwaysStrict": true,
     "declaration": true,
     "esModuleInterop": true,
-    "sourceMap": true,
+    "removeComments": true,
+    "sourceMap": false,
     "experimentalDecorators": true,
     "outDir": "dist"
   },

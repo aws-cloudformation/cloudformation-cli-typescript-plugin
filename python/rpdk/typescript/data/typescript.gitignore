@@ -2,6 +2,11 @@
 build/
 dist/
 
+# Unit test / coverage reports
+.cache
+.hypothesis/
+.pytest_cache/
+
 # RPDK logs
 rpdk.log
 

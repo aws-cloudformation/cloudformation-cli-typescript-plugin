@@ -1,7 +1,8 @@
 import {
     Action,
     BaseResource,
-    handlerAction,
+    exceptions,
+    handlerEvent,
     HandlerErrorCode,
     OperationStatus,
     Optional,
@@ -9,107 +10,108 @@ import {
     ResourceHandlerRequest,
     SessionProxy,
 } from '{{lib_name}}';
-import * as exceptions from '{{lib_name}}/dist/exceptions';
 import { ResourceModel } from './models';
 
+
 // Use this logger to forward log messages to CloudWatch Logs.
-const LOG = console;
+const LOGGER = console;
 
-class Resource<T = ResourceModel> extends BaseResource<T> {
+class Resource extends BaseResource<ResourceModel> {
 
-    @handlerAction(Action.Create)
-    public create(
+    @handlerEvent(Action.Create)
+    public async create(
         session: Optional<SessionProxy>,
         request: ResourceHandlerRequest<ResourceModel>,
         callbackContext: Map<string, any>,
-    ): ProgressEvent {
+    ): Promise<ProgressEvent> {
         const model: ResourceModel = request.desiredResourceState;
-        // @ts-ignore
-        const progress: ProgressEvent = ProgressEvent.builder({
-            status: OperationStatus.InProgress,
-            resourceModel: model,
-        }).build();
+        const progress: ProgressEvent<ResourceModel> = ProgressEvent.builder()
+            .status(OperationStatus.InProgress)
+            .resourceModel(model)
+            .build() as ProgressEvent<ResourceModel>;
         // TODO: put code here
 
         // Example:
         try {
             if (session instanceof SessionProxy) {
-                const client = session.client('s3');
+                const client = session.client('S3');
             }
             // Setting Status to success will signal to cfn that the operation is complete
             progress.status = OperationStatus.Success;
         } catch(err) {
-            LOG.log(err);
+            LOGGER.log(err);
+            // exceptions module lets CloudFormation know the type of failure that occurred
             throw new exceptions.InternalFailure(err.message);
+            // this can also be done by returning a failed progress event
+            // return ProgressEvent.failed(HandlerErrorCode.InternalFailure, err.message);
         }
         return progress;
     }
 
-    @handlerAction(Action.Update)
-    public update(
+    @handlerEvent(Action.Update)
+    public async update(
         session: Optional<SessionProxy>,
         request: ResourceHandlerRequest<ResourceModel>,
         callbackContext: Map<string, any>,
-    ): ProgressEvent {
+    ): Promise<ProgressEvent> {
         const model: ResourceModel = request.desiredResourceState;
-        // @ts-ignore
-        const progress: ProgressEvent = ProgressEvent.builder({
-            status: OperationStatus.InProgress,
-            resourceModel: model,
-        }).build();
+        const progress: ProgressEvent<ResourceModel> = ProgressEvent.builder()
+            .status(OperationStatus.InProgress)
+            .resourceModel(model)
+            .build() as ProgressEvent<ResourceModel>;
         // TODO: put code here
+        progress.status = OperationStatus.Success;
         return progress;
     }
 
-    @handlerAction(Action.Delete)
-    public delete(
+    @handlerEvent(Action.Delete)
+    public async delete(
         session: Optional<SessionProxy>,
         request: ResourceHandlerRequest<ResourceModel>,
         callbackContext: Map<string, any>,
-    ): ProgressEvent {
+    ): Promise<ProgressEvent> {
         const model: ResourceModel = request.desiredResourceState;
-        // @ts-ignore
-        const progress: ProgressEvent = ProgressEvent.builder({
-            status: OperationStatus.InProgress,
-            resourceModel: model,
-        }).build();
+        const progress: ProgressEvent<ResourceModel> = ProgressEvent.builder()
+            .status(OperationStatus.InProgress)
+            .resourceModel(model)
+            .build() as ProgressEvent<ResourceModel>;
         // TODO: put code here
+        progress.status = OperationStatus.Success;
         return progress;
     }
 
-    @handlerAction(Action.Read)
-    public read(
+    @handlerEvent(Action.Read)
+    public async read(
         session: Optional<SessionProxy>,
         request: ResourceHandlerRequest<ResourceModel>,
         callbackContext: Map<string, any>,
-    ): ProgressEvent {
+    ): Promise<ProgressEvent> {
         const model: ResourceModel = request.desiredResourceState;
         // TODO: put code here
-        // @ts-ignore
-        ProgressEvent.progress()
-        const progress: ProgressEvent = ProgressEvent.builder({
-            status: OperationStatus.Success,
-            resourceModel: model,
-        }).build();
+        const progress: ProgressEvent<ResourceModel> = ProgressEvent.builder()
+            .status(OperationStatus.Success)
+            .resourceModel(model)
+            .build() as ProgressEvent<ResourceModel>;
         return progress;
     }
 
-    @handlerAction(Action.List)
-    public list(
+    @handlerEvent(Action.List)
+    public async list(
         session: Optional<SessionProxy>,
         request: ResourceHandlerRequest<ResourceModel>,
         callbackContext: Map<string, any>,
-    ): ProgressEvent {
+    ): Promise<ProgressEvent> {
         // TODO: put code here
-        // @ts-ignore
-        const progress: ProgressEvent = ProgressEvent.builder({
-            status: OperationStatus.Success,
-            resourceModels: [],
-        }).build();
+        const progress: ProgressEvent<ResourceModel> = ProgressEvent.builder()
+            .status(OperationStatus.Success)
+            .resourceModels([])
+            .build() as ProgressEvent<ResourceModel>;
         return progress;
     }
 }
 
-export const resource = new Resource();
+const resource = new Resource(ResourceModel.TYPE_NAME, ResourceModel);
+
+export const entrypoint = resource.entrypoint;
 
 export const testEntrypoint = resource.testEntrypoint;
