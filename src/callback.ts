@@ -1,15 +1,13 @@
 import { v4 as uuidv4 } from 'uuid';
 import CloudFormation from 'aws-sdk/clients/cloudformation';
 
-import {
-    SessionProxy,
-} from './proxy';
-import { BaseResourceModel, OperationStatus, Response } from './interface';
+import { SessionProxy } from './proxy';
+import { BaseResourceModel, CfnResponse, OperationStatus } from './interface';
 
 
-const LOG = console;
+const LOGGER = console;
 
-interface ProgressOptions extends Response<BaseResourceModel> {
+interface ProgressOptions extends CfnResponse<BaseResourceModel> {
     session: SessionProxy,
     currentOperationStatus?: OperationStatus,
 }
@@ -46,6 +44,6 @@ export async function reportProgress(options: ProgressOptions): Promise<void> {
         if (response['ResponseMetadata']) {
             requestId = response.ResponseMetadata.RequestId;
         }
-        LOG.info(`Record Handler Progress with Request Id ${requestId} and Request: ${request}`);
+        LOGGER.debug(`Record Handler Progress with Request Id ${requestId} and Request: ${JSON.stringify(request)}`);    
     }
 }
