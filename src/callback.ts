@@ -44,6 +44,6 @@ export async function reportProgress(options: ProgressOptions): Promise<void> {
         if (response['ResponseMetadata']) {
             requestId = response.ResponseMetadata.RequestId;
         }
-        LOGGER.debug(`Record Handler Progress with Request Id ${requestId} and Request: ${JSON.stringify(request)}`);    
+        LOGGER.debug(`Record Handler Progress with Request Id ${requestId} and Request:`, request);
     }
 }

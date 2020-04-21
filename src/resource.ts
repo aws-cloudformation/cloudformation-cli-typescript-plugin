@@ -20,6 +20,7 @@ import { ProviderLogHandler } from './log-delivery';
 import { MetricsPublisherProxy } from './metrics';
 import { cleanupCloudwatchEvents, rescheduleAfterMinutes } from './scheduler';
 import {
+    delay,
     Constructor,
     HandlerRequest,
     LambdaContext,
@@ -62,9 +63,9 @@ function ensureSerialize(toResponse: boolean = false): MethodDecorator {
                 // Use the raw event data as a last-ditch attempt to call back if the
                 // request is invalid.
                 const serialized = progress.serialize(true, mappedEvent.get('bearerToken'));
-                return serialized.toObject() as CfnResponse<Resource>;
+                return Promise.resolve(serialized.toObject() as CfnResponse<Resource>);
             }
-            return progress;
+            return Promise.resolve(progress);
         }
         return descriptor;
     }
@@ -130,14 +131,11 @@ export abstract class BaseResource<T extends BaseResourceModel = BaseResourceMod
         // locally otherwise we re-invoke through CloudWatchEvents.
         const neededMsRemaining = callbackDelaySeconds * 1200 + INVOCATION_TIMEOUT_MS;
         if (callbackDelaySeconds < 60 && remainingMs > neededMsRemaining) {
-            const delay = async (ms: number) => {
-                await new Promise(r => setTimeout(() => r(), ms));
-            };
-            delay(callbackDelaySeconds * 1000);
+            await delay(callbackDelaySeconds);
             return true;
         }
         const callbackDelayMin = Number(callbackDelaySeconds / 60);
-        rescheduleAfterMinutes(
+        await rescheduleAfterMinutes(
             session,
             context.invokedFunctionArn,
             callbackDelayMin,
@@ -194,7 +192,7 @@ export abstract class BaseResource<T extends BaseResourceModel = BaseResourceMod
                 event.request = new Map<string, any>(Object.entries(event.request));
             }
             request = new UnmodeledRequest(event.request).toModeled<T>(this.modelCls);
-    
+
             session = SessionProxy.getSession(creds, event.region);
             action = event.action;
         } catch(err) {
@@ -315,14 +313,13 @@ export abstract class BaseResource<T extends BaseResourceModel = BaseResourceMod
         try {
             const [sessions, action, callback, event] = BaseResource.parseRequest(eventData);
             const [callerSession, platformSession, providerSession] = sessions;
-            ProviderLogHandler.setup(event, providerSession);
-            isLogSetup = true;
+            isLogSetup = await ProviderLogHandler.setup(event, providerSession);
 
             const request = this.castResourceRequest(event);
 
             const metrics = new MetricsPublisherProxy(event.awsAccountId, event.resourceType);
             metrics.addMetricsPublisher(platformSession);
-            metrics.addMetricsPublisher(callerSession);
+            metrics.addMetricsPublisher(providerSession);
             // Acknowledge the task for first time invocation.
             if (!event.requestContext || Object.keys(event.requestContext).length === 0) {
                 await reportProgress({
@@ -337,7 +334,7 @@ export abstract class BaseResource<T extends BaseResourceModel = BaseResourceMod
             } else {
                 // If this invocation was triggered by a 're-invoke' CloudWatch Event,
                 // clean it up.
-                cleanupCloudwatchEvents(
+                await cleanupCloudwatchEvents(
                     platformSession,
                     event.requestContext.cloudWatchEventsRuleName || '',
                     event.requestContext.cloudWatchEventsTargetId || '',
@@ -346,7 +343,7 @@ export abstract class BaseResource<T extends BaseResourceModel = BaseResourceMod
             let invoke: boolean = true;
             while (invoke) {
                 const startTime = new Date(Date.now());
-                metrics.publishInvocationMetric(startTime, action);
+                await metrics.publishInvocationMetric(startTime, action);
                 let error: Error;
                 try {
                     progress = await this.invokeHandler(
@@ -357,9 +354,9 @@ export abstract class BaseResource<T extends BaseResourceModel = BaseResourceMod
                 }
                 const endTime = new Date(Date.now());
                 const milliseconds: number = endTime.getTime() - startTime.getTime();
-                metrics.publishDurationMetric(endTime, action, milliseconds);
+                await metrics.publishDurationMetric(endTime, action, milliseconds);
                 if (error) {
-                    metrics.publishExceptionMetric(new Date(Date.now()), action, error);
+                    await metrics.publishExceptionMetric(new Date(Date.now()), action, error);
                     throw error;
                 }
                 if (progress.callbackContext) {
@@ -393,7 +390,10 @@ export abstract class BaseResource<T extends BaseResourceModel = BaseResourceMod
                 progress = ProgressEvent.failed(HandlerErrorCode.InternalFailure, err.message);
             }
         }
-
+        if (isLogSetup) {
+            const providerLogHandler = ProviderLogHandler.getInstance();
+            await providerLogHandler.processLogs();
+        }
         return progress;
     }
 }

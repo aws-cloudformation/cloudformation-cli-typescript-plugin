@@ -13,7 +13,7 @@ export function formatDimensions(dimensions: Map<string, string>): Array<Dimensi
         formatted.push({
             Name: key,
             Value: value,
-        })
+        });
     });
     return formatted;
 }
@@ -43,6 +43,7 @@ export class MetricPublisher {
                     Value: value,
                 }],
             }).promise();
+            LOGGER.debug('Response from "putMetricData"', metric);
         } catch(err) {
             LOGGER.error(`An error occurred while publishing metrics: ${err.message}`);
         }
@@ -63,20 +64,20 @@ export class MetricsPublisherProxy {
         const suffix = resourceType.replace(/::/g, '/');
         return `${METRIC_NAMESPACE_ROOT}/${accountId}/${suffix}`;
     }
-    
+
     addMetricsPublisher(session?: SessionProxy): void {
         if (session) {
             this.publishers.push(new MetricPublisher(session, this.namespace));
         }
     }
 
-    publishExceptionMetric(timestamp: Date, action: Action, error: Error): void {
+    async publishExceptionMetric(timestamp: Date, action: Action, error: Error): Promise<any> {
         const dimensions = new Map<string, string>();
         dimensions.set('DimensionKeyActionType', action);
-        dimensions.set('DimensionKeyExceptionType', error.constructor.name);
+        dimensions.set('DimensionKeyExceptionType', error['errorCode'] || error.constructor.name);
         dimensions.set('DimensionKeyResourceType', this.resourceType);
-        this.publishers.forEach((publisher: MetricPublisher) => {
-            publisher.publishMetric(
+        const promises: Array<Promise<void>> = this.publishers.map((publisher: MetricPublisher) => {
+            return publisher.publishMetric(
                 MetricTypes.HandlerException,
                 dimensions,
                 StandardUnit.Count,
@@ -84,14 +85,15 @@ export class MetricsPublisherProxy {
                 timestamp,
             );
         });
+        return await Promise.all(promises);
     }
 
-    publishInvocationMetric(timestamp: Date, action: Action): void {
+    async publishInvocationMetric(timestamp: Date, action: Action): Promise<any> {
         const dimensions = new Map<string, string>();
         dimensions.set('DimensionKeyActionType', action);
         dimensions.set('DimensionKeyResourceType', this.resourceType);
-        this.publishers.forEach((publisher: MetricPublisher) => {
-            publisher.publishMetric(
+        const promises: Array<Promise<void>> = this.publishers.map((publisher: MetricPublisher) => {
+            return publisher.publishMetric(
                 MetricTypes.HandlerInvocationCount,
                 dimensions,
                 StandardUnit.Count,
@@ -99,14 +101,15 @@ export class MetricsPublisherProxy {
                 timestamp,
             );
         });
+        return await Promise.all(promises);
     }
 
-    publishDurationMetric(timestamp: Date, action: Action, milliseconds: number): void {
+    async publishDurationMetric(timestamp: Date, action: Action, milliseconds: number): Promise<any> {
         const dimensions = new Map<string, string>();
         dimensions.set('DimensionKeyActionType', action);
         dimensions.set('DimensionKeyResourceType', this.resourceType);
-        this.publishers.forEach((publisher: MetricPublisher) => {
-            publisher.publishMetric(
+        const promises: Array<Promise<void>> = this.publishers.map((publisher: MetricPublisher) => {
+            return publisher.publishMetric(
                 MetricTypes.HandlerInvocationDuration,
                 dimensions,
                 StandardUnit.Milliseconds,
@@ -114,15 +117,16 @@ export class MetricsPublisherProxy {
                 timestamp,
             );
         });
+        return await Promise.all(promises);
     }
 
-    publishLogDeliveryExceptionMetric(timestamp: Date, error: any): void {
+    async publishLogDeliveryExceptionMetric(timestamp: Date, error: any): Promise<any> {
         const dimensions = new Map<string, string>();
         dimensions.set('DimensionKeyActionType', 'ProviderLogDelivery');
-        dimensions.set('DimensionKeyExceptionType', error.constructor.name);
+        dimensions.set('DimensionKeyExceptionType', error['errorCode'] || error.constructor.name);
         dimensions.set('DimensionKeyResourceType', this.resourceType);
-        this.publishers.forEach((publisher: MetricPublisher) => {
-            publisher.publishMetric(
+        const promises: Array<Promise<void>> = this.publishers.map((publisher: MetricPublisher) => {
+            return publisher.publishMetric(
                 MetricTypes.HandlerException,
                 dimensions,
                 StandardUnit.Count,
@@ -130,5 +134,6 @@ export class MetricsPublisherProxy {
                 timestamp,
             );
         });
+        return await Promise.all(promises);
     }
 }

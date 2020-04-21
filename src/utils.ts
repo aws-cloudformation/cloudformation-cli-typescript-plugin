@@ -17,7 +17,7 @@ export type Constructor<T = {}> = new (...args: any[]) => T;
 
 /**
  * Convert minutes to a valid scheduling expression to be used in the AWS Events
- * 
+ *
  * @param {number} minutes Minutes to be converted
  */
 export function minToCron(minutes: number): string {
@@ -25,6 +25,28 @@ export function minToCron(minutes: number): string {
     // add another minute, as per java implementation
     date.setMinutes(date.getMinutes() + minutes + 1);
     return `cron(${date.getMinutes()} ${date.getHours()} ${date.getDate()} ${date.getMonth()} ? ${date.getFullYear()})`;
+}
+
+/**
+ * Wait for a specified amount of time.
+ *
+ * @param {number} seconds Seconds that we will wait
+ */
+export async function delay(seconds: number): Promise<void> {
+    return new Promise(_ => setTimeout(() => _(), seconds * 1000));
+}
+
+/**
+ * Execute promises in sequence (not in parallel as Promise.all)
+ *
+ * @param functions Array of functions that return a promise
+ */
+export async function runInSequence(functions: Array<Promise<any>>): Promise<any[]> {
+    const results = [];
+    for (const fn of functions) {
+        results.push(await fn);
+    }
+    return results;
 }
 
 @allArgsConstructor

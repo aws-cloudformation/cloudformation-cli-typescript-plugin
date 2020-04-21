@@ -30,7 +30,7 @@ const progress: ProgressEvent = ProgressEvent.builder()
     // Required on IN_PROGRESS
     // The number of seconds to delay before re-invocation
     .callbackDelaySeconds(0)
-    
+
     .build()
 ```
 

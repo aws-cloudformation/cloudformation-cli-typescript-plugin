@@ -26,7 +26,6 @@ const mockResult = (output: any): jest.Mock => {
     });
 };
 
-jest.useFakeTimers();
 jest.mock('aws-sdk/clients/cloudformation');
 jest.mock('aws-sdk/clients/cloudwatchevents');
 jest.mock('../../src/callback');
@@ -124,7 +123,7 @@ describe('when getting resource', () => {
         const instance = new Resource(TYPE_NAME, null, handlers);
         return instance;
     }
-    
+
     test('entrypoint handler error', async () => {
         const resource = getResource();
         const event: CfnResponse<Resource> = await resource.entrypoint({}, null);
@@ -514,11 +513,12 @@ describe('when getting resource', () => {
             invokedFunctionArn: 'arn:aaa:bbb:ccc',
             getRemainingTimeInMillis: jest.fn().mockReturnValue(600000),
         } as LambdaContext;
+        const spySetTimeout = jest.spyOn(global, 'setTimeout');
         const reinvoke = await Resource['scheduleReinvocation'](
             request, event, context, session);
         expect(reinvoke).toBe(true);
-        expect(setTimeout).toHaveBeenCalledTimes(1);
-        expect(setTimeout).toHaveBeenCalledWith(expect.any(Function), 5000);
+        expect(spySetTimeout).toHaveBeenCalledTimes(1);
+        expect(spySetTimeout).toHaveBeenCalledWith(expect.any(Function), 5000);
         expect(request.requestContext.invocation).toBe(1);
     });
 
@@ -533,12 +533,13 @@ describe('when getting resource', () => {
             invokedFunctionArn: 'arn:aaa:bbb:ccc',
             getRemainingTimeInMillis: jest.fn().mockReturnValue(6000),
         } as LambdaContext;
+        const spySetTimeout = jest.spyOn(global, 'setTimeout');
         const reinvoke = await Resource['scheduleReinvocation'](
             request, event, context, session);
         expect(reinvoke).toBe(false);
         expect(mockReschedule).toBeCalledTimes(1);
         expect(mockReschedule).toHaveBeenCalledWith(expect.anything(), 'arn:aaa:bbb:ccc', 1, request);
-        expect(setTimeout).not.toHaveBeenCalled();
+        expect(spySetTimeout).not.toHaveBeenCalled();
         expect(request.requestContext.invocation).toBe(1);
     });
 });

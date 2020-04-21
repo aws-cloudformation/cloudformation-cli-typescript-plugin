@@ -1,5 +1,3 @@
-import { allArgsConstructor, builder, IBuilder } from 'tombok';
-
 import { ProgressEvent, SessionProxy } from '../../src/proxy';
 import {
     BaseResourceModel,
@@ -21,7 +19,7 @@ describe('when getting session proxy', () => {
         public somekey: Optional<string>;
         public someotherkey: Optional<string>;
     }
-   
+
     test('get session returns proxy', () => {
         const proxy: SessionProxy = SessionProxy.getSession({
             accessKeyId: '',
@@ -30,7 +28,7 @@ describe('when getting session proxy', () => {
         } as Credentials);
         expect(proxy).toBeInstanceOf(SessionProxy);
     });
-    
+
     test('get session returns null', () => {
         const proxy: SessionProxy = SessionProxy.getSession(null);
         expect(proxy).toBeNull();

@@ -22,7 +22,7 @@ If you are using this package to build resource providers for CloudFormation, in
 
 **Installation**
 
-Because this is a developer preview, you still need to install the plugin using [pip](https://pypi.org/project/pip/) from GitHub.
+Because this is a developer preview, you still need to install the plugin from GitHub using [pip](https://pypi.org/project/pip/).
 
 ```shell
 pip3 install git+https://github.com/eduardomourar/cloudformation-cli-typescript-plugin.git#egg=cloudformation-cli-typescript-plugin
@@ -94,7 +94,7 @@ pip3 install \
 
 That ensures neither is accidentally installed from PyPI.
 
-Linting and running unit tests is done via [pre-commit](https://pre-commit.com/), and so is performed automatically on commit after being installed (`pre-commit install`). The continuous integration also runs these checks. Manual options are available so you don't have to commit:
+Linting and running unit tests is done via [pre-commit](https://pre-commit.com/), and so is performed automatically on commit after being installed (`pre-commit install`).
 
 ```shell
 # run all hooks on all files, mirrors what the CI runs

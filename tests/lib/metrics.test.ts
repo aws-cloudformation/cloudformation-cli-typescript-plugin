@@ -114,11 +114,12 @@ describe('when getting metrics', () => {
         );
     });
 
-    test('publish exception metric', () => {
+    test('publish exception metric', async () => {
         const proxy = new MetricsPublisherProxy(ACCOUNT_ID, RESOURCE_TYPE);
         proxy.addMetricsPublisher(session);
-        proxy.publishExceptionMetric(MOCK_DATE, Action.Create, new Error('fake-err'));
-        expect(putMetricData).toHaveBeenCalledTimes(1);
+        proxy.addMetricsPublisher(session);
+        await proxy.publishExceptionMetric(MOCK_DATE, Action.Create, new Error('fake-err'));
+        expect(putMetricData).toHaveBeenCalledTimes(2);
         expect(putMetricData).toHaveBeenCalledWith({
             MetricData: [{
                 Dimensions: [
@@ -144,10 +145,10 @@ describe('when getting metrics', () => {
         });
     });
 
-    test('publish invocation metric', () => {
+    test('publish invocation metric', async () => {
         const proxy = new MetricsPublisherProxy(ACCOUNT_ID, RESOURCE_TYPE);
         proxy.addMetricsPublisher(session);
-        proxy.publishInvocationMetric(MOCK_DATE, Action.Create);
+        await proxy.publishInvocationMetric(MOCK_DATE, Action.Create);
         expect(putMetricData).toHaveBeenCalledTimes(1);
         expect(putMetricData).toHaveBeenCalledWith({
             MetricData: [{
@@ -170,10 +171,10 @@ describe('when getting metrics', () => {
         });
     });
 
-    test('publish duration metric', () => {
+    test('publish duration metric', async () => {
         const proxy = new MetricsPublisherProxy(ACCOUNT_ID, RESOURCE_TYPE);
         proxy.addMetricsPublisher(session);
-        proxy.publishDurationMetric( MOCK_DATE, Action.Create, 100);
+        await proxy.publishDurationMetric(MOCK_DATE, Action.Create, 100);
         expect(putMetricData).toHaveBeenCalledTimes(1);
         expect(putMetricData).toHaveBeenCalledWith({
             MetricData: [{
@@ -196,10 +197,10 @@ describe('when getting metrics', () => {
         });
     });
 
-    test('publish log delivery exception metric', () => {
+    test('publish log delivery exception metric', async () => {
         const proxy = new MetricsPublisherProxy(ACCOUNT_ID, RESOURCE_TYPE);
         proxy.addMetricsPublisher(session);
-        proxy.publishLogDeliveryExceptionMetric( MOCK_DATE, new TypeError('test'));
+        await proxy.publishLogDeliveryExceptionMetric(MOCK_DATE, new TypeError('test'));
         expect(putMetricData).toHaveBeenCalledTimes(1);
         expect(putMetricData).toHaveBeenCalledWith({
             MetricData: [{
