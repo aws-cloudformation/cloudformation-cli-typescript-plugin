@@ -1,0 +1,86 @@
+---
+name: Continuous Delivery (Release)
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  delivery-nodejs:
+    name: Delivery to NPM
+    runs-on: ubuntu-18.04
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-node@v1
+        with:
+          node-version: 12
+          registry-url: https://registry.npmjs.org/
+      - uses: olegtarasov/get-tag@v2
+        id: tag_name
+        with:
+          tagRegex: 'v(.*)'
+      - name: Install Dependencies and Package Project
+        id: installing
+        run: |
+          npm ci --optional
+          npm pack
+      - name: Upload NPM Artifacts
+        id: upload_npm
+        uses: actions/upload-artifact@v1
+        with:
+          name: package-npm
+          path: cfn-rpdk-${{ steps.tag_name.outputs.tag }}.tgz
+
+  delivery-python:
+    runs-on: ubuntu-18.04
+    strategy:
+      matrix:
+        python: [3.6]
+    steps:
+      - uses: actions/checkout@v2
+      - name: Setup Python ${{ matrix.python }}
+        uses: actions/setup-python@v1
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Install Dependencies and Package Project
+        id: installing
+        run: |
+          python -m pip install --upgrade pip setuptools wheel
+          python3 setup.py sdist bdist_wheel
+      - uses: actions/upload-artifact@v1
+        with:
+          name: dist-py${{ matrix.python }}
+          path: dist
+
+  delivery-github:
+    name: Delivery to GitHub
+    needs: [delivery-nodejs, delivery-python]
+    runs-on: ubuntu-18.04
+    steps:
+      - uses: actions/checkout@v2
+      - name: Download NPM Artifacts
+        uses: actions/download-artifact@v1
+        with:
+          name: package-npm
+      - name: Download Python 3.6 Artifacts
+        uses: actions/download-artifact@v1
+        with:
+          name: dist-py3.6
+          path: dist/
+      - name: List Artifacts
+        run: |
+          echo ::set-env name=ARTIFACTS::$(echo package-npm/* && echo dist/*)
+      - name: GitHub Release
+        id: releasing
+        uses: docker://antonyurchenko/git-release:v3.1.2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DRAFT_RELEASE: 'false'
+          PRE_RELEASE: 'true'
+          CHANGELOG_FILE: 'CHANGELOG.md'
+          ALLOW_EMPTY_CHANGELOG: 'false'
+          ALLOW_TAG_PREFIX: 'true'
+        with:
+          args: |
+              ${{ env.ARTIFACTS }}

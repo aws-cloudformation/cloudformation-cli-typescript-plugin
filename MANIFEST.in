@@ -1,7 +1,10 @@
 include README.md
 include LICENSE
+include Pipfile
+include Pipfile.lock
 
 graft python/rpdk/typescript
+graft tests/plugin
 
 # last rule wins, put excludes last
-global-exclude __pycache__ *.py[co] .DS_Store
+global-exclude __pycache__ *.py[cod] .DS_Store

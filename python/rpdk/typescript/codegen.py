@@ -1,13 +1,11 @@
 import logging
 import shutil
 import zipfile
-from pathlib import PurePosixPath
 from subprocess import PIPE, CalledProcessError, run as subprocess_run  # nosec
 from tempfile import TemporaryFile
 
-from requests.exceptions import ConnectionError as RequestsConnectionError
 from rpdk.core.data_loaders import resource_stream
-from rpdk.core.exceptions import DownstreamError, SysExitRecommendedError
+from rpdk.core.exceptions import DownstreamError
 from rpdk.core.init import input_with_validation
 from rpdk.core.jsonutils.resolver import ContainerType, resolve_models
 from rpdk.core.plugin_base import LanguagePlugin
@@ -20,10 +18,7 @@ LOG = logging.getLogger(__name__)
 EXECUTABLE = "cfn"
 SUPPORT_LIB_NAME = "cfn-rpdk"
 MAIN_HANDLER_FUNCTION = "TypeFunction"
-
-
-class StandardDistNotFoundError(SysExitRecommendedError):
-    pass
+REPO_URL = "https://github.com/eduardomourar/cloudformation-cli-typescript-plugin"
 
 
 def validate_no(value):
@@ -37,6 +32,7 @@ class TypescriptLanguagePlugin(LanguagePlugin):
     ENTRY_POINT = "dist/handlers.entrypoint"
     TEST_ENTRY_POINT = "dist/handlers.testEntrypoint"
     CODE_URI = "./"
+    SUPPORT_LIB_URI = f"{REPO_URL}/releases/download/v0.1.0/cfn-rpdk-0.1.0.tgz"
 
     def __init__(self):
         self.env = self._setup_jinja_env(
@@ -50,6 +46,7 @@ class TypescriptLanguagePlugin(LanguagePlugin):
         self.package_root = None
         self._use_docker = True
         self._build_command = None
+        self._lib_path = None
 
     def _init_from_project(self, project):
         self.namespace = tuple(s.lower() for s in project.type_info)
@@ -57,6 +54,7 @@ class TypescriptLanguagePlugin(LanguagePlugin):
         self._use_docker = project.settings.get("useDocker", True)
         self.package_root = project.root / "src"
         self._build_command = project.settings.get("buildCommand", None)
+        self._lib_path = project.settings.get("supportLibrary", self.SUPPORT_LIB_URI)
 
     def _prompt_for_use_docker(self, project):
         self._use_docker = input_with_validation(
@@ -103,13 +101,16 @@ class TypescriptLanguagePlugin(LanguagePlugin):
 
         # project support files
         _copy_resource(project.root / ".gitignore", "typescript.gitignore")
-        _copy_resource(project.root / ".npmrc", ".npmrc")
-        _copy_resource(project.root / "tsconfig.json", "tsconfig.json")
+        _copy_resource(project.root / ".npmrc")
+        _copy_resource(project.root / "tsconfig.json")
         _render_template(
             project.root / "package.json",
             name=project.hypenated_name,
-            description="AWS custom resource provider named {}.".format(project.type_name),
+            description="AWS custom resource provider named {}.".format(
+                project.type_name
+            ),
             lib_name=SUPPORT_LIB_NAME,
+            lib_path=self._lib_path,
         )
         _render_template(
             project.root / "README.md",
@@ -127,10 +128,7 @@ class TypescriptLanguagePlugin(LanguagePlugin):
             "CodeUri": self.CODE_URI,
         }
         handler_function = {
-            "TestEntrypoint": {
-                **handler_params,
-                "Handler": project.test_entrypoint,
-            },
+            "TestEntrypoint": {**handler_params, "Handler": project.test_entrypoint},
         }
         handler_function[MAIN_HANDLER_FUNCTION] = handler_params
         _render_template(
@@ -152,9 +150,7 @@ class TypescriptLanguagePlugin(LanguagePlugin):
         LOG.debug("Writing file: %s", path)
         template = self.env.get_template("models.ts")
         contents = template.render(
-            lib_name=SUPPORT_LIB_NAME,
-            type_name=project.type_name,
-            models=models,
+            lib_name=SUPPORT_LIB_NAME, type_name=project.type_name, models=models,
         )
         project.overwrite(path, contents)
 
@@ -202,8 +198,8 @@ class TypescriptLanguagePlugin(LanguagePlugin):
 
     @staticmethod
     def _make_build_command(base_path, build_command=None):
-        command = f"sam build --build-dir {base_path}/build"
-        if build_command:
+        command = f"npm install --optional && sam build --build-dir {base_path}/build"
+        if build_command is not None:
             command = build_command
         return command
 
@@ -222,7 +218,11 @@ class TypescriptLanguagePlugin(LanguagePlugin):
         LOG.warning("Starting build.")
         try:
             completed_proc = subprocess_run(  # nosec
-                ["/bin/bash", "-c", command], stdout=PIPE, stderr=PIPE, cwd=base_path, check=True
+                ["/bin/bash", "-c", command],
+                stdout=PIPE,
+                stderr=PIPE,
+                cwd=base_path,
+                check=True,
             )
         except (FileNotFoundError, CalledProcessError) as e:
             raise DownstreamError("local build failed") from e

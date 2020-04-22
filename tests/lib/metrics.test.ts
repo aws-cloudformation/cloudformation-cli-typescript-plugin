@@ -1,5 +1,5 @@
 import CloudWatch from 'aws-sdk/clients/cloudwatch';
-import awsUtil = require('aws-sdk/lib/util');
+import awsUtil from 'aws-sdk/lib/util';
 
 import { Action, MetricTypes, StandardUnit } from '../../src/interface';
 import { SessionProxy } from '../../src/proxy';
@@ -11,7 +11,7 @@ import {
 
 const mockResult = (output: any): jest.Mock => {
     return jest.fn().mockReturnValue({
-        promise: jest.fn().mockResolvedValue(output)
+        promise: jest.fn().mockResolvedValue(output),
     });
 };
 
@@ -19,7 +19,7 @@ const MOCK_DATE = new Date('2020-01-01T23:05:38.964Z');
 const ACCOUNT_ID = '123412341234';
 const RESOURCE_TYPE = 'Aa::Bb::Cc';
 const NAMESPACE = MetricsPublisherProxy.makeNamespace(
-    ACCOUNT_ID, RESOURCE_TYPE
+    ACCOUNT_ID, RESOURCE_TYPE,
 );
 
 jest.mock('aws-sdk/clients/cloudwatch');
@@ -42,7 +42,7 @@ describe('when getting metrics', () => {
                 ...returnValue,
                 makeRequest: (operation: string, params?: {[key: string]: any}) => {
                     return returnValue[operation](params);
-                }
+                },
             };
         });
         session['client'] = cloudwatch;
@@ -73,8 +73,8 @@ describe('when getting metrics', () => {
                     code: 'InternalServiceError',
                     message: 'An error occurred (InternalServiceError) when '
                         + 'calling the PutMetricData operation: ',
-                })
-            )
+                }),
+            ),
         });
         const publisher = new MetricPublisher(session, NAMESPACE);
         const dimensions = new Map<string, string>();
@@ -110,7 +110,7 @@ describe('when getting metrics', () => {
         expect(spyConsoleError).toHaveBeenCalledTimes(1);
         expect(spyConsoleError).toHaveBeenCalledWith('An error occurred while '
             + 'publishing metrics: An error occurred (InternalServiceError) '
-            + 'when calling the PutMetricData operation: '
+            + 'when calling the PutMetricData operation: ',
         );
     });
 

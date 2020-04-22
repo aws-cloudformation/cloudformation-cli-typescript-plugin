@@ -8,8 +8,8 @@ import { BaseResourceModel, CfnResponse, OperationStatus } from './interface';
 const LOGGER = console;
 
 interface ProgressOptions extends CfnResponse<BaseResourceModel> {
-    session: SessionProxy,
-    currentOperationStatus?: OperationStatus,
+    session: SessionProxy;
+    currentOperationStatus?: OperationStatus;
 }
 
 export async function reportProgress(options: ProgressOptions): Promise<void> {
@@ -39,8 +39,8 @@ export async function reportProgress(options: ProgressOptions): Promise<void> {
     }
     if (currentOperationStatus) {
         request.CurrentOperationStatus = currentOperationStatus;
-        const response: { [key: string]: any; } = await client.recordHandlerProgress(request).promise();
-        let requestId: string = '';
+        const response: { [key: string]: any } = await client.recordHandlerProgress(request).promise();
+        let requestId = '';
         if (response['ResponseMetadata']) {
             requestId = response.ResponseMetadata.RequestId;
         }

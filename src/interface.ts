@@ -75,7 +75,7 @@ export class BaseResourceModel {
     protected static readonly TYPE_NAME?: string;
 
     constructor(...args: any[]) {}
-    public static builder() {}
+    public static builder(): any {return null}
 
     public getTypeName(): string {
         return Object.getPrototypeOf(this).constructor.TYPE_NAME;
@@ -91,11 +91,11 @@ export class BaseResourceModel {
         return data;
     }
 
-    public static deserialize(jsonData: Object): ThisType<BaseResourceModel> {
+    public static deserialize(jsonData: any): ThisType<BaseResourceModel> {
         return new this(new Map<string, any>(Object.entries(jsonData)));
     }
 
-    public toObject(): Object {
+    public toObject(): any {
         // @ts-ignore
         const obj = Object.fromEntries(this.serialize().entries());
         return obj;

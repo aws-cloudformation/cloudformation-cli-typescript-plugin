@@ -13,6 +13,7 @@
         "outDir": "dist"
     },
     "include": [
+        "global.d.ts",
         "src/**/*.ts"
     ],
     "exclude": [

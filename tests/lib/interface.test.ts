@@ -25,7 +25,7 @@ describe('when getting interface', () => {
 
     test('base resource model serialize', () => {
         const model = new ResourceModel(new Map(Object.entries({
-            somekey: 'a', someotherkey: null
+            somekey: 'a', someotherkey: null,
         })));
         const serialized = model.serialize();
         expect(serialized.size).toBe(1);
@@ -34,7 +34,7 @@ describe('when getting interface', () => {
 
     test('base resource model to object', () => {
         const model = new ResourceModel(new Map(Object.entries({
-            somekey: 'a', someotherkey: 'b'
+            somekey: 'a', someotherkey: 'b',
         })));
         const obj = model.toObject();
         expect(obj).toMatchObject({

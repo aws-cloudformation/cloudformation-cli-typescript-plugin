@@ -1,0 +1,49 @@
+---
+name: Continuous Integration
+
+on:
+  pull_request:
+    branches:
+      - master
+  push:
+    branches:
+      - master
+
+jobs:
+  test:
+    runs-on: ubuntu-18.04
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v1
+        with:
+          python-version: 3.7
+      - name: Install Dependencies Python
+        id: installation_python
+        run: |
+          pip install --upgrade pip setuptools wheel aws-sam-cli -r https://raw.githubusercontent.com/aws-cloudformation/cloudformation-cli/master/requirements.txt
+          pip install .
+      - uses: actions/setup-node@v1
+        with:
+          node-version: 12
+      - name: Install Dependencies Node.js
+        id: installation_nodejs
+        run: |
+          npm ci --optional
+      - name: Run Tests
+        id: testing
+        run: |
+          pre-commit run --all-files --verbose
+      - name: Upload Artifacts
+        id: upload_artifacts
+        uses: actions/upload-artifact@v1
+        with:
+          name: artifacts
+          path: coverage
+      - name: Run Integration Tests
+        id: integration_testing
+        run: |
+          DIR=$(mktemp -d)
+          cd "$DIR"
+          ls -la
+          printf "AWS::Foo::Bar\n1\nn" | cfn init -vv
+          ls -la

@@ -57,7 +57,7 @@ export const rescheduleAfterMinutes = async (
  * @param targetId the target of the CWE rule which triggered a re-invocation
  */
 export const cleanupCloudwatchEvents = async (
-    session: SessionProxy, ruleName: string, targetId: string
+    session: SessionProxy, ruleName: string, targetId: string,
 ): Promise<void> => {
     const client: CloudWatchEvents = session.client('CloudWatchEvents') as CloudWatchEvents;
     try {
@@ -69,7 +69,7 @@ export const cleanupCloudwatchEvents = async (
         }
     } catch(err) {
         LOGGER.error(
-            `Error cleaning CloudWatchEvents Target (targetId=${targetId}): ${err.message}`
+            `Error cleaning CloudWatchEvents Target (targetId=${targetId}): ${err.message}`,
         );
     }
 
@@ -82,7 +82,7 @@ export const cleanupCloudwatchEvents = async (
         }
     } catch(err) {
         LOGGER.error(
-            `Error cleaning CloudWatchEvents Rule (ruleName=${ruleName}): ${err.message}`
+            `Error cleaning CloudWatchEvents Rule (ruleName=${ruleName}): ${err.message}`,
         );
     }
 }

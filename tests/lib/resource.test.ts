@@ -22,7 +22,7 @@ import { HandlerRequest, LambdaContext } from '../../src/utils';
 
 const mockResult = (output: any): jest.Mock => {
     return jest.fn().mockReturnValue({
-        promise: jest.fn().mockResolvedValue(output)
+        promise: jest.fn().mockResolvedValue(output),
     });
 };
 
@@ -35,7 +35,7 @@ jest.mock('../../src/scheduler');
 
 describe('when getting resource', () => {
 
-    let entrypointPayload: Object;
+    let entrypointPayload: any;
     let mockSession: jest.SpyInstance;
     const TYPE_NAME = 'Test::Foo::Bar';
     class Resource extends BaseResource {};
@@ -59,7 +59,7 @@ describe('when getting resource', () => {
                 ...returnValue,
                 makeRequest: (operation: string, params?: {[key: string]: any}) => {
                     return returnValue[operation](params);
-                }
+                },
             };
         });
         const mockCloudformation = (CloudFormation as unknown) as jest.Mock;
@@ -71,7 +71,7 @@ describe('when getting resource', () => {
                 ...returnValue,
                 makeRequest: (operation: string, params?: {[key: string]: any}) => {
                     return returnValue[operation](params);
-                }
+                },
             };
         });
         entrypointPayload = {
@@ -412,7 +412,7 @@ describe('when getting resource', () => {
         resource.addHandler(Action.Create, jest.fn());
         const payload = new Map(Object.entries({
             credentials: {
-                accessKeyId: '', secretAccessKey: '', sessionToken: ''
+                accessKeyId: '', secretAccessKey: '', sessionToken: '',
             },
             action: 'CREATE',
             request: {
@@ -473,7 +473,7 @@ describe('when getting resource', () => {
         resource.addHandler(Action.Create, mockHandler);
         const payload = {
             credentials: {
-                accessKeyId: '', secretAccessKey: '', sessionToken: ''
+                accessKeyId: '', secretAccessKey: '', sessionToken: '',
             },
             action: 'CREATE',
             request: {

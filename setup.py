@@ -28,6 +28,7 @@ setup(
     description=__doc__,
     long_description=read("README.md"),
     author="eduardomourar",
+    author_email="eduardomourar@users.noreply.github.com",
     url="https://github.com/eduardomourar/cloudformation-cli-typescript-plugin",
     packages=["rpdk.typescript"],
     package_dir={"": "python"},
@@ -35,7 +36,7 @@ setup(
     include_package_data=True,
     zip_safe=True,
     python_requires=">=3.6",
-    install_requires=["cloudformation-cli>=0.1,<0.2", "docker>=3.7,<3.8"],
+    install_requires=["cloudformation-cli>=0.1,<0.2", "aws-lambda-builders>=0.8,<0.9"],
     entry_points={
         "rpdk.v1.languages": [
             "typescript = rpdk.typescript.codegen:TypescriptLanguagePlugin",
@@ -54,6 +55,7 @@ setup(
         "Programming Language :: Python :: 3 :: Only",
         "Programming Language :: Python :: 3.6",
         "Programming Language :: Python :: 3.7",
+        "Programming Language :: Python :: 3.8",
     ],
     keywords="Amazon Web Services AWS CloudFormation",
 )

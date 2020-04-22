@@ -19,8 +19,6 @@ export class SessionProxy {
 
     constructor(private options: ConfigurationOptions) { }
 
-    public resource(): void { }
-
     public client(name: keyof ClientMap, options?: ConfigurationOptions): Client {
         const clients: { [K in keyof ClientMap]: ClientMap[K] } = Aws;
         const service: Client = new clients[name]({
@@ -60,7 +58,7 @@ export class ProgressEvent<R extends BaseResourceModel = BaseResourceModel, T = 
      * can be shown to callers to indicate the nature of a progress transition or
      * callback delay; for example a message indicating "propagating to edge"
      */
-    public message: string = '';
+    public message = '';
 
     /**
      * The callback context is an arbitrary datum which the handler can return in an
@@ -74,7 +72,7 @@ export class ProgressEvent<R extends BaseResourceModel = BaseResourceModel, T = 
      * A callback will be scheduled with an initial delay of no less than the number
      * of seconds specified in the progress event.
      */
-    public callbackDelaySeconds: number = 0;
+    public callbackDelaySeconds = 0;
 
     /**
      * The output resource instance populated by a READ for synchronous results and
@@ -97,9 +95,9 @@ export class ProgressEvent<R extends BaseResourceModel = BaseResourceModel, T = 
     public static builder(template?: Partial<ProgressEvent>): IBuilder<ProgressEvent> {return null}
 
     public serialize(
-        toTesponse: boolean = false, bearerToken?: string
+        toTesponse = false, bearerToken?: string,
     ): Map<string, any> {
-        // To match Java serialization, which drops `null` values, and the
+        // To match Java serialization, which drops 'null' values, and the
         // contract tests currently expect this also.
         const json: Map<string, any> = new Map<string, any>(Object.entries(this));//JSON.parse(JSON.stringify(this)));
         json.forEach((value: any, key: string) => {
@@ -107,7 +105,6 @@ export class ProgressEvent<R extends BaseResourceModel = BaseResourceModel, T = 
                 json.delete(key);
             }
         });
-        // Object.keys(json).forEach((key) => (json[key] == null) && delete json[key]);
         // Mutate to what's expected in the response.
         if (toTesponse) {
             json.set('bearerToken', bearerToken);
@@ -129,7 +126,6 @@ export class ProgressEvent<R extends BaseResourceModel = BaseResourceModel, T = 
             }
         }
         return json;
-        // return new Map(Object.entries(jsonData));
     }
 
     /**
@@ -169,9 +165,9 @@ export class ProgressEvent<R extends BaseResourceModel = BaseResourceModel, T = 
         return event;
     }
 
-    public toObject(): Object {
+    public toObject(): any {
         // @ts-ignore
-        const obj: Object = Object.fromEntries(this.serialize().entries());
+        const obj = Object.fromEntries(this.serialize().entries());
         return obj;
     }
 }
@@ -198,7 +194,5 @@ export class ResourceHandlerRequest<T extends BaseResourceModel> extends BaseRes
     public region: string;
 
     constructor(...args: any[]) {super()}
-    public static builder(template?: Partial<ResourceHandlerRequest<any>>): IBuilder<ResourceHandlerRequest<any>> {
-        return null
-    }
+    public static builder(): any {return null}
 }

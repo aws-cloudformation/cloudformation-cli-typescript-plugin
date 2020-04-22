@@ -4,13 +4,13 @@ import { HandlerErrorCode, OperationStatus } from '../../src/interface';
 describe('when getting exceptions', () => {
     test('all error codes have exceptions', () => {
         expect(exceptions.BaseHandlerException).toBeDefined();
-        for (let errorCode in HandlerErrorCode) {
+        for (const errorCode in HandlerErrorCode) {
             expect(exceptions[errorCode].prototype).toBeInstanceOf(exceptions.BaseHandlerException);
         }
     });
 
     test('exception to progress event', () => {
-        for (let errorCode in HandlerErrorCode) {
+        for (const errorCode in HandlerErrorCode) {
             let e: exceptions.BaseHandlerException;
             try {
                 e = new exceptions[errorCode]();

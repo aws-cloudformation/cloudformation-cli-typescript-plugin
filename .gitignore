@@ -127,6 +127,7 @@ dmypy.json
 .idea/
 .vscode/
 *.tar.gz
+*.tgz
 
 # We want to allow the tests/lib folder
 !tests/lib

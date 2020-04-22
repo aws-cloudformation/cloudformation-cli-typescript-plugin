@@ -1,5 +1,5 @@
 import CloudWatchEvents from 'aws-sdk/clients/cloudwatchevents';
-import awsUtil = require('aws-sdk/lib/util');
+import awsUtil from 'aws-sdk/lib/util';
 
 import { cleanupCloudwatchEvents, rescheduleAfterMinutes } from '../../src/scheduler';
 import { SessionProxy } from '../../src/proxy';
@@ -9,16 +9,16 @@ import * as utils from '../../src/utils';
 
 const mockResult = (output: any): jest.Mock => {
     return jest.fn().mockReturnValue({
-        promise: jest.fn().mockResolvedValue(output)
+        promise: jest.fn().mockResolvedValue(output),
     });
 };
 
-const IDENTIFIER: string = 'f3390613-b2b5-4c31-a4c6-66813dff96a6';
+const IDENTIFIER = 'f3390613-b2b5-4c31-a4c6-66813dff96a6';
 
 jest.mock('aws-sdk/clients/cloudwatchevents');
 jest.mock('uuid', () => {
     return {
-        v4: () => IDENTIFIER
+        v4: () => IDENTIFIER,
     };
 });
 
@@ -55,7 +55,7 @@ describe('when getting scheduler', () => {
                 ...returnValue,
                 makeRequest: (operation: string, params?: {[key: string]: any}) => {
                     return returnValue[operation](params);
-                }
+                },
             };
         });
         session = new SessionProxy({});
@@ -110,7 +110,7 @@ describe('when getting scheduler', () => {
                     Id: `reinvoke-target-${IDENTIFIER}`,
                     Arn: 'arn:goes:here',
                     Input: '{}',
-                }
+                },
             ],
         });
     });

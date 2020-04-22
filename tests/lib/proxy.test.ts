@@ -10,7 +10,7 @@ import {
 
 describe('when getting session proxy', () => {
 
-    const BEARER_TOKEN: string = 'f3390613-b2b5-4c31-a4c6-66813dff96a6';
+    const BEARER_TOKEN = 'f3390613-b2b5-4c31-a4c6-66813dff96a6';
 
     class ResourceModel extends BaseResourceModel {
 
@@ -36,7 +36,7 @@ describe('when getting session proxy', () => {
 
     test('progress event failed is json serializable', () => {
         const errorCode: HandlerErrorCode = HandlerErrorCode.AlreadyExists;
-        const message: string = 'message of failed event';
+        const message = 'message of failed event';
         const event: ProgressEvent = ProgressEvent.failed(errorCode, message);
         expect(event.status).toBe(OperationStatus.Failed);
         expect(event.errorCode).toBe(errorCode);
@@ -51,7 +51,7 @@ describe('when getting session proxy', () => {
     });
 
     test('progress event serialize to response with context', () => {
-        const message: string = 'message of event with context';
+        const message = 'message of event with context';
         const event = ProgressEvent.builder()
             .callbackContext({ a: 'b' })
             .message(message)

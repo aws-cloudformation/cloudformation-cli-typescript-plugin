@@ -138,7 +138,7 @@ export class UnmodeledRequest extends BaseResourceHandlerRequest<BaseResourceMod
 
     constructor(...args: any[]) {super()}
 
-    public static fromUnmodeled(obj: Object): UnmodeledRequest {
+    public static fromUnmodeled(obj: any): UnmodeledRequest {
         const mapped = new Map(Object.entries(obj));
         const request: UnmodeledRequest = new UnmodeledRequest(mapped);
         return request;
@@ -167,9 +167,9 @@ export interface LambdaContext {
  *                 `[Object object]`), it's possible that two keys within the Map may evaluate to the same object key.
  *                 In this case, if the associated values are not the same, throws an Error.
  */
-Map.prototype.toObject = function(): Object {
-    let o: any = {};
-    for (let [key, value] of this.entries()) {
+Map.prototype.toObject = function(): any {
+    const o: any = {};
+    for (const [key, value] of this.entries()) {
         if (o.hasOwnProperty(key) && o[key] !== value) {
             throw new Error(`Duplicate key ${key} found in Map. First value: ${o[key]}, next value: ${value}`);
         }

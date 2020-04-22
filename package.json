@@ -1,17 +1,21 @@
 {
     "name": "cfn-rpdk",
-    "version": "0.0.2",
+    "version": "0.1.0",
     "description": "The CloudFormation Resource Provider Development Kit (RPDK) allows you to author your own resource providers that can be used by CloudFormation. This plugin library helps to provide runtime bindings for the execution of your providers by CloudFormation.",
     "main": "dist/index.js",
     "directories": {
         "test": "tests"
     },
     "files": [
-        "dist"
+        "dist",
+        "global.d.ts"
     ],
     "scripts": {
         "build": "npx tsc",
         "prepack": "npm run build",
+        "postinstall": "npm run build",
+        "lint": "npx eslint '**/*.ts'",
+        "lint:fix": "npx eslint --fix '**/*.ts'",
         "test": "npx jest",
         "test:debug": "npx --node-arg=--inspect jest --runInBand",
         "test:ci": "npx jest --ci --collect-coverage"
@@ -33,7 +37,7 @@
     "dependencies": {
         "autobind-decorator": "^2.4.0",
         "reflect-metadata": "^0.1.13",
-        "tombok": "https://github.com/eduardomourar/tombok/releases/download/v0.0.1/tombok-0.0.1.tar.gz",
+        "tombok": "https://github.com/eduardomourar/tombok/releases/download/v0.0.1/tombok-0.0.1.tgz",
         "uuid": "^7.0.2"
     },
     "devDependencies": {
@@ -41,10 +45,17 @@
         "@types/jest": "^25.1.0",
         "@types/node": "^12.0.0",
         "@types/uuid": "^7.0.0",
+        "@typescript-eslint/eslint-plugin": "^2.29.0",
+        "@typescript-eslint/parser": "^2.19.2",
+        "eslint": "^6.8.0",
+        "eslint-import-resolver-node": "^0.3.3",
+        "eslint-import-resolver-typescript": "^2.0.0",
+        "eslint-plugin-import": "^2.20.2",
+        "eslint-plugin-prefer-arrow": "^1.1.7",
         "jest": "^25.3.0",
         "minimist": ">=1.2.5",
         "ts-jest": "^25.4.0",
-        "typescript": "^3.8.3"
+        "typescript": "^3.7.0"
     },
     "optionalDependencies": {
         "aws-sdk": "^2.656.0"

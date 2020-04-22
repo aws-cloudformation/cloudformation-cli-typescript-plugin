@@ -16,12 +16,12 @@ import { HandlerRequest, runInSequence } from './utils';
 
 type Console = globalThis.Console;
 
-interface ILogOptions {
-    groupName: string,
-    stream: string,
-    session: SessionProxy,
-    logger?: Console,
-    accountId?: string,
+interface LogOptions {
+    groupName: string;
+    stream: string;
+    session: SessionProxy;
+    logger?: Console;
+    accountId?: string;
 }
 
 class LogEmitter extends EventEmitter {}
@@ -30,7 +30,7 @@ export class ProviderLogHandler {
     private static instance: ProviderLogHandler;
     public emitter: LogEmitter;
     public client: CloudWatchLogs;
-    public sequenceToken: string = '';
+    public sequenceToken = '';
     public accountId: string;
     public groupName: string;
     public stream: string;
@@ -42,7 +42,7 @@ export class ProviderLogHandler {
      * The ProviderLogHandler's constructor should always be private to prevent direct
      * construction calls with the `new` operator.
      */
-    private constructor(options: ILogOptions) {
+    private constructor(options: LogOptions) {
         this.accountId = options.accountId;
         this.groupName = options.groupName;
         this.stream = options.stream.replace(/:/g, '__');
@@ -60,7 +60,7 @@ export class ProviderLogHandler {
         Object.entries(this.logger).forEach(([key, val]) => {
             if (typeof val === 'function') {
                 if (['log', 'error', 'warn', 'info'].includes(key)) {
-                    this.logger[key as 'log' | 'error' | 'warn' | 'info'] = function(...args: any[]) {
+                    this.logger[key as 'log' | 'error' | 'warn' | 'info'] = function(...args: any[]): void {
                         // For adding other event watchers later.
                         setImmediate(() => emitter.emit('log', ...args));
 
@@ -104,10 +104,10 @@ export class ProviderLogHandler {
     }
 
     public static async setup(
-        request: HandlerRequest, providerSession?: SessionProxy
+        request: HandlerRequest, providerSession?: SessionProxy,
     ): Promise<boolean> {
         const logGroup: string = request.requestData?.providerLogGroupName;
-        let streamName: string = `${request.awsAccountId}-${request.region}`;
+        let streamName = `${request.awsAccountId}-${request.region}`;
         if (request.stackId && request.requestData?.logicalResourceId) {
             streamName = `${request.stackId}/${request.requestData.logicalResourceId}`;
         }

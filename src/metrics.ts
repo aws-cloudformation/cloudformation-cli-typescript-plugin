@@ -2,6 +2,7 @@ import CloudWatch, { Dimension } from 'aws-sdk/clients/cloudwatch';
 
 import { SessionProxy } from './proxy';
 import { Action, MetricTypes, StandardUnit } from './interface';
+import { BaseHandlerException } from './exceptions';
 
 
 const LOGGER = console;
@@ -74,7 +75,7 @@ export class MetricsPublisherProxy {
     async publishExceptionMetric(timestamp: Date, action: Action, error: Error): Promise<any> {
         const dimensions = new Map<string, string>();
         dimensions.set('DimensionKeyActionType', action);
-        dimensions.set('DimensionKeyExceptionType', error['errorCode'] || error.constructor.name);
+        dimensions.set('DimensionKeyExceptionType', (error as BaseHandlerException).errorCode || error.constructor.name);
         dimensions.set('DimensionKeyResourceType', this.resourceType);
         const promises: Array<Promise<void>> = this.publishers.map((publisher: MetricPublisher) => {
             return publisher.publishMetric(
@@ -120,10 +121,10 @@ export class MetricsPublisherProxy {
         return await Promise.all(promises);
     }
 
-    async publishLogDeliveryExceptionMetric(timestamp: Date, error: any): Promise<any> {
+    async publishLogDeliveryExceptionMetric(timestamp: Date, error: Error): Promise<any> {
         const dimensions = new Map<string, string>();
         dimensions.set('DimensionKeyActionType', 'ProviderLogDelivery');
-        dimensions.set('DimensionKeyExceptionType', error['errorCode'] || error.constructor.name);
+        dimensions.set('DimensionKeyExceptionType', (error as BaseHandlerException).errorCode || error.constructor.name);
         dimensions.set('DimensionKeyResourceType', this.resourceType);
         const promises: Array<Promise<void>> = this.publishers.map((publisher: MetricPublisher) => {
             return publisher.publishMetric(

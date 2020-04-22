@@ -10,16 +10,16 @@ import {
 
 const mockResult = (output: any): jest.Mock => {
     return jest.fn().mockReturnValue({
-        promise: jest.fn().mockResolvedValue(output)
+        promise: jest.fn().mockResolvedValue(output),
     });
 };
 
-const IDENTIFIER: string = 'f3390613-b2b5-4c31-a4c6-66813dff96a6';
+const IDENTIFIER = 'f3390613-b2b5-4c31-a4c6-66813dff96a6';
 
 jest.mock('aws-sdk/clients/cloudformation');
 jest.mock('uuid', () => {
     return {
-        v4: () => IDENTIFIER
+        v4: (): string => IDENTIFIER,
     };
 });
 
@@ -30,18 +30,18 @@ describe('when getting callback', () => {
 
     beforeEach(() => {
         recordHandlerProgress = mockResult({
-            ResponseMetadata: {RequestId: 'mock-request'}
+            ResponseMetadata: {RequestId: 'mock-request'},
         });
         const cfn = (CloudFormation as unknown) as jest.Mock;
         cfn.mockImplementation(() => {
             const returnValue = {
-                recordHandlerProgress
+                recordHandlerProgress,
             };
             return {
                 ...returnValue,
-                makeRequest: (operation: string, params?: {[key: string]: any}) => {
+                makeRequest: (operation: string, params?: {[key: string]: any}): any => {
                     return returnValue[operation](params);
-                }
+                },
             };
         });
         session = new SessionProxy({});

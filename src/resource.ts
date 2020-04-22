@@ -41,7 +41,7 @@ class HandlerEvents extends Map<Action, string | symbol> {};
  *
  * @returns {MethodDecorator}
  */
-function ensureSerialize(toResponse: boolean = false): MethodDecorator {
+function ensureSerialize(toResponse = false): MethodDecorator {
     return function(target: any, propertyKey: string, descriptor: PropertyDescriptor): PropertyDescriptor {
         type Resource = typeof target;
         // Save a reference to the original method this way we keep the values currently in the
@@ -51,7 +51,7 @@ function ensureSerialize(toResponse: boolean = false): MethodDecorator {
         }
         const originalMethod = descriptor.value;
         // Wrapping the original method with new signature.
-        descriptor.value = async function(event: Object | Map<string, any>, context: any): Promise<ProgressEvent | CfnResponse<Resource>> {
+        descriptor.value = async function(event: any | Map<string, any>, context: any): Promise<ProgressEvent | CfnResponse<Resource>> {
             let mappedEvent: Map<string, any>;
             if (event instanceof Map) {
                 mappedEvent = new Map<string, any>(event);
@@ -68,26 +68,6 @@ function ensureSerialize(toResponse: boolean = false): MethodDecorator {
             return Promise.resolve(progress);
         }
         return descriptor;
-    }
-}
-
-/**
- * Decorates a method to point to the proper action
- *
- * @returns {MethodDecorator}
- */
-export function handlerEvent(action: Action): MethodDecorator {
-    return function(target: any, propertyKey: string | symbol, descriptor: PropertyDescriptor): PropertyDescriptor {
-        if (target instanceof BaseResource) {
-            const actions: HandlerEvents = Reflect.getMetadata('handlerEvents', target) || new HandlerEvents();
-            if (!actions.has(action)) {
-                actions.set(action, propertyKey);
-            }
-            Reflect.defineMetadata('handlerEvents', actions, target);
-        }
-        if (descriptor) {
-            return descriptor;
-        }
     }
 }
 
@@ -153,7 +133,7 @@ export abstract class BaseResource<T extends BaseResourceModel = BaseResourceMod
         const handle: HandlerSignature = this.handlers.get(action);
         if (!handle) {
             return ProgressEvent.failed(
-                HandlerErrorCode.InternalFailure, `No handler for ${action}`
+                HandlerErrorCode.InternalFailure, `No handler for ${action}`,
             );
         }
         const progress = await handle(session, request, callbackContext);
@@ -166,7 +146,7 @@ export abstract class BaseResource<T extends BaseResourceModel = BaseResourceMod
     }
 
     private parseTestRequest = (
-        eventData: Map<string, any>
+        eventData: Map<string, any>,
     ): [
         Optional<SessionProxy>,
         BaseResourceHandlerRequest<T>,
@@ -205,12 +185,12 @@ export abstract class BaseResource<T extends BaseResourceModel = BaseResourceMod
 
     // @ts-ignore
     public async testEntrypoint (
-        eventData: Object | Map<string, any>, context: any
+        eventData: any | Map<string, any>, context: any
     ): Promise<ProgressEvent>;
     @boundMethod
     @ensureSerialize()
     public async testEntrypoint(
-        eventData: Map<string, any>, context: any
+        eventData: Map<string, any>, context: any,
     ): Promise<ProgressEvent> {
         let msg = 'Uninitialized';
         let progress: ProgressEvent;
@@ -231,7 +211,7 @@ export abstract class BaseResource<T extends BaseResourceModel = BaseResourceMod
     }
 
     private static parseRequest = (
-        eventData: Map<string, any>
+        eventData: Map<string, any>,
     ): [
         [Optional<SessionProxy>, Optional<SessionProxy>, SessionProxy],
         Action,
@@ -272,7 +252,7 @@ export abstract class BaseResource<T extends BaseResourceModel = BaseResourceMod
     }
 
     private castResourceRequest = (
-        request: HandlerRequest
+        request: HandlerRequest,
     ): BaseResourceHandlerRequest<T> => {
         try {
             const unmodeled: UnmodeledRequest = UnmodeledRequest.fromUnmodeled({
@@ -290,15 +270,15 @@ export abstract class BaseResource<T extends BaseResourceModel = BaseResourceMod
 
     // @ts-ignore
     public async entrypoint (
-        eventData: Object | Map<string, any>, context: LambdaContext
+        eventData: any | Map<string, any>, context: LambdaContext
     ): Promise<CfnResponse<BaseResource>>;
     @boundMethod
     @ensureSerialize(true)
     public async entrypoint (
-        eventData: Map<string, any>, context: LambdaContext
+        eventData: Map<string, any>, context: LambdaContext,
     ): Promise<ProgressEvent> {
 
-        let isLogSetup: boolean = false;
+        let isLogSetup = false;
         let progress: ProgressEvent;
 
         const printOrLog = (message: string): void => {
@@ -340,14 +320,14 @@ export abstract class BaseResource<T extends BaseResourceModel = BaseResourceMod
                     event.requestContext.cloudWatchEventsTargetId || '',
                 );
             }
-            let invoke: boolean = true;
+            let invoke = true;
             while (invoke) {
                 const startTime = new Date(Date.now());
                 await metrics.publishInvocationMetric(startTime, action);
                 let error: Error;
                 try {
                     progress = await this.invokeHandler(
-                        callerSession, request, action, callback
+                        callerSession, request, action, callback,
                     );
                 } catch(err) {
                     error = err;
@@ -378,7 +358,7 @@ export abstract class BaseResource<T extends BaseResourceModel = BaseResourceMod
                     });
                 }
                 invoke = await BaseResource.scheduleReinvocation(
-                    event, progress, context, platformSession
+                    event, progress, context, platformSession,
                 );
             }
         } catch(err) {
@@ -395,5 +375,26 @@ export abstract class BaseResource<T extends BaseResourceModel = BaseResourceMod
             await providerLogHandler.processLogs();
         }
         return progress;
+    }
+}
+
+
+/**
+ * Decorates a method to point to the proper action
+ *
+ * @returns {MethodDecorator}
+ */
+export function handlerEvent(action: Action): MethodDecorator {
+    return function(target: any, propertyKey: string | symbol, descriptor: PropertyDescriptor): PropertyDescriptor {
+        if (target instanceof BaseResource) {
+            const actions: HandlerEvents = Reflect.getMetadata('handlerEvents', target) || new HandlerEvents();
+            if (!actions.has(action)) {
+                actions.set(action, propertyKey);
+            }
+            Reflect.defineMetadata('handlerEvents', actions, target);
+        }
+        if (descriptor) {
+            return descriptor;
+        }
     }
 }

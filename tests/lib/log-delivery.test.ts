@@ -1,7 +1,7 @@
 import { v4 as uuidv4 } from 'uuid';
 import CloudWatchLogs from 'aws-sdk/clients/cloudwatchlogs';
 import S3 from 'aws-sdk/clients/s3';
-import awsUtil = require('aws-sdk/lib/util');
+import awsUtil from 'aws-sdk/lib/util';
 
 import { Action } from '../../src/interface';
 import { SessionProxy } from '../../src/proxy';
@@ -11,11 +11,11 @@ import { HandlerRequest, RequestData } from '../../src/utils';
 
 const mockResult = (output: any): jest.Mock => {
     return jest.fn().mockReturnValue({
-        promise: jest.fn().mockResolvedValue(output)
+        promise: jest.fn().mockResolvedValue(output),
     });
 };
 
-const IDENTIFIER: string = 'f3390613-b2b5-4c31-a4c6-66813dff96a6';
+const IDENTIFIER = 'f3390613-b2b5-4c31-a4c6-66813dff96a6';
 
 const AWS_CONFIG = {
     region: 'us-east-1',
@@ -24,10 +24,10 @@ const AWS_CONFIG = {
 };
 
 jest.mock('aws-sdk/clients/cloudwatchlogs');
-jest.mock('aws-sdk/clients/S3');
+jest.mock('aws-sdk/clients/s3');
 jest.mock('uuid', () => {
     return {
-        v4: () => IDENTIFIER
+        v4: () => IDENTIFIER,
     };
 });
 
@@ -64,7 +64,7 @@ describe('when delivering log', () => {
                 config: AWS_CONFIG,
                 makeRequest: (operation: string, params?: {[key: string]: any}) => {
                     return returnValue[operation](params);
-                }
+                },
             };
         });
         createBucket = mockResult({ ResponseMetadata: { RequestId: 'mock-request' }});
@@ -80,7 +80,7 @@ describe('when delivering log', () => {
                 config,
                 makeRequest: (operation: string, params?: {[key: string]: any}) => {
                     return returnValue[operation](params);
-                }
+                },
             };
         });
         session['client'] = cwLogs;
@@ -215,8 +215,8 @@ describe('when delivering log', () => {
         await ['createLogGroup', 'createLogStream'].forEach(async (methodName: string) => {
             const mockLogsMethod: jest.Mock = jest.fn().mockReturnValue({
                 promise: jest.fn().mockRejectedValueOnce(
-                    awsUtil.error(new Error(), { code: 'ResourceAlreadyExistsException' })
-                )
+                    awsUtil.error(new Error(), { code: 'ResourceAlreadyExistsException' }),
+                ),
             });
             providerLogHandler.client[methodName] = mockLogsMethod;
             // Should not raise an exception if the log group already exists.
@@ -230,8 +230,8 @@ describe('when delivering log', () => {
             providerLogHandler.sequenceToken = sequenceToken;
             const mockPut: jest.Mock = jest.fn().mockReturnValue({
                 promise: jest.fn().mockResolvedValueOnce(
-                    { nextSequenceToken: 'some-other-seq' }
-                )
+                    { nextSequenceToken: 'some-other-seq' },
+                ),
             });
             providerLogHandler.client.putLogEvents = mockPut;
             await providerLogHandler['putLogEvents']({
@@ -245,12 +245,12 @@ describe('when delivering log', () => {
     test('put log event invalid token', async () => {
         putLogEvents.mockReturnValue({
             promise: jest.fn().mockRejectedValueOnce(
-                awsUtil.error(new Error(), { code: 'InvalidSequenceTokenException' })
+                awsUtil.error(new Error(), { code: 'InvalidSequenceTokenException' }),
             ).mockRejectedValueOnce(
-                awsUtil.error(new Error(), { code: 'DataAlreadyAcceptedException' })
+                awsUtil.error(new Error(), { code: 'DataAlreadyAcceptedException' }),
             ).mockResolvedValue(
-                { nextSequenceToken: 'some-other-seq' }
-            )
+                { nextSequenceToken: 'some-other-seq' },
+            ),
         });
         for(let i = 1; i < 4; i++) {
             await providerLogHandler['putLogEvents']({
@@ -280,7 +280,7 @@ describe('when delivering log', () => {
                 awsUtil.error(new Error(), {
                     code: 'ResourceNotFoundException',
                     message: 'log group does not exist',
-                })
+                }),
             );
         const createLogGroup: jest.Mock = jest.fn();
         const createLogStream: jest.Mock = jest.fn();
@@ -297,7 +297,7 @@ describe('when delivering log', () => {
             awsUtil.error(new Error(), {
                 code: 'ResourceNotFoundException',
                 message: 'log stream does not exist',
-            })
+            }),
         );
         providerLogHandler.emitter.emit('log', 'log-msg');
         expect(providerLogHandler['stack'].length).toBe(1);
@@ -324,7 +324,7 @@ describe('when delivering log', () => {
                 awsUtil.error(new Error(), {
                     code: 'NoSuchBucket',
                     message: 'bucket does not exist',
-                })
+                }),
             );
         const createBucket: jest.Mock = jest.fn();
         providerLogHandler['putLogObject'] = putLogObject;
@@ -332,7 +332,7 @@ describe('when delivering log', () => {
         providerLogHandler['deliverLogCloudWatch'] = jest.fn().mockRejectedValue(new Error(''));
         await providerLogHandler['initialize']();
         expect(providerLogHandler.clientS3.config).toEqual(
-            expect.objectContaining(AWS_CONFIG)
+            expect.objectContaining(AWS_CONFIG),
         );
         await providerLogHandler['deliverLogS3'](['log-msg1']);
         providerLogHandler.emitter.emit('log', 'log-msg2');
@@ -344,7 +344,7 @@ describe('when delivering log', () => {
             awsUtil.error(new Error(), {
                 statusCode: 400,
                 message: '',
-            })
+            }),
         );
         jest.useFakeTimers();
         providerLogHandler.logger.log('log-msg1');

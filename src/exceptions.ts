@@ -2,9 +2,9 @@ import { HandlerErrorCode } from './interface';
 import { ProgressEvent } from './proxy';
 
 export abstract class BaseHandlerException extends Error {
-    static serialVersionUID: number = -1646136434112354328;
+    static serialVersionUID = -1646136434112354328;
 
-    private errorCode: HandlerErrorCode;
+    public errorCode: HandlerErrorCode;
 
     public constructor(message? : any, errorCode? : HandlerErrorCode) {
         super(message);
@@ -28,7 +28,7 @@ export class InvalidCredentials extends BaseHandlerException {}
 export class AlreadyExists extends BaseHandlerException {
     constructor(typeName: string, identifier: string) {
         super(
-            `Resource of type '${typeName}' with identifier '${identifier}' already exists.`
+            `Resource of type '${typeName}' with identifier '${identifier}' already exists.`,
         )
     }
 }
@@ -36,7 +36,7 @@ export class AlreadyExists extends BaseHandlerException {
 export class NotFound extends BaseHandlerException {
     constructor(typeName: string, identifier: string) {
         super(
-            `Resource of type '${typeName}' with identifier '${identifier}' was not found.`
+            `Resource of type '${typeName}' with identifier '${identifier}' was not found.`,
         )
     }
 }

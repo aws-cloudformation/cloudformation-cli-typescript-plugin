@@ -1,3 +1,7 @@
+import re
+
+from rpdk.core.exceptions import WizardValidationError
+
 # https://github.com/Microsoft/TypeScript/issues/2536
 LANGUAGE_KEYWORDS = {
     "abstract",
@@ -79,3 +83,19 @@ def safe_reserved(token):
     if token in LANGUAGE_KEYWORDS:
         return token + "_"
     return token
+
+
+def validate_codegen_model(default):
+    pattern = r"^[1-2]$"
+
+    def _validate_codegen_model(value):
+        if not value:
+            return default
+
+        match = re.match(pattern, value)
+        if not match:
+            raise WizardValidationError("Invalid selection.")
+
+        return value
+
+    return _validate_codegen_model
