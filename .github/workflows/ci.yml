@@ -1,5 +1,6 @@
 ---
-name: Continuous Integration
+# Continous Integration
+name: ci
 
 on:
   pull_request:
@@ -10,8 +11,14 @@ on:
       - master
 
 jobs:
-  test:
+  build:
     runs-on: ubuntu-18.04
+    env:
+      SAM_CLI_TELEMETRY: "0"
+      AWS_REGION: "us-east-1"
+      AWS_DEFAULT_REGION: "us-east-1"
+      AWS_ACCESS_KEY_ID: "AKIAIOSFODNN7EXAMPLE"
+      AWS_SECRET_ACCESS_KEY: "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-python@v1
@@ -28,17 +35,23 @@ jobs:
       - name: Install Dependencies Node.js
         id: installation_nodejs
         run: |
-          npm ci --optional
-      - name: Run Tests
-        id: testing
+          npm ci --optional && npm run build
+      - name: Run Unit Tests
+        id: unit_testing
         run: |
           pre-commit run --all-files --verbose
+      - name: Upload Coverage
+        id: coverage
+        run: |
+          curl -s https://codecov.io/bash > codecov.sh
+          bash codecov.sh -f coverage/py/coverage.xml -F unittests -n codecov-python
+          bash codecov.sh -f coverage/ts/coverage-final.json -F unittests -n codecov-typescript
       - name: Upload Artifacts
         id: upload_artifacts
         uses: actions/upload-artifact@v1
         with:
-          name: artifacts
-          path: coverage
+          name: coverage
+          path: coverage/
       - name: Run Integration Tests
         id: integration_testing
         run: |
@@ -47,5 +60,6 @@ jobs:
           ls -la
           printf "AWS::Foo::Bar\n1\nn" | cfn init -vv
           ls -la
-          npm install --optional
-          npm run build
+          cfn validate -vv && cfn generate -vv
+          cfn submit --dry-run -vv
+          sam local invoke --debug --event sam-tests/create.json TestEntrypoint

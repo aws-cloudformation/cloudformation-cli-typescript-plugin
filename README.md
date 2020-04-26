@@ -1,15 +1,14 @@
 # DEVELOPER PREVIEW (COMMUNITY DRIVEN)
 
+[![License MIT](https://img.shields.io/badge/license-MIT-brightgreen.svg)](https://opensource.org/licenses/MIT) [![contributions welcome](https://img.shields.io/badge/contributions-welcome-brightgreen.svg?style=flat)](https://github.com/eduardomourar/cloudformation-cli-typescript-plugin/issues) [![Project Status: WIP – Initial development](https://www.repostatus.org/badges/latest/wip.svg)](https://www.repostatus.org/#wip)
+
 We're excited to share our progress with adding new languages to the CloudFormation CLI!
 > This plugin is an early preview prepared by the community, and not ready for production use.
 
-
-[![License MIT](https://img.shields.io/badge/license-MIT-brightgreen.svg)](https://opensource.org/licenses/MIT) [![contributions welcome](https://img.shields.io/badge/contributions-welcome-brightgreen.svg?style=flat)](https://github.com/eduardomourar/cloudformation-cli-typescript-plugin/issues) [![Project Status: WIP – Initial development](https://www.repostatus.org/badges/latest/wip.svg)](https://www.repostatus.org/#wip)
-
-![GitHub Workflow Status](https://img.shields.io/github/workflow/status/eduardomourar/cloudformation-cli-typescript-plugin/Continuous%20Integration) ![GitHub release](https://img.shields.io/github/v/release/eduardomourar/cloudformation-cli-typescript-plugin?include_prereleases)
-[![nodejs version](https://img.shields.io/badge/dynamic/json?color=brightgreen&url=https://raw.githubusercontent.com/eduardomourar/cloudformation-cli-typescript-plugin/master/package.json&query=$.engines.node&label=nodejs)](https://nodejs.org/)
-
 ## AWS CloudFormation Resource Provider TypeScript Plugin
+
+![GitHub Workflow Status](https://img.shields.io/github/workflow/status/eduardomourar/cloudformation-cli-typescript-plugin/ci) ![Codecov](https://img.shields.io/codecov/c/gh/eduardomourar/cloudformation-cli-typescript-plugin) ![GitHub release](https://img.shields.io/github/v/release/eduardomourar/cloudformation-cli-typescript-plugin?include_prereleases)
+[![Node.js version](https://img.shields.io/badge/dynamic/json?color=brightgreen&url=https://raw.githubusercontent.com/eduardomourar/cloudformation-cli-typescript-plugin/master/package.json&query=$.engines.node&label=nodejs)](https://nodejs.org/)
 
 The CloudFormation CLI (cfn) allows you to author your own resource providers that can be used by CloudFormation.
 
@@ -57,26 +56,7 @@ with cross-platform Typescript packaging.
 >> y
 Initialized a new project in <>
 $ cfn submit --dry-run
-$ cat test.json
-{
-  "credentials": {
-    "accessKeyId": "",
-    "secretAccessKey": "",
-    "sessionToken": ""
-  },
-  "action": "CREATE",
-  "request": {
-    "clientRequestToken": "ecba020e-b2e6-4742-a7d0-8a06ae7c4b2b",
-    "desiredResourceState": {
-      "Title": "foo",
-      "Description": "bar"
-    },
-    "previousResourceState": null,
-    "logicalResourceIdentifier": null
-  },
-  "callbackContext": null
-}
-$ sam local invoke TestEntrypoint --event test.json
+$ sam local invoke --event sam-tests/create.json TestEntrypoint
 ```
 
 Development

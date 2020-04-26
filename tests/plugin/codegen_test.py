@@ -96,6 +96,8 @@ def test_initialize(project: Project):
         "foo-bar-baz.json",
         "package.json",
         "README.md",
+        "sam-tests",
+        "sam-tests/create.json",
         "src",
         "src/handlers.ts",
         "template.yml",

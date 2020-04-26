@@ -13,6 +13,7 @@ module.exports = {
             statements: 90,
         },
     },
+    coverageDirectory: 'coverage/ts',
     collectCoverage: true,
-    coverageReporters: ['lcov', 'html', 'text-summary'],
+    coverageReporters: ['json', 'lcov', 'text'],
 };

@@ -1,5 +1,6 @@
 ---
-name: Continuous Delivery (Release)
+# Continuous Delivery (Release)
+name: cd
 
 on:
   push:
@@ -8,7 +9,7 @@ on:
 
 jobs:
   delivery-nodejs:
-    name: Delivery to NPM
+    name: Prepare for NPM
     runs-on: ubuntu-18.04
     steps:
       - uses: actions/checkout@v2
@@ -33,6 +34,7 @@ jobs:
           path: cfn-rpdk-${{ steps.tag_name.outputs.tag }}.tgz
 
   delivery-python:
+    name: Prepare for PyPI
     runs-on: ubuntu-18.04
     strategy:
       matrix:
