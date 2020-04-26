@@ -3,12 +3,7 @@ module.exports = {
         jest: true,
         node: true,
     },
-    plugins: [
-        '@typescript-eslint',
-        'prettier',
-        'import',
-        'prefer-arrow',
-    ],
+    plugins: ['@typescript-eslint', 'prettier', 'import', 'prefer-arrow'],
     parser: '@typescript-eslint/parser',
     parserOptions: {
         ecmaVersion: '2017',
@@ -28,19 +23,19 @@ module.exports = {
             node: {},
             typescript: {
                 directory: './tsconfig.eslint.json',
-            }
-        }
+            },
+        },
     },
-    ignorePatterns: ['*.js', '*.d.ts', 'node_modules/', '*.generated.ts'],
+    ignorePatterns: ['*.d.ts', '*.generated.ts'],
     rules: {
         // Require use of the `import { foo } from 'bar';` form instead of `import foo = require('bar');`
         '@typescript-eslint/no-require-imports': ['error'],
 
+        '@typescript-eslint/ban-ts-ignore': ['warn'],
+        '@typescript-eslint/no-empty-function': ['warn'],
+
         // Require all imported dependencies are actually declared in package.json
         'import/no-extraneous-dependencies': ['error'],
         'import/no-unresolved': ['error'],
-
-        '@typescript-eslint/ban-ts-ignore': ['warn'],
-        '@typescript-eslint/no-empty-function': ['warn'],
-    }
-}
+    },
+};

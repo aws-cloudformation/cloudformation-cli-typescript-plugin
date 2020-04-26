@@ -5,7 +5,6 @@ import {
 } from 'aws-sdk/clients/cloudformation';
 import { allArgsConstructor, builder } from 'tombok';
 
-
 export type Optional<T> = T | undefined | null;
 
 export interface Callable<R extends Array<any>, T> {
@@ -75,7 +74,9 @@ export class BaseResourceModel {
     protected static readonly TYPE_NAME?: string;
 
     constructor(...args: any[]) {}
-    public static builder(): any {return null}
+    public static builder(): any {
+        return null;
+    }
 
     public getTypeName(): string {
         return Object.getPrototypeOf(this).constructor.TYPE_NAME;

@@ -75,7 +75,7 @@ repos:
       - id: jest-local
         name: jest-local
         description: Run jest in the local environment
-        entry: npm run test:ci
+        entry: npx jest --ci
         language: system
         # ignore all files, run on hard-coded modules instead
         pass_filenames: false

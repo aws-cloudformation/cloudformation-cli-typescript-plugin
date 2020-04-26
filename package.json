@@ -13,12 +13,10 @@
     "scripts": {
         "build": "npx tsc",
         "prepack": "npm run build",
-        "postinstall": "npm run build",
-        "lint": "npx eslint '**/*.ts'",
-        "lint:fix": "npx eslint --fix '**/*.ts'",
+        "lint": "npx eslint --ext .ts,.js .",
+        "lint:fix": "npx eslint --fix --ext .ts,.js .",
         "test": "npx jest",
-        "test:debug": "npx --node-arg=--inspect jest --runInBand",
-        "test:ci": "npx jest --ci --collect-coverage"
+        "test:debug": "npx --node-arg=--inspect jest --runInBand"
     },
     "engines": {
         "node": ">=10.0.0",

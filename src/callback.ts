@@ -4,7 +4,6 @@ import CloudFormation from 'aws-sdk/clients/cloudformation';
 import { SessionProxy } from './proxy';
 import { BaseResourceModel, CfnResponse, OperationStatus } from './interface';
 
-
 const LOGGER = console;
 
 interface ProgressOptions extends CfnResponse<BaseResourceModel> {
@@ -13,7 +12,6 @@ interface ProgressOptions extends CfnResponse<BaseResourceModel> {
 }
 
 export async function reportProgress(options: ProgressOptions): Promise<void> {
-
     const {
         session,
         bearerToken,
@@ -39,11 +37,16 @@ export async function reportProgress(options: ProgressOptions): Promise<void> {
     }
     if (currentOperationStatus) {
         request.CurrentOperationStatus = currentOperationStatus;
-        const response: { [key: string]: any } = await client.recordHandlerProgress(request).promise();
+        const response: { [key: string]: any } = await client
+            .recordHandlerProgress(request)
+            .promise();
         let requestId = '';
         if (response['ResponseMetadata']) {
             requestId = response.ResponseMetadata.RequestId;
         }
-        LOGGER.debug(`Record Handler Progress with Request Id ${requestId} and Request:`, request);
+        LOGGER.debug(
+            `Record Handler Progress with Request Id ${requestId} and Request:`,
+            request
+        );
     }
 }

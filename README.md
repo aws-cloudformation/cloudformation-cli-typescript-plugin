@@ -100,7 +100,7 @@ pip3 install \
 
 That ensures neither is accidentally installed from PyPI.
 
-Linting and running unit tests is done via [pre-commit](https://pre-commit.com/), and so is performed automatically on commit after being installed (`pre-commit install`).
+Linting and running unit tests is done via [pre-commit](https://pre-commit.com/), and so is performed automatically on commit after being installed (`pre-commit install`). The continuous integration also runs these checks. Manual options are available so you don't have to commit:
 
 ```shell
 # run all hooks on all files, mirrors what the CI runs

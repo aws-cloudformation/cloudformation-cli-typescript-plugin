@@ -1,11 +1,6 @@
-import {
-    BaseResourceModel,
-    Optional,
-} from '../../src/interface';
-
+import { BaseResourceModel, Optional } from '../../src/interface';
 
 describe('when getting interface', () => {
-
     class ResourceModel extends BaseResourceModel {
         ['constructor']: typeof ResourceModel;
         public static readonly TYPE_NAME: string = 'Test::Resource::Model';
@@ -20,22 +15,34 @@ describe('when getting interface', () => {
     });
 
     test('base resource model deserialize', () => {
-        expect(() => ResourceModel.deserialize(null)).toThrow('Cannot convert undefined or null to object');
+        expect(() => ResourceModel.deserialize(null)).toThrow(
+            'Cannot convert undefined or null to object'
+        );
     });
 
     test('base resource model serialize', () => {
-        const model = new ResourceModel(new Map(Object.entries({
-            somekey: 'a', someotherkey: null,
-        })));
+        const model = new ResourceModel(
+            new Map(
+                Object.entries({
+                    somekey: 'a',
+                    someotherkey: null,
+                })
+            )
+        );
         const serialized = model.serialize();
         expect(serialized.size).toBe(1);
         expect(serialized.get('someotherkey')).not.toBeDefined();
     });
 
     test('base resource model to object', () => {
-        const model = new ResourceModel(new Map(Object.entries({
-            somekey: 'a', someotherkey: 'b',
-        })));
+        const model = new ResourceModel(
+            new Map(
+                Object.entries({
+                    somekey: 'a',
+                    someotherkey: 'b',
+                })
+            )
+        );
         const obj = model.toObject();
         expect(obj).toMatchObject({
             somekey: 'a',

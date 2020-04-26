@@ -18,21 +18,18 @@ const mockResult = (output: any): jest.Mock => {
 const MOCK_DATE = new Date('2020-01-01T23:05:38.964Z');
 const ACCOUNT_ID = '123412341234';
 const RESOURCE_TYPE = 'Aa::Bb::Cc';
-const NAMESPACE = MetricsPublisherProxy.makeNamespace(
-    ACCOUNT_ID, RESOURCE_TYPE,
-);
+const NAMESPACE = MetricsPublisherProxy.makeNamespace(ACCOUNT_ID, RESOURCE_TYPE);
 
 jest.mock('aws-sdk/clients/cloudwatch');
 
 describe('when getting metrics', () => {
-
     let session: SessionProxy;
     let cloudwatch: jest.Mock;
     let putMetricData: jest.Mock;
 
     beforeAll(() => {
         session = new SessionProxy({});
-        putMetricData = mockResult({ ResponseMetadata: { RequestId: 'mock-request' }});
+        putMetricData = mockResult({ ResponseMetadata: { RequestId: 'mock-request' } });
         cloudwatch = (CloudWatch as unknown) as jest.Mock;
         cloudwatch.mockImplementation(() => {
             const returnValue = {
@@ -40,7 +37,7 @@ describe('when getting metrics', () => {
             };
             return {
                 ...returnValue,
-                makeRequest: (operation: string, params?: {[key: string]: any}) => {
+                makeRequest: (operation: string, params?: { [key: string]: any }) => {
                     return returnValue[operation](params);
                 },
             };
@@ -59,21 +56,23 @@ describe('when getting metrics', () => {
         dimensions.set('MyDimensionKeyTwo', 'valTwo');
         const result = formatDimensions(dimensions);
         expect(result).toMatchObject([
-            {Name: 'MyDimensionKeyOne', Value: 'valOne'},
-            {Name: 'MyDimensionKeyTwo', Value: 'valTwo'},
+            { Name: 'MyDimensionKeyOne', Value: 'valOne' },
+            { Name: 'MyDimensionKeyTwo', Value: 'valTwo' },
         ]);
     });
 
     test('put metric catches error', async () => {
         const spyConsoleError: jest.SpyInstance = jest
-            .spyOn(global.console, 'error').mockImplementation(() => {});
+            .spyOn(global.console, 'error')
+            .mockImplementation(() => {});
         putMetricData.mockReturnValueOnce({
             promise: jest.fn().mockRejectedValueOnce(
                 awsUtil.error(new Error(), {
                     code: 'InternalServiceError',
-                    message: 'An error occurred (InternalServiceError) when '
-                        + 'calling the PutMetricData operation: ',
-                }),
+                    message:
+                        'An error occurred (InternalServiceError) when ' +
+                        'calling the PutMetricData operation: ',
+                })
             ),
         });
         const publisher = new MetricPublisher(session, NAMESPACE);
@@ -85,32 +84,35 @@ describe('when getting metrics', () => {
             dimensions,
             StandardUnit.Count,
             1.0,
-            MOCK_DATE,
+            MOCK_DATE
         );
         expect(putMetricData).toHaveBeenCalledTimes(1);
         expect(putMetricData).toHaveBeenCalledWith({
-            MetricData: [{
-                Dimensions: [
-                    {
-                        Name: 'DimensionKeyActionType',
-                        Value: 'CREATE',
-                    },
-                    {
-                        Name: 'DimensionKeyResourceType',
-                        Value: 'Aa::Bb::Cc',
-                    },
-                ],
-                MetricName: MetricTypes.HandlerInvocationCount,
-                Timestamp: MOCK_DATE,
-                Unit: StandardUnit.Count,
-                Value: 1.0,
-            }],
+            MetricData: [
+                {
+                    Dimensions: [
+                        {
+                            Name: 'DimensionKeyActionType',
+                            Value: 'CREATE',
+                        },
+                        {
+                            Name: 'DimensionKeyResourceType',
+                            Value: 'Aa::Bb::Cc',
+                        },
+                    ],
+                    MetricName: MetricTypes.HandlerInvocationCount,
+                    Timestamp: MOCK_DATE,
+                    Unit: StandardUnit.Count,
+                    Value: 1.0,
+                },
+            ],
             Namespace: 'AWS/CloudFormation/123412341234/Aa/Bb/Cc',
         });
         expect(spyConsoleError).toHaveBeenCalledTimes(1);
-        expect(spyConsoleError).toHaveBeenCalledWith('An error occurred while '
-            + 'publishing metrics: An error occurred (InternalServiceError) '
-            + 'when calling the PutMetricData operation: ',
+        expect(spyConsoleError).toHaveBeenCalledWith(
+            'An error occurred while ' +
+                'publishing metrics: An error occurred (InternalServiceError) ' +
+                'when calling the PutMetricData operation: '
         );
     });
 
@@ -118,29 +120,35 @@ describe('when getting metrics', () => {
         const proxy = new MetricsPublisherProxy(ACCOUNT_ID, RESOURCE_TYPE);
         proxy.addMetricsPublisher(session);
         proxy.addMetricsPublisher(session);
-        await proxy.publishExceptionMetric(MOCK_DATE, Action.Create, new Error('fake-err'));
+        await proxy.publishExceptionMetric(
+            MOCK_DATE,
+            Action.Create,
+            new Error('fake-err')
+        );
         expect(putMetricData).toHaveBeenCalledTimes(2);
         expect(putMetricData).toHaveBeenCalledWith({
-            MetricData: [{
-                Dimensions: [
-                    {
-                        Name: 'DimensionKeyActionType',
-                        Value: 'CREATE',
-                    },
-                    {
-                        Name: 'DimensionKeyExceptionType',
-                        Value: 'Error',
-                    },
-                    {
-                        Name: 'DimensionKeyResourceType',
-                        Value: 'Aa::Bb::Cc',
-                    },
-                ],
-                MetricName: MetricTypes.HandlerException,
-                Timestamp:  MOCK_DATE,
-                Unit: StandardUnit.Count,
-                Value: 1.0,
-            }],
+            MetricData: [
+                {
+                    Dimensions: [
+                        {
+                            Name: 'DimensionKeyActionType',
+                            Value: 'CREATE',
+                        },
+                        {
+                            Name: 'DimensionKeyExceptionType',
+                            Value: 'Error',
+                        },
+                        {
+                            Name: 'DimensionKeyResourceType',
+                            Value: 'Aa::Bb::Cc',
+                        },
+                    ],
+                    MetricName: MetricTypes.HandlerException,
+                    Timestamp: MOCK_DATE,
+                    Unit: StandardUnit.Count,
+                    Value: 1.0,
+                },
+            ],
             Namespace: 'AWS/CloudFormation/123412341234/Aa/Bb/Cc',
         });
     });
@@ -151,22 +159,24 @@ describe('when getting metrics', () => {
         await proxy.publishInvocationMetric(MOCK_DATE, Action.Create);
         expect(putMetricData).toHaveBeenCalledTimes(1);
         expect(putMetricData).toHaveBeenCalledWith({
-            MetricData: [{
-                Dimensions: [
-                    {
-                        Name: 'DimensionKeyActionType',
-                        Value: 'CREATE',
-                    },
-                    {
-                        Name: 'DimensionKeyResourceType',
-                        Value: 'Aa::Bb::Cc',
-                    },
-                ],
-                MetricName: MetricTypes.HandlerInvocationCount,
-                Timestamp:  MOCK_DATE,
-                Unit: StandardUnit.Count,
-                Value: 1.0,
-            }],
+            MetricData: [
+                {
+                    Dimensions: [
+                        {
+                            Name: 'DimensionKeyActionType',
+                            Value: 'CREATE',
+                        },
+                        {
+                            Name: 'DimensionKeyResourceType',
+                            Value: 'Aa::Bb::Cc',
+                        },
+                    ],
+                    MetricName: MetricTypes.HandlerInvocationCount,
+                    Timestamp: MOCK_DATE,
+                    Unit: StandardUnit.Count,
+                    Value: 1.0,
+                },
+            ],
             Namespace: 'AWS/CloudFormation/123412341234/Aa/Bb/Cc',
         });
     });
@@ -177,22 +187,24 @@ describe('when getting metrics', () => {
         await proxy.publishDurationMetric(MOCK_DATE, Action.Create, 100);
         expect(putMetricData).toHaveBeenCalledTimes(1);
         expect(putMetricData).toHaveBeenCalledWith({
-            MetricData: [{
-                Dimensions: [
-                    {
-                        Name: 'DimensionKeyActionType',
-                        Value: 'CREATE',
-                    },
-                    {
-                        Name: 'DimensionKeyResourceType',
-                        Value: 'Aa::Bb::Cc',
-                    },
-                ],
-                MetricName: MetricTypes.HandlerInvocationDuration,
-                Timestamp:  MOCK_DATE,
-                Unit: StandardUnit.Milliseconds,
-                Value: 100,
-            }],
+            MetricData: [
+                {
+                    Dimensions: [
+                        {
+                            Name: 'DimensionKeyActionType',
+                            Value: 'CREATE',
+                        },
+                        {
+                            Name: 'DimensionKeyResourceType',
+                            Value: 'Aa::Bb::Cc',
+                        },
+                    ],
+                    MetricName: MetricTypes.HandlerInvocationDuration,
+                    Timestamp: MOCK_DATE,
+                    Unit: StandardUnit.Milliseconds,
+                    Value: 100,
+                },
+            ],
             Namespace: 'AWS/CloudFormation/123412341234/Aa/Bb/Cc',
         });
     });
@@ -203,26 +215,28 @@ describe('when getting metrics', () => {
         await proxy.publishLogDeliveryExceptionMetric(MOCK_DATE, new TypeError('test'));
         expect(putMetricData).toHaveBeenCalledTimes(1);
         expect(putMetricData).toHaveBeenCalledWith({
-            MetricData: [{
-                Dimensions: [
-                    {
-                        Name: 'DimensionKeyActionType',
-                        Value: 'ProviderLogDelivery',
-                    },
-                    {
-                        Name: 'DimensionKeyExceptionType',
-                        Value: 'TypeError',
-                    },
-                    {
-                        Name: 'DimensionKeyResourceType',
-                        Value: 'Aa::Bb::Cc',
-                    },
-                ],
-                MetricName: MetricTypes.HandlerException,
-                Timestamp:  MOCK_DATE,
-                Unit: StandardUnit.Count,
-                Value: 1.0,
-            }],
+            MetricData: [
+                {
+                    Dimensions: [
+                        {
+                            Name: 'DimensionKeyActionType',
+                            Value: 'ProviderLogDelivery',
+                        },
+                        {
+                            Name: 'DimensionKeyExceptionType',
+                            Value: 'TypeError',
+                        },
+                        {
+                            Name: 'DimensionKeyResourceType',
+                            Value: 'Aa::Bb::Cc',
+                        },
+                    ],
+                    MetricName: MetricTypes.HandlerException,
+                    Timestamp: MOCK_DATE,
+                    Unit: StandardUnit.Count,
+                    Value: 1.0,
+                },
+            ],
             Namespace: 'AWS/CloudFormation/123412341234/Aa/Bb/Cc',
         });
     });

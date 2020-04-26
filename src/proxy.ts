@@ -2,7 +2,7 @@ import { ConfigurationOptions } from 'aws-sdk/lib/config';
 import { CredentialsOptions } from 'aws-sdk/lib/credentials';
 import * as Aws from 'aws-sdk/clients/all';
 import { NextToken } from 'aws-sdk/clients/cloudformation';
-import { allArgsConstructor, builder, IBuilder} from 'tombok';
+import { allArgsConstructor, builder, IBuilder } from 'tombok';
 
 import {
     BaseResourceHandlerRequest,
@@ -11,13 +11,11 @@ import {
     OperationStatus,
 } from './interface';
 
-
 type ClientMap = typeof Aws;
 type Client = InstanceType<ClientMap[keyof ClientMap]>;
 
 export class SessionProxy {
-
-    constructor(private options: ConfigurationOptions) { }
+    constructor(private options: ConfigurationOptions) {}
 
     public client(name: keyof ClientMap, options?: ConfigurationOptions): Client {
         const clients: { [K in keyof ClientMap]: ClientMap[K] } = Aws;
@@ -28,7 +26,10 @@ export class SessionProxy {
         return service;
     }
 
-    public static getSession(credentials?: CredentialsOptions, region?: string): SessionProxy | null {
+    public static getSession(
+        credentials?: CredentialsOptions,
+        region?: string
+    ): SessionProxy | null {
         if (!credentials) {
             return null;
         }
@@ -41,7 +42,10 @@ export class SessionProxy {
 
 @allArgsConstructor
 @builder
-export class ProgressEvent<R extends BaseResourceModel = BaseResourceModel, T = Map<string, any>> {
+export class ProgressEvent<
+    R extends BaseResourceModel = BaseResourceModel,
+    T = Map<string, any>
+> {
     /**
      * The status indicates whether the handler has reached a terminal state or is
      * still computing and requires more time to complete
@@ -92,14 +96,14 @@ export class ProgressEvent<R extends BaseResourceModel = BaseResourceModel, T = 
 
     // TODO: remove workaround when decorator mutation implemented: https://github.com/microsoft/TypeScript/issues/4881
     constructor(...args: any[]) {}
-    public static builder(template?: Partial<ProgressEvent>): IBuilder<ProgressEvent> {return null}
+    public static builder(template?: Partial<ProgressEvent>): IBuilder<ProgressEvent> {
+        return null;
+    }
 
-    public serialize(
-        toTesponse = false, bearerToken?: string,
-    ): Map<string, any> {
+    public serialize(toTesponse = false, bearerToken?: string): Map<string, any> {
         // To match Java serialization, which drops 'null' values, and the
         // contract tests currently expect this also.
-        const json: Map<string, any> = new Map<string, any>(Object.entries(this));//JSON.parse(JSON.stringify(this)));
+        const json: Map<string, any> = new Map<string, any>(Object.entries(this)); //JSON.parse(JSON.stringify(this)));
         json.forEach((value: any, key: string) => {
             if (value == null) {
                 json.delete(key);
@@ -114,7 +118,9 @@ export class ProgressEvent<R extends BaseResourceModel = BaseResourceModel, T = 
                 json.set('resourceModel', this.resourceModel.toObject());
             }
             if (this.resourceModels) {
-                const models = this.resourceModels.map((resource: R) => resource.toObject());
+                const models = this.resourceModels.map((resource: R) =>
+                    resource.toObject()
+                );
                 json.set('resourceModels', models);
             }
             json.delete('callbackDelaySeconds');
@@ -144,8 +150,7 @@ export class ProgressEvent<R extends BaseResourceModel = BaseResourceModel, T = 
      * Convenience method for constructing IN_PROGRESS response
      */
     public static progress(model?: any, ctx?: any): ProgressEvent {
-        const progress = ProgressEvent.builder()
-            .status(OperationStatus.InProgress);
+        const progress = ProgressEvent.builder().status(OperationStatus.InProgress);
         if (ctx) {
             progress.callbackContext(ctx);
         }
@@ -181,7 +186,9 @@ export class ProgressEvent<R extends BaseResourceModel = BaseResourceModel, T = 
  */
 @allArgsConstructor
 @builder
-export class ResourceHandlerRequest<T extends BaseResourceModel> extends BaseResourceHandlerRequest<T> {
+export class ResourceHandlerRequest<
+    T extends BaseResourceModel
+> extends BaseResourceHandlerRequest<T> {
     public clientRequestToken: string;
     public desiredResourceState: T;
     public previousResourceState: T;
@@ -193,6 +200,10 @@ export class ResourceHandlerRequest<T extends BaseResourceModel> extends BaseRes
     public nextToken: string;
     public region: string;
 
-    constructor(...args: any[]) {super()}
-    public static builder(): any {return null}
+    constructor(...args: any[]) {
+        super();
+    }
+    public static builder(): any {
+        return null;
+    }
 }
