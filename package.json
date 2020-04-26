@@ -48,16 +48,27 @@
         "@typescript-eslint/eslint-plugin": "^2.29.0",
         "@typescript-eslint/parser": "^2.19.2",
         "eslint": "^6.8.0",
+        "eslint-config-prettier": "^6.11.0",
         "eslint-import-resolver-node": "^0.3.3",
         "eslint-import-resolver-typescript": "^2.0.0",
         "eslint-plugin-import": "^2.20.2",
         "eslint-plugin-prefer-arrow": "^1.1.7",
+        "eslint-plugin-prettier": "^3.1.3",
         "jest": "^25.3.0",
         "minimist": ">=1.2.5",
+        "prettier": "2.0.5",
         "ts-jest": "^25.4.0",
         "typescript": "^3.7.0"
     },
     "optionalDependencies": {
         "aws-sdk": "^2.656.0"
+    },
+    "prettier": {
+        "parser": "typescript",
+        "singleQuote": true,
+        "tabWidth": 4,
+        "printWidth": 88,
+        "trailingComma": "es5",
+        "endOfLine": "lf"
     }
 }
