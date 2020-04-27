@@ -6,7 +6,6 @@ import { SessionProxy } from '../../src/proxy';
 import { RequestContext } from '../../src/interface';
 import * as utils from '../../src/utils';
 
-
 const mockResult = (output: any): jest.Mock => {
     return jest.fn().mockReturnValue({
         promise: jest.fn().mockResolvedValue(output),
@@ -23,7 +22,6 @@ jest.mock('uuid', () => {
 });
 
 describe('when getting scheduler', () => {
-
     let session: SessionProxy;
     let handlerRequest: utils.HandlerRequest;
     let cwEvents: jest.Mock;
@@ -35,13 +33,22 @@ describe('when getting scheduler', () => {
     let mockDeleteRule: jest.Mock;
 
     beforeEach(() => {
-        spyConsoleError = jest.spyOn(global.console, 'error').mockImplementation(() => {});
-        spyMinToCron = jest.spyOn(utils, 'minToCron')
+        spyConsoleError = jest
+            .spyOn(global.console, 'error')
+            .mockImplementation(() => {});
+        spyMinToCron = jest
+            .spyOn(utils, 'minToCron')
             .mockReturnValue('cron(30 16 21 11 ? 2019)');
-        mockPutRule = mockResult({ ResponseMetadata: { RequestId: 'mock-request' }});
-        mockPutTargets = mockResult({ ResponseMetadata: { RequestId: 'mock-request' }});
-        mockRemoveTargets = mockResult({ ResponseMetadata: { RequestId: 'mock-request' }});
-        mockDeleteRule = mockResult({ ResponseMetadata: { RequestId: 'mock-request' }});
+        mockPutRule = mockResult({ ResponseMetadata: { RequestId: 'mock-request' } });
+        mockPutTargets = mockResult({
+            ResponseMetadata: { RequestId: 'mock-request' },
+        });
+        mockRemoveTargets = mockResult({
+            ResponseMetadata: { RequestId: 'mock-request' },
+        });
+        mockDeleteRule = mockResult({
+            ResponseMetadata: { RequestId: 'mock-request' },
+        });
 
         cwEvents = (CloudWatchEvents as unknown) as jest.Mock;
         cwEvents.mockImplementation(() => {
@@ -53,7 +60,7 @@ describe('when getting scheduler', () => {
             };
             return {
                 ...returnValue,
-                makeRequest: (operation: string, params?: {[key: string]: any}) => {
+                makeRequest: (operation: string, params?: { [key: string]: any }) => {
                     return returnValue[operation](params);
                 },
             };
@@ -61,7 +68,7 @@ describe('when getting scheduler', () => {
         session = new SessionProxy({});
         session['client'] = cwEvents;
 
-        handlerRequest = new utils.HandlerRequest()
+        handlerRequest = new utils.HandlerRequest();
         handlerRequest.requestContext = {} as RequestContext<Map<string, any>>;
         handlerRequest.toJSON = jest.fn(() => new Object());
     });
@@ -143,8 +150,12 @@ describe('when getting scheduler', () => {
     test('cleanup cloudwatch events client error', async () => {
         // cleanup should catch and log client failures
         const error = awsUtil.error(new Error(), { code: '1' });
-        mockRemoveTargets.mockImplementation(() => {throw error});
-        mockDeleteRule.mockImplementation(() => {throw error});
+        mockRemoveTargets.mockImplementation(() => {
+            throw error;
+        });
+        mockDeleteRule.mockImplementation(() => {
+            throw error;
+        });
 
         await cleanupCloudwatchEvents(session, 'rulename', 'targetid');
 

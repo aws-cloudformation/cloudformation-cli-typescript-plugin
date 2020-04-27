@@ -3,3 +3,4 @@ branch = True
 
 [report]
 fail_under = 90
+show_missing = False

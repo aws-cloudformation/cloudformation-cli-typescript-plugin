@@ -67,7 +67,7 @@ repos:
       - id: pytest-local
         name: pytest-local
         description: Run pytest in the local virtualenv
-        entry: pytest --cov-report term-missing --cov-report html:coverage/python --cov=rpdk.typescript --doctest-modules tests/
+        entry: pytest --cov=rpdk.typescript tests/
         language: system
         # ignore all files, run on hard-coded modules instead
         pass_filenames: false
@@ -75,7 +75,7 @@ repos:
       - id: jest-local
         name: jest-local
         description: Run jest in the local environment
-        entry: npm run test:ci
+        entry: npx jest --ci --verbose
         language: system
         # ignore all files, run on hard-coded modules instead
         pass_filenames: false

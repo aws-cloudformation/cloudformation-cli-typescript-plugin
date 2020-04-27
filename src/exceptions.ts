@@ -6,9 +6,10 @@ export abstract class BaseHandlerException extends Error {
 
     public errorCode: HandlerErrorCode;
 
-    public constructor(message? : any, errorCode? : HandlerErrorCode) {
+    public constructor(message?: any, errorCode?: HandlerErrorCode) {
         super(message);
-        this.errorCode = errorCode || HandlerErrorCode[this.constructor.name as HandlerErrorCode];
+        this.errorCode =
+            errorCode || HandlerErrorCode[this.constructor.name as HandlerErrorCode];
         Object.setPrototypeOf(this, new.target.prototype); // restore prototype chain
     }
 
@@ -28,16 +29,16 @@ export class InvalidCredentials extends BaseHandlerException {}
 export class AlreadyExists extends BaseHandlerException {
     constructor(typeName: string, identifier: string) {
         super(
-            `Resource of type '${typeName}' with identifier '${identifier}' already exists.`,
-        )
+            `Resource of type '${typeName}' with identifier '${identifier}' already exists.`
+        );
     }
 }
 
 export class NotFound extends BaseHandlerException {
     constructor(typeName: string, identifier: string) {
         super(
-            `Resource of type '${typeName}' with identifier '${identifier}' was not found.`,
-        )
+            `Resource of type '${typeName}' with identifier '${identifier}' was not found.`
+        );
     }
 }
 

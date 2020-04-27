@@ -102,6 +102,9 @@ class TypescriptLanguagePlugin(LanguagePlugin):
         # project support files
         _copy_resource(project.root / ".gitignore", "typescript.gitignore")
         _copy_resource(project.root / ".npmrc")
+        sam_tests_folder = project.root / "sam-tests"
+        sam_tests_folder.mkdir(exist_ok=True)
+        _copy_resource(sam_tests_folder / "create.json")
         _copy_resource(project.root / "tsconfig.json")
         _render_template(
             project.root / "package.json",
@@ -198,7 +201,10 @@ class TypescriptLanguagePlugin(LanguagePlugin):
 
     @staticmethod
     def _make_build_command(base_path, build_command=None):
-        command = f"npm install --optional && sam build --build-dir {base_path}/build"
+        command = (
+            "npm install --optional --loglevel verbose "
+            + f"&& sam build --debug --build-dir {base_path}/build"
+        )
         if build_command is not None:
             command = build_command
         return command

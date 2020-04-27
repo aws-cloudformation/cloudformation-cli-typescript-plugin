@@ -5,7 +5,9 @@ describe('when getting exceptions', () => {
     test('all error codes have exceptions', () => {
         expect(exceptions.BaseHandlerException).toBeDefined();
         for (const errorCode in HandlerErrorCode) {
-            expect(exceptions[errorCode].prototype).toBeInstanceOf(exceptions.BaseHandlerException);
+            expect(exceptions[errorCode].prototype).toBeInstanceOf(
+                exceptions.BaseHandlerException
+            );
         }
     });
 
@@ -14,7 +16,7 @@ describe('when getting exceptions', () => {
             let e: exceptions.BaseHandlerException;
             try {
                 e = new exceptions[errorCode]();
-            } catch(err) {
+            } catch (err) {
                 e = new exceptions[errorCode]('Foo::Bar::Baz', 'ident');
             }
             const progressEvent = e.toProgressEvent();

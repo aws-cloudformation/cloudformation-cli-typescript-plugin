@@ -7,7 +7,6 @@ import {
     OperationStatus,
 } from '../../src/interface';
 
-
 const mockResult = (output: any): jest.Mock => {
     return jest.fn().mockReturnValue({
         promise: jest.fn().mockResolvedValue(output),
@@ -24,13 +23,12 @@ jest.mock('uuid', () => {
 });
 
 describe('when getting callback', () => {
-
     let session: SessionProxy;
     let recordHandlerProgress: jest.Mock;
 
     beforeEach(() => {
         recordHandlerProgress = mockResult({
-            ResponseMetadata: {RequestId: 'mock-request'},
+            ResponseMetadata: { RequestId: 'mock-request' },
         });
         const cfn = (CloudFormation as unknown) as jest.Mock;
         cfn.mockImplementation(() => {
@@ -39,7 +37,10 @@ describe('when getting callback', () => {
             };
             return {
                 ...returnValue,
-                makeRequest: (operation: string, params?: {[key: string]: any}): any => {
+                makeRequest: (
+                    operation: string,
+                    params?: { [key: string]: any }
+                ): any => {
                     return returnValue[operation](params);
                 },
             };

@@ -12,7 +12,6 @@ import {
     RequestContext,
 } from './interface';
 
-
 export type Constructor<T = {}> = new (...args: any[]) => T;
 
 /**
@@ -33,7 +32,7 @@ export function minToCron(minutes: number): string {
  * @param {number} seconds Seconds that we will wait
  */
 export async function delay(seconds: number): Promise<void> {
-    return new Promise(_ => setTimeout(() => _(), seconds * 1000));
+    return new Promise((_) => setTimeout(() => _(), seconds * 1000));
 }
 
 /**
@@ -82,7 +81,10 @@ export class RequestData<T = Map<string, any>> {
         const reqData: RequestData = new RequestData(jsonData);
         jsonData.forEach((value: any, key: string) => {
             if (key.endsWith('Credentials')) {
-                type credentialsType = 'callerCredentials' | 'platformCredentials' | 'providerCredentials';
+                type credentialsType =
+                    | 'callerCredentials'
+                    | 'platformCredentials'
+                    | 'providerCredentials';
                 const prop: credentialsType = key as credentialsType;
                 const creds = value;
                 if (creds) {
@@ -99,7 +101,10 @@ export class RequestData<T = Map<string, any>> {
 }
 
 @allArgsConstructor
-export class HandlerRequest<ResourceT = Map<string, any>, CallbackT = Map<string, any>> {
+export class HandlerRequest<
+    ResourceT = Map<string, any>,
+    CallbackT = Map<string, any>
+> {
     action: Action;
     awsAccountId: string;
     bearerToken: string;
@@ -119,24 +124,27 @@ export class HandlerRequest<ResourceT = Map<string, any>, CallbackT = Map<string
             jsonData = new Map<string, any>();
         }
         const event: HandlerRequest = new HandlerRequest(jsonData);
-        const requestData = new Map<string, any>(Object.entries(jsonData.get('requestData') || {}));
+        const requestData = new Map<string, any>(
+            Object.entries(jsonData.get('requestData') || {})
+        );
         event.requestData = RequestData.deserialize(requestData);
         return event;
-    };
+    }
 
     public fromJSON(jsonData: Map<string, any>): HandlerRequest {
         return null;
-    };
+    }
 
     public toJSON(): any {
         return null;
-    };
+    }
 }
 
 @allArgsConstructor
 export class UnmodeledRequest extends BaseResourceHandlerRequest<BaseResourceModel> {
-
-    constructor(...args: any[]) {super()}
+    constructor(...args: any[]) {
+        super();
+    }
 
     public static fromUnmodeled(obj: any): UnmodeledRequest {
         const mapped = new Map(Object.entries(obj));
@@ -144,14 +152,24 @@ export class UnmodeledRequest extends BaseResourceHandlerRequest<BaseResourceMod
         return request;
     }
 
-    public toModeled<T extends BaseResourceModel = BaseResourceModel>(modelCls: Constructor<T> & { deserialize?: Function }): BaseResourceHandlerRequest<T> {
-        return new BaseResourceHandlerRequest<T>(new Map(Object.entries({
-            clientRequestToken: this.clientRequestToken,
-            desiredResourceState: modelCls.deserialize(this.desiredResourceState || {}),
-            previousResourceState: modelCls.deserialize(this.previousResourceState || {}),
-            logicalResourceIdentifier: this.logicalResourceIdentifier,
-            nextToken: this.nextToken,
-        })));
+    public toModeled<T extends BaseResourceModel = BaseResourceModel>(
+        modelCls: Constructor<T> & { deserialize?: Function }
+    ): BaseResourceHandlerRequest<T> {
+        return new BaseResourceHandlerRequest<T>(
+            new Map(
+                Object.entries({
+                    clientRequestToken: this.clientRequestToken,
+                    desiredResourceState: modelCls.deserialize(
+                        this.desiredResourceState || {}
+                    ),
+                    previousResourceState: modelCls.deserialize(
+                        this.previousResourceState || {}
+                    ),
+                    logicalResourceIdentifier: this.logicalResourceIdentifier,
+                    nextToken: this.nextToken,
+                })
+            )
+        );
     }
 }
 
@@ -167,11 +185,13 @@ export interface LambdaContext {
  *                 `[Object object]`), it's possible that two keys within the Map may evaluate to the same object key.
  *                 In this case, if the associated values are not the same, throws an Error.
  */
-Map.prototype.toObject = function(): any {
+Map.prototype.toObject = function (): any {
     const o: any = {};
     for (const [key, value] of this.entries()) {
         if (o.hasOwnProperty(key) && o[key] !== value) {
-            throw new Error(`Duplicate key ${key} found in Map. First value: ${o[key]}, next value: ${value}`);
+            throw new Error(
+                `Duplicate key ${key} found in Map. First value: ${o[key]}, next value: ${value}`
+            );
         }
 
         o[key] = value;
@@ -183,6 +203,6 @@ Map.prototype.toObject = function(): any {
 /**
  * Defines the default JSON representation of a Map to be an array of key-value pairs.
  */
-Map.prototype.toJSON = function<K, V>(this: Map<K, V>): Array<[K, V]> {
+Map.prototype.toJSON = function <K, V>(this: Map<K, V>): Array<[K, V]> {
     return Array.from(this.entries());
 };

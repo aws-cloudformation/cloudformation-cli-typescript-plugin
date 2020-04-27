@@ -4,7 +4,6 @@ import CloudWatchEvents from 'aws-sdk/clients/cloudwatchevents';
 import { SessionProxy } from './proxy';
 import { HandlerRequest, minToCron } from './utils';
 
-
 const LOGGER = console;
 
 /**
@@ -22,9 +21,11 @@ export const rescheduleAfterMinutes = async (
     session: SessionProxy,
     functionArn: string,
     minutesFromNow: number,
-    handlerRequest: HandlerRequest,
+    handlerRequest: HandlerRequest
 ): Promise<void> => {
-    const client: CloudWatchEvents = session.client('CloudWatchEvents') as CloudWatchEvents;
+    const client: CloudWatchEvents = session.client(
+        'CloudWatchEvents'
+    ) as CloudWatchEvents;
     const cron = minToCron(Math.max(minutesFromNow, 1));
     const identifier = uuidv4();
     const ruleName = `reinvoke-handler-${identifier}`;
@@ -33,20 +34,26 @@ export const rescheduleAfterMinutes = async (
     handlerRequest.requestContext.cloudWatchEventsTargetId = targetId;
     const jsonRequest = JSON.stringify(handlerRequest);
     LOGGER.debug(`Scheduling re-invoke at ${cron} (${identifier})`);
-    await client.putRule({
-        Name: ruleName,
-        ScheduleExpression: cron,
-        State: 'ENABLED',
-    }).promise();
-    await client.putTargets({
-        Rule: ruleName,
-        Targets: [{
-            Id: targetId,
-            Arn: functionArn,
-            Input: jsonRequest,
-        }],
-    }).promise();
-}
+    await client
+        .putRule({
+            Name: ruleName,
+            ScheduleExpression: cron,
+            State: 'ENABLED',
+        })
+        .promise();
+    await client
+        .putTargets({
+            Rule: ruleName,
+            Targets: [
+                {
+                    Id: targetId,
+                    Arn: functionArn,
+                    Input: jsonRequest,
+                },
+            ],
+        })
+        .promise();
+};
 
 /**
  * After a re-invocation, the CWE rule which generated the reinvocation should
@@ -57,32 +64,40 @@ export const rescheduleAfterMinutes = async (
  * @param targetId the target of the CWE rule which triggered a re-invocation
  */
 export const cleanupCloudwatchEvents = async (
-    session: SessionProxy, ruleName: string, targetId: string,
+    session: SessionProxy,
+    ruleName: string,
+    targetId: string
 ): Promise<void> => {
-    const client: CloudWatchEvents = session.client('CloudWatchEvents') as CloudWatchEvents;
+    const client: CloudWatchEvents = session.client(
+        'CloudWatchEvents'
+    ) as CloudWatchEvents;
     try {
         if (targetId && ruleName) {
-            await client.removeTargets({
-                Rule: ruleName,
-                Ids: [targetId],
-            }).promise();
+            await client
+                .removeTargets({
+                    Rule: ruleName,
+                    Ids: [targetId],
+                })
+                .promise();
         }
-    } catch(err) {
+    } catch (err) {
         LOGGER.error(
-            `Error cleaning CloudWatchEvents Target (targetId=${targetId}): ${err.message}`,
+            `Error cleaning CloudWatchEvents Target (targetId=${targetId}): ${err.message}`
         );
     }
 
     try {
         if (ruleName) {
-            await client.deleteRule({
-                Name: ruleName,
-                Force: true,
-            }).promise();
+            await client
+                .deleteRule({
+                    Name: ruleName,
+                    Force: true,
+                })
+                .promise();
         }
-    } catch(err) {
+    } catch (err) {
         LOGGER.error(
-            `Error cleaning CloudWatchEvents Rule (ruleName=${ruleName}): ${err.message}`,
+            `Error cleaning CloudWatchEvents Rule (ruleName=${ruleName}): ${err.message}`
         );
     }
-}
+};
