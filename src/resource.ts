@@ -474,6 +474,11 @@ export function handlerEvent(action: Action): MethodDecorator {
             Reflect.defineMetadata('handlerEvents', actions, target);
         }
         if (descriptor) {
+            // The event handler decorated methods need binding
+            const boundDescriptor = boundMethod(target, propertyKey, descriptor);
+            if (typeof descriptor.value === 'function' && boundDescriptor) {
+                return boundDescriptor;
+            }
             return descriptor;
         }
     };
