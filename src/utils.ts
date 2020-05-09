@@ -35,19 +35,6 @@ export async function delay(seconds: number): Promise<void> {
     return new Promise((_) => setTimeout(() => _(), seconds * 1000));
 }
 
-/**
- * Execute promises in sequence (not in parallel as Promise.all)
- *
- * @param functions Array of functions that return a promise
- */
-export async function runInSequence(functions: Array<Promise<any>>): Promise<any[]> {
-    const results = [];
-    for (const fn of functions) {
-        results.push(await fn);
-    }
-    return results;
-}
-
 @allArgsConstructor
 export class TestEvent {
     credentials: Credentials;

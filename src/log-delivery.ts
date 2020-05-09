@@ -1,16 +1,20 @@
 import { boundMethod } from 'autobind-decorator';
 import { EventEmitter } from 'events';
 import CloudWatchLogs, {
+    DescribeLogStreamsResponse,
+    LogStream,
     InputLogEvent,
     PutLogEventsRequest,
     PutLogEventsResponse,
 } from 'aws-sdk/clients/cloudwatchlogs';
 import S3, { PutObjectRequest, PutObjectOutput } from 'aws-sdk/clients/s3';
+import promiseSequential from 'promise-sequential';
 
 import { SessionProxy } from './proxy';
-import { HandlerRequest, runInSequence } from './utils';
+import { delay, HandlerRequest } from './utils';
 
 type Console = globalThis.Console;
+type PromiseFunction = () => Promise<any>;
 
 interface LogOptions {
     groupName: string;
@@ -26,13 +30,14 @@ export class ProviderLogHandler {
     private static instance: ProviderLogHandler;
     public emitter: LogEmitter;
     public client: CloudWatchLogs;
-    public sequenceToken = '';
+    public sequenceToken: string = null;
     public accountId: string;
     public groupName: string;
     public stream: string;
     public logger: Console;
     public clientS3: S3;
-    private stack: Array<Promise<any>> = [];
+    private stack: Array<PromiseFunction> = [];
+    private isProcessing = false;
 
     /**
      * The ProviderLogHandler's constructor should always be private to prevent direct
@@ -50,20 +55,40 @@ export class ProviderLogHandler {
         const logger = options.logger || global.console;
         this.logger = logger;
         this.emitter.on('log', (...args: any[]) => {
-            this.stack.push(this.deliverLog(args));
+            // this.logger.debug('Emitting log event...');
         });
         // Create maps of each logger method and then alias that.
         Object.entries(this.logger).forEach(([key, val]) => {
             if (typeof val === 'function') {
                 if (['log', 'error', 'warn', 'info'].includes(key)) {
-                    this.logger[key as 'log' | 'error' | 'warn' | 'info'] = function (
+                    this.logger[key as 'log' | 'error' | 'warn' | 'info'] = (
                         ...args: any[]
-                    ): void {
-                        // For adding other event watchers later.
-                        setImmediate(() => emitter.emit('log', ...args));
+                    ): void => {
+                        if (!this.isProcessing) {
+                            const logLevel = key.toUpperCase();
+                            // Add log level when not present
+                            if (
+                                args.length &&
+                                args[0].substring(0, logLevel.length).toUpperCase() !==
+                                    logLevel
+                            ) {
+                                args.unshift(logLevel);
+                            }
+                            this.stack.push(() =>
+                                this.deliverLog(args).catch(this.logger.debug)
+                            );
+                            // For adding other event watchers later.
+                            setImmediate(() => {
+                                this.emitter.emit('log', ...args);
+                            });
+                        } else {
+                            this.logger.debug(
+                                'Logs are being delivered at the moment...'
+                            );
+                        }
 
                         // Calls the logger method.
-                        val.apply(this, args);
+                        val.apply(this.logger, args);
                     };
                 }
             }
@@ -71,7 +96,7 @@ export class ProviderLogHandler {
     }
 
     private async initialize(): Promise<void> {
-        this.sequenceToken = '';
+        this.sequenceToken = null;
         this.stack = [];
         try {
             await this.deliverLogCloudWatch(['Initialize CloudWatch']);
@@ -142,11 +167,13 @@ export class ProviderLogHandler {
 
     @boundMethod
     public async processLogs(): Promise<void> {
+        this.isProcessing = true;
         if (this.stack.length > 0) {
-            this.stack.push(this.deliverLog(['Log delivery finalized.']));
+            this.stack.push(() => this.deliverLog(['Log delivery finalized.']));
         }
-        await runInSequence(this.stack);
+        await promiseSequential(this.stack);
         this.stack = [];
+        this.isProcessing = false;
     }
 
     private async createLogGroup(): Promise<void> {
@@ -199,19 +226,38 @@ export class ProviderLogHandler {
             const response: PutLogEventsResponse = await this.client
                 .putLogEvents(logEventsParams)
                 .promise();
-            this.sequenceToken = response?.nextSequenceToken;
+            this.sequenceToken = response?.nextSequenceToken || null;
             this.logger.debug('Response from "putLogEvents"', response);
             return response;
         } catch (err) {
             const errorCode = err.code || err.name;
-            this.logger.debug('Error from "deliverLogCloudWatch"', err);
-            this.logger.debug(`Error from 'putLogEvents' ${JSON.stringify(err)}`);
+            this.logger.debug(
+                `Error from "putLogEvents" with sequence token ${this.sequenceToken}`,
+                err
+            );
             if (
                 errorCode === 'DataAlreadyAcceptedException' ||
                 errorCode === 'InvalidSequenceTokenException'
             ) {
-                this.sequenceToken = (err.message || '').split(' ').pop();
-                this.putLogEvents(record);
+                this.sequenceToken = null;
+                // Delay to avoid throttling
+                await delay(1);
+                try {
+                    const response: DescribeLogStreamsResponse = await this.client
+                        .describeLogStreams({
+                            logGroupName: this.groupName,
+                            logStreamNamePrefix: this.stream,
+                            limit: 1,
+                        })
+                        .promise();
+                    this.logger.debug('Response from "describeLogStreams"', response);
+                    if (response.logStreams && response.logStreams.length) {
+                        const logStream = response.logStreams[0] as LogStream;
+                        this.sequenceToken = logStream.uploadSequenceToken;
+                    }
+                } catch (err) {
+                    this.logger.debug('Error from "describeLogStreams"', err);
+                }
             } else {
                 throw err;
             }
@@ -219,7 +265,9 @@ export class ProviderLogHandler {
     }
 
     @boundMethod
-    private async deliverLogCloudWatch(messages: any[]): Promise<PutLogEventsResponse> {
+    private async deliverLogCloudWatch(
+        messages: any[]
+    ): Promise<PutLogEventsResponse | void> {
         const currentTime = new Date(Date.now());
         const record: InputLogEvent = {
             message: JSON.stringify({ messages }),
@@ -236,8 +284,20 @@ export class ProviderLogHandler {
                     await this.createLogGroup();
                 }
                 await this.createLogStream();
-                return this.putLogEvents(record);
-            } else {
+            } else if (
+                errorCode !== 'DataAlreadyAcceptedException' &&
+                errorCode !== 'InvalidSequenceTokenException'
+            ) {
+                throw err;
+            }
+            try {
+                const response = await this.putLogEvents(record);
+                return response;
+            } catch (err) {
+                // Additional retry for sequence token error
+                if (this.sequenceToken) {
+                    return this.putLogEvents(record);
+                }
                 throw err;
             }
         }
@@ -316,7 +376,7 @@ export class ProviderLogHandler {
     @boundMethod
     private async deliverLog(
         messages: any[]
-    ): Promise<PutLogEventsResponse | PutObjectOutput> {
+    ): Promise<PutLogEventsResponse | PutObjectOutput | void> {
         if (this.clientS3) {
             return this.deliverLogS3(messages);
         }

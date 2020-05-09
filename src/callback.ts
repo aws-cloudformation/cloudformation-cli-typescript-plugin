@@ -37,6 +37,7 @@ export async function reportProgress(options: ProgressOptions): Promise<void> {
     }
     if (currentOperationStatus) {
         request.CurrentOperationStatus = currentOperationStatus;
+        LOGGER.debug('Record Handler Progress Request:', request);
         const response: { [key: string]: any } = await client
             .recordHandlerProgress(request)
             .promise();
@@ -45,8 +46,8 @@ export async function reportProgress(options: ProgressOptions): Promise<void> {
             requestId = response.ResponseMetadata.RequestId;
         }
         LOGGER.debug(
-            `Record Handler Progress with Request Id ${requestId} and Request:`,
-            request
+            `Record handler progress with Request Id ${requestId} and response:`,
+            response
         );
     }
 }
