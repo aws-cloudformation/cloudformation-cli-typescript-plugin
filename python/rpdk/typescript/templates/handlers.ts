@@ -18,6 +18,14 @@ const LOGGER = console;
 
 class Resource extends BaseResource<ResourceModel> {
 
+    /**
+     * CloudFormation invokes this handler when the resource is initially created
+     * during stack create operations.
+     * 
+     * @param session Current AWS session passed through from caller
+     * @param request The request object for the provisioning request passed to the implementor
+     * @param callbackContext Custom context object to enable handlers to process re-invocation
+     */
     @handlerEvent(Action.Create)
     public async create(
         session: Optional<SessionProxy>,
@@ -48,6 +56,14 @@ class Resource extends BaseResource<ResourceModel> {
         return progress;
     }
 
+    /**
+     * CloudFormation invokes this handler when the resource is updated
+     * as part of a stack update operation.
+     * 
+     * @param session Current AWS session passed through from caller
+     * @param request The request object for the provisioning request passed to the implementor
+     * @param callbackContext Custom context object to enable handlers to process re-invocation
+     */
     @handlerEvent(Action.Update)
     public async update(
         session: Optional<SessionProxy>,
@@ -64,6 +80,15 @@ class Resource extends BaseResource<ResourceModel> {
         return progress;
     }
 
+    /**
+     * CloudFormation invokes this handler when the resource is deleted, either when
+     * the resource is deleted from the stack as part of a stack update operation,
+     * or the stack itself is deleted.
+     * 
+     * @param session Current AWS session passed through from caller
+     * @param request The request object for the provisioning request passed to the implementor
+     * @param callbackContext Custom context object to enable handlers to process re-invocation
+     */
     @handlerEvent(Action.Delete)
     public async delete(
         session: Optional<SessionProxy>,
@@ -80,6 +105,14 @@ class Resource extends BaseResource<ResourceModel> {
         return progress;
     }
 
+    /**
+     * CloudFormation invokes this handler as part of a stack update operation when
+     * detailed information about the resource's current state is required.
+     * 
+     * @param session Current AWS session passed through from caller
+     * @param request The request object for the provisioning request passed to the implementor
+     * @param callbackContext Custom context object to enable handlers to process re-invocation
+     */
     @handlerEvent(Action.Read)
     public async read(
         session: Optional<SessionProxy>,
@@ -95,6 +128,14 @@ class Resource extends BaseResource<ResourceModel> {
         return progress;
     }
 
+    /**
+     * CloudFormation invokes this handler when summary information about multiple
+     * resources of this resource provider is required.
+     * 
+     * @param session Current AWS session passed through from caller
+     * @param request The request object for the provisioning request passed to the implementor
+     * @param callbackContext Custom context object to enable handlers to process re-invocation
+     */
     @handlerEvent(Action.List)
     public async list(
         session: Optional<SessionProxy>,
