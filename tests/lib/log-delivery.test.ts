@@ -420,6 +420,23 @@ describe('when delivering log', () => {
         expect(createLogStream).toHaveBeenCalledTimes(2);
     });
 
+    test('cloudwatch log with deserialize error', async () => {
+        const mockToJson: jest.Mock = jest.fn().mockReturnValue(() => {
+            throw new Error();
+        });
+        class Unserializable {
+            message = 'msg';
+            toJSON = mockToJson;
+        }
+        const unserializable = new Unserializable();
+        providerLogHandler.logger.log(unserializable);
+        expect(providerLogHandler['stack'].length).toBe(1);
+        await providerLogHandler.processLogs();
+        expect(providerLogHandler['stack'].length).toBe(0);
+        expect(mockToJson).toHaveBeenCalledTimes(1);
+        expect(putObject).toHaveBeenCalledTimes(0);
+    });
+
     test('s3 bucket create success', async () => {
         providerLogHandler['clientS3'] = new S3(AWS_CONFIG);
         await providerLogHandler['createBucket']();

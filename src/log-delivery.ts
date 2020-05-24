@@ -69,8 +69,10 @@ export class ProviderLogHandler {
                             // Add log level when not present
                             if (
                                 args.length &&
-                                args[0].substring(0, logLevel.length).toUpperCase() !==
-                                    logLevel
+                                (typeof args[0] !== 'string' ||
+                                    args[0]
+                                        .substring(0, logLevel.length)
+                                        .toUpperCase() !== logLevel)
                             ) {
                                 args.unshift(logLevel);
                             }
