@@ -34,6 +34,7 @@
     "homepage": "https://github.com/eduardomourar/cloudformation-cli-typescript-plugin#readme",
     "dependencies": {
         "autobind-decorator": "^2.4.0",
+        "promise-sequential": "^1.1.1",
         "reflect-metadata": "^0.1.13",
         "tombok": "https://github.com/eduardomourar/tombok/releases/download/v0.0.1/tombok-0.0.1.tgz",
         "uuid": "^7.0.2"
@@ -42,6 +43,7 @@
         "@types/aws-sdk": "^2.7.0",
         "@types/jest": "^25.2.1",
         "@types/node": "^12.0.0",
+        "@types/promise-sequential": "^1.1.0",
         "@types/uuid": "^7.0.0",
         "@typescript-eslint/eslint-plugin": "^2.29.0",
         "@typescript-eslint/parser": "^2.19.2",
@@ -54,12 +56,12 @@
         "eslint-plugin-prettier": "^3.1.3",
         "jest": "^25.5.2",
         "minimist": ">=1.2.5",
-        "prettier": "2.0.5",
+        "prettier": "^2.0.5",
         "ts-jest": "^25.4.0",
         "typescript": "^3.7.0"
     },
     "optionalDependencies": {
-        "aws-sdk": "^2.656.0"
+        "aws-sdk": "~2.631.0"
     },
     "prettier": {
         "parser": "typescript",

@@ -2,6 +2,8 @@ import { v4 as uuidv4 } from 'uuid';
 import CloudWatchLogs from 'aws-sdk/clients/cloudwatchlogs';
 import S3 from 'aws-sdk/clients/s3';
 import awsUtil from 'aws-sdk/lib/util';
+import { AWSError } from 'aws-sdk';
+import promiseSequential from 'promise-sequential';
 
 import { Action } from '../../src/interface';
 import { SessionProxy } from '../../src/proxy';
@@ -38,6 +40,7 @@ describe('when delivering log', () => {
     let s3: jest.Mock;
     let createLogGroup: jest.Mock;
     let createLogStream: jest.Mock;
+    let describeLogStreams: jest.Mock;
     let putLogEvents: jest.Mock;
     let createBucket: jest.Mock;
     let putObject: jest.Mock;
@@ -53,12 +56,16 @@ describe('when delivering log', () => {
         createLogStream = mockResult({
             ResponseMetadata: { RequestId: 'mock-request' },
         });
+        describeLogStreams = mockResult({
+            ResponseMetadata: { RequestId: 'mock-request' },
+        });
         putLogEvents = mockResult({ ResponseMetadata: { RequestId: 'mock-request' } });
         cwLogs = (CloudWatchLogs as unknown) as jest.Mock;
         cwLogs.mockImplementation(() => {
             const returnValue = {
                 createLogGroup,
                 createLogStream,
+                describeLogStreams,
                 putLogEvents,
             };
             return {
@@ -150,6 +157,28 @@ describe('when delivering log', () => {
         expect(instance).toBeNull();
     });
 
+    test('setup with initialize error', async () => {
+        const spyConsoleDebug: jest.SpyInstance = jest
+            .spyOn(global.console, 'debug')
+            .mockImplementation(() => {});
+        const spyInitialize = jest
+            .spyOn<any, any>(ProviderLogHandler.prototype, 'initialize')
+            .mockRejectedValueOnce(
+                awsUtil.error(new Error(), {
+                    code: 'InternalServiceError',
+                    message: 'An error occurred during initialization.',
+                })
+            );
+        const logHandler = await ProviderLogHandler.setup(payload, session);
+        expect(spyInitialize).toHaveBeenCalledTimes(1);
+        expect(logHandler).toBeFalsy();
+        expect(spyConsoleDebug).toHaveBeenCalledTimes(1);
+        expect(spyConsoleDebug).toHaveBeenCalledWith(
+            'Error on ProviderLogHandler setup:',
+            expect.any(Error)
+        );
+    });
+
     test('setup with provider creds and stack id and logical resource id', async () => {
         await ProviderLogHandler.setup(payload, session);
         expect(cwLogs).toHaveBeenCalledTimes(1);
@@ -186,9 +215,10 @@ describe('when delivering log', () => {
         expect(cwLogs).toHaveBeenCalledTimes(1);
         expect(cwLogs).toHaveBeenCalledWith('CloudWatchLogs');
         jest.useFakeTimers();
-        providerLogHandler.logger.log('log-msg1');
-        providerLogHandler.logger.log('log-msg2');
+        providerLogHandler.logger.log('msg1');
+        providerLogHandler.logger.log('msg2');
         jest.runAllImmediates();
+        jest.useRealTimers();
         expect(providerLogHandler['stack'].length).toBe(2);
         await providerLogHandler.processLogs();
         expect(providerLogHandler['stack'].length).toBe(0);
@@ -200,9 +230,10 @@ describe('when delivering log', () => {
         expect(newInstance.stream).toContain(stackId);
         expect(newInstance.stream).toContain(payload.requestData.logicalResourceId);
         jest.useFakeTimers();
-        providerLogHandler.logger.log('log-msg3');
-        providerLogHandler.logger.log('log-msg4');
+        providerLogHandler.logger.log('msg3');
+        providerLogHandler.logger.log('msg4');
         jest.runAllImmediates();
+        jest.useRealTimers();
         expect(providerLogHandler['stack'].length).toBe(2);
         await providerLogHandler.processLogs();
         expect(providerLogHandler['stack'].length).toBe(0);
@@ -221,8 +252,15 @@ describe('when delivering log', () => {
         expect(logHandler).toBeNull();
     });
 
-    test('log group create success', async () => {
-        await providerLogHandler['createLogGroup']();
+    test('log group create fail', async () => {
+        createLogGroup.mockReturnValue({
+            promise: jest.fn().mockRejectedValueOnce(
+                awsUtil.error(new Error(), {
+                    code: 'ServiceUnavailableException',
+                })
+            ),
+        });
+        await expect(providerLogHandler['createLogGroup']()).rejects.toThrow(AWSError);
         expect(createLogGroup).toHaveBeenCalledTimes(1);
     });
 
@@ -231,39 +269,57 @@ describe('when delivering log', () => {
         expect(createLogStream).toHaveBeenCalledTimes(1);
     });
 
+    test('log stream create fail', async () => {
+        createLogStream.mockReturnValue({
+            promise: jest.fn().mockRejectedValueOnce(
+                awsUtil.error(new Error(), {
+                    code: 'ServiceUnavailableException',
+                })
+            ),
+        });
+        await expect(providerLogHandler['createLogStream']()).rejects.toThrow(AWSError);
+        expect(createLogStream).toHaveBeenCalledTimes(1);
+    });
+
     test('create already exists', async () => {
-        await ['createLogGroup', 'createLogStream'].forEach(
-            async (methodName: string) => {
-                const mockLogsMethod: jest.Mock = jest.fn().mockReturnValue({
-                    promise: jest.fn().mockRejectedValueOnce(
-                        awsUtil.error(new Error(), {
-                            code: 'ResourceAlreadyExistsException',
-                        })
-                    ),
-                });
-                providerLogHandler.client[methodName] = mockLogsMethod;
-                // Should not raise an exception if the log group already exists.
-                await providerLogHandler[methodName]();
-                expect(mockLogsMethod).toHaveBeenCalledTimes(1);
-            }
+        await promiseSequential(
+            ['createLogGroup', 'createLogStream'].map((methodName: string) => {
+                return async () => {
+                    const mockLogsMethod: jest.Mock = jest.fn().mockReturnValue({
+                        promise: jest.fn().mockRejectedValueOnce(
+                            awsUtil.error(new Error(), {
+                                code: 'ResourceAlreadyExistsException',
+                            })
+                        ),
+                    });
+                    providerLogHandler.client[methodName] = mockLogsMethod;
+                    // Should not raise an exception if the log group already exists.
+                    await providerLogHandler[methodName]();
+                    expect(mockLogsMethod).toHaveBeenCalledTimes(1);
+                };
+            })
         );
     });
 
     test('put log event success', async () => {
-        await [null, 'some-seq'].forEach(async (sequenceToken: string) => {
-            providerLogHandler.sequenceToken = sequenceToken;
-            const mockPut: jest.Mock = jest.fn().mockReturnValue({
-                promise: jest
-                    .fn()
-                    .mockResolvedValueOnce({ nextSequenceToken: 'some-other-seq' }),
-            });
-            providerLogHandler.client.putLogEvents = mockPut;
-            await providerLogHandler['putLogEvents']({
-                message: 'log-msg',
-                timestamp: undefined,
-            });
-            expect(mockPut).toHaveBeenCalledTimes(1);
-        });
+        await promiseSequential(
+            [null, 'some-seq'].map((sequenceToken: string) => {
+                return async () => {
+                    providerLogHandler.sequenceToken = sequenceToken;
+                    const mockPut: jest.Mock = jest.fn().mockReturnValue({
+                        promise: jest.fn().mockResolvedValueOnce({
+                            nextSequenceToken: 'some-other-seq',
+                        }),
+                    });
+                    providerLogHandler.client.putLogEvents = mockPut;
+                    await providerLogHandler['putLogEvents']({
+                        message: 'msg',
+                        timestamp: undefined,
+                    });
+                    expect(mockPut).toHaveBeenCalledTimes(1);
+                };
+            })
+        );
     });
 
     test('put log event invalid token', async () => {
@@ -280,26 +336,52 @@ describe('when delivering log', () => {
                 )
                 .mockResolvedValue({ nextSequenceToken: 'some-other-seq' }),
         });
+        describeLogStreams.mockReturnValue({
+            promise: jest.fn().mockResolvedValue({
+                logStreams: [{ uploadSequenceToken: 'some-other-seq' }],
+            }),
+        });
         for (let i = 1; i < 4; i++) {
             await providerLogHandler['putLogEvents']({
                 message: 'log-msg',
                 timestamp: i,
             });
         }
-        expect(putLogEvents).toHaveBeenCalledTimes(6);
+        expect(putLogEvents).toHaveBeenCalledTimes(4);
+        expect(describeLogStreams).toHaveBeenCalledTimes(2);
     });
 
     test('emit existing cwl group stream', async () => {
         const mock: jest.Mock = jest.fn().mockResolvedValue({});
         providerLogHandler['putLogEvents'] = mock;
         jest.useFakeTimers();
-        providerLogHandler.logger.log('log-msg1');
-        providerLogHandler.logger.log('log-msg2');
+        providerLogHandler.logger.log('msg1');
+        providerLogHandler.logger.info('INFO msg2');
+        providerLogHandler.logger.debug('msg3');
         jest.runAllImmediates();
+        jest.useRealTimers();
         expect(providerLogHandler['stack'].length).toBe(2);
         await providerLogHandler.processLogs();
         expect(providerLogHandler['stack'].length).toBe(0);
         expect(mock).toHaveBeenCalledTimes(3);
+        expect(mock).toHaveBeenNthCalledWith(
+            1,
+            expect.objectContaining({
+                message: '{"messages":["LOG","msg1"]}',
+            })
+        );
+        expect(mock).toHaveBeenNthCalledWith(
+            2,
+            expect.objectContaining({
+                message: '{"messages":["INFO msg2"]}',
+            })
+        );
+        expect(mock).toHaveBeenNthCalledWith(
+            3,
+            expect.objectContaining({
+                message: '{"messages":["Log delivery finalized."]}',
+            })
+        );
     });
 
     test('emit no group stream', async () => {
@@ -317,7 +399,7 @@ describe('when delivering log', () => {
         providerLogHandler['putLogEvents'] = putLogEvents;
         providerLogHandler['createLogGroup'] = createLogGroup;
         providerLogHandler['createLogStream'] = createLogStream;
-        await providerLogHandler['deliverLogCloudWatch'](['log-msg']);
+        await providerLogHandler['deliverLogCloudWatch'](['msg']);
         expect(putLogEvents).toHaveBeenCalledTimes(2);
         expect(createLogGroup).toHaveBeenCalledTimes(1);
         expect(createLogStream).toHaveBeenCalledTimes(1);
@@ -329,7 +411,7 @@ describe('when delivering log', () => {
                 message: 'log stream does not exist',
             })
         );
-        providerLogHandler.emitter.emit('log', 'log-msg');
+        providerLogHandler.logger.log('msg');
         expect(providerLogHandler['stack'].length).toBe(1);
         await providerLogHandler.processLogs();
         expect(providerLogHandler['stack'].length).toBe(0);
@@ -338,13 +420,68 @@ describe('when delivering log', () => {
         expect(createLogStream).toHaveBeenCalledTimes(2);
     });
 
-    test('put log s3 success', async () => {
+    test('cloudwatch log with deserialize error', async () => {
+        const mockToJson: jest.Mock = jest.fn().mockReturnValue(() => {
+            throw new Error();
+        });
+        class Unserializable {
+            message = 'msg';
+            toJSON = mockToJson;
+        }
+        const unserializable = new Unserializable();
+        providerLogHandler.logger.log(unserializable);
+        expect(providerLogHandler['stack'].length).toBe(1);
+        await providerLogHandler.processLogs();
+        expect(providerLogHandler['stack'].length).toBe(0);
+        expect(mockToJson).toHaveBeenCalledTimes(1);
+        expect(putObject).toHaveBeenCalledTimes(0);
+    });
+
+    test('s3 bucket create success', async () => {
+        providerLogHandler['clientS3'] = new S3(AWS_CONFIG);
+        await providerLogHandler['createBucket']();
+        expect(createBucket).toHaveBeenCalledTimes(1);
+    });
+
+    test('s3 bucket create fail', async () => {
+        providerLogHandler['clientS3'] = new S3(AWS_CONFIG);
+        createBucket.mockReturnValue({
+            promise: jest.fn().mockRejectedValueOnce(
+                awsUtil.error(new Error(), {
+                    code: 'ServiceUnavailableException',
+                })
+            ),
+        });
+        await expect(providerLogHandler['createBucket']()).rejects.toThrow(AWSError);
+        expect(createBucket).toHaveBeenCalledTimes(1);
+    });
+
+    test('s3 log put success', async () => {
         providerLogHandler['clientS3'] = new S3(AWS_CONFIG);
         await providerLogHandler['putLogObject']({
             groupName: providerLogHandler.groupName,
             stream: providerLogHandler.stream,
-            messages: ['log-msg'],
+            messages: ['msg'],
         });
+        expect(putObject).toHaveBeenCalledTimes(1);
+    });
+
+    test('s3 log put fail', async () => {
+        providerLogHandler['clientS3'] = new S3(AWS_CONFIG);
+        putObject.mockReturnValue({
+            promise: jest.fn().mockRejectedValueOnce(
+                awsUtil.error(new Error(), {
+                    code: 'ServiceUnavailableException',
+                })
+            ),
+        });
+        await expect(
+            providerLogHandler['putLogObject']({
+                groupName: providerLogHandler.groupName,
+                stream: providerLogHandler.stream,
+                messages: ['msg'],
+            })
+        ).rejects.toThrow(AWSError);
         expect(putObject).toHaveBeenCalledTimes(1);
     });
 
@@ -368,8 +505,8 @@ describe('when delivering log', () => {
         expect(providerLogHandler.clientS3.config).toEqual(
             expect.objectContaining(AWS_CONFIG)
         );
-        await providerLogHandler['deliverLogS3'](['log-msg1']);
-        providerLogHandler.emitter.emit('log', 'log-msg2');
+        await providerLogHandler['deliverLogS3'](['msg1']);
+        await providerLogHandler['deliverLogS3'](['msg2']);
         expect(putLogObject).toHaveBeenCalledTimes(4);
         expect(createBucket).toHaveBeenCalledTimes(1);
 
@@ -381,11 +518,12 @@ describe('when delivering log', () => {
             })
         );
         jest.useFakeTimers();
-        providerLogHandler.logger.log('log-msg1');
-        providerLogHandler.logger.log('log-msg2');
-        providerLogHandler.logger.log('log-msg3');
+        providerLogHandler.logger.log('msg1');
+        providerLogHandler.logger.log('msg2');
+        providerLogHandler.logger.log('msg3');
         jest.runAllImmediates();
-        expect(providerLogHandler['stack'].length).toBe(4);
+        jest.useRealTimers();
+        expect(providerLogHandler['stack'].length).toBe(3);
         await providerLogHandler.processLogs();
         expect(providerLogHandler['stack'].length).toBe(0);
         expect(putLogObject).toHaveBeenCalledTimes(9);

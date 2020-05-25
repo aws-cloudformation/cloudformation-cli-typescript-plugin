@@ -20,6 +20,7 @@ SUPPORT_LIB_NAME = "cfn-rpdk"
 SUPPORT_LIB_VERSION = "0.1.1"
 MAIN_HANDLER_FUNCTION = "TypeFunction"
 REPO_URL = "https://github.com/eduardomourar/cloudformation-cli-typescript-plugin"
+REPO_RELEASE_SUFFIX = f"v{SUPPORT_LIB_VERSION}/cfn-rpdk-{SUPPORT_LIB_VERSION}.tgz"
 
 
 def validate_no(value):
@@ -33,7 +34,7 @@ class TypescriptLanguagePlugin(LanguagePlugin):
     ENTRY_POINT = "dist/handlers.entrypoint"
     TEST_ENTRY_POINT = "dist/handlers.testEntrypoint"
     CODE_URI = "./"
-    SUPPORT_LIB_URI = f"{REPO_URL}/releases/download/v{SUPPORT_LIB_VERSION}/cfn-rpdk-{SUPPORT_LIB_VERSION}.tgz"
+    SUPPORT_LIB_URI = f"{REPO_URL}/releases/download/{REPO_RELEASE_SUFFIX}"
 
     def __init__(self):
         self.env = self._setup_jinja_env(

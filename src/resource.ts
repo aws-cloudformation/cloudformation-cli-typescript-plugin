@@ -122,6 +122,11 @@ export abstract class BaseResource<T extends BaseResourceModel = BaseResourceMod
         }
         // Modify requestContext in-place, so that invoke count is bumped on local
         // reinvoke too.
+        if (!handlerRequest.requestContext) {
+            handlerRequest.requestContext = {
+                invocation: 0,
+            } as RequestContext<Map<string, any>>;
+        }
         const reinvokeContext: RequestContext<Map<string, any>> =
             handlerRequest.requestContext;
         reinvokeContext.invocation = (reinvokeContext.invocation || 0) + 1;
@@ -241,11 +246,15 @@ export abstract class BaseResource<T extends BaseResourceModel = BaseResourceMod
                 callbackContext
             );
         } catch (err) {
+            if (!err.stack) {
+                Error.captureStackTrace(err);
+            }
+            err.stack = `${new Error().stack}\n${err.stack}`;
             if (err instanceof BaseHandlerException) {
-                LOGGER.error('Handler error');
+                LOGGER.error(`Handler error: ${err.message}`, err);
                 progress = err.toProgressEvent();
             } else {
-                LOGGER.error('Exception caught');
+                LOGGER.error(`Exception caught: ${err.message}`, err);
                 msg = err.message || msg;
                 progress = ProgressEvent.failed(HandlerErrorCode.InternalFailure, msg);
             }
@@ -336,12 +345,11 @@ export abstract class BaseResource<T extends BaseResourceModel = BaseResourceMod
         let isLogSetup = false;
         let progress: ProgressEvent;
 
-        const printOrLog = (message: string): void => {
+        const printOrLog = (...args: any[]): void => {
             if (isLogSetup) {
-                LOGGER.error(message);
+                LOGGER.error(...args);
             } else {
-                console.log(message);
-                console.trace();
+                console.log(...args);
             }
         };
 
@@ -351,7 +359,7 @@ export abstract class BaseResource<T extends BaseResourceModel = BaseResourceMod
             );
             const [callerSession, platformSession, providerSession] = sessions;
             isLogSetup = await ProviderLogHandler.setup(event, providerSession);
-
+            // LOGGER.debug('entrypoint eventData', eventData.toObject());
             const request = this.castResourceRequest(event);
 
             const metrics = new MetricsPublisherProxy(
@@ -435,11 +443,15 @@ export abstract class BaseResource<T extends BaseResourceModel = BaseResourceMod
                 );
             }
         } catch (err) {
+            if (!err.stack) {
+                Error.captureStackTrace(err);
+            }
+            err.stack = `${new Error().stack}\n${err.stack}`;
             if (err instanceof BaseHandlerException) {
-                printOrLog('Handler error');
+                printOrLog(`Handler error: ${err.message}`, err);
                 progress = err.toProgressEvent();
             } else {
-                printOrLog('Exception caught');
+                printOrLog(`Exception caught: ${err.message}`, err);
                 progress = ProgressEvent.failed(
                     HandlerErrorCode.InternalFailure,
                     err.message
