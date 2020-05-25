@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.2] - 2020-05-25
+### Fixed
+- [Support Library] Fix error messages not appearing in CloudWatch
+
 
 ## [0.1.1] - 2020-05-02
 ### Fixed
@@ -33,7 +37,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - [Support Library] Base Model class as well as Progress Event class
 
 
-[Unreleased]: https://github.com/eduardomourar/cloudformation-cli-typescript-plugin/compare/v0.1.1...HEAD
+[Unreleased]: https://github.com/eduardomourar/cloudformation-cli-typescript-plugin/compare/v0.1.2...HEAD
+[0.1.2]: https://github.com/eduardomourar/cloudformation-cli-typescript-plugin/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/eduardomourar/cloudformation-cli-typescript-plugin/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/eduardomourar/cloudformation-cli-typescript-plugin/compare/v0.0.1...v0.1.0
 [0.0.1]: https://github.com/eduardomourar/cloudformation-cli-typescript-plugin/releases/tag/v0.0.1
