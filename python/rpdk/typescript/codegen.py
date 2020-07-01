@@ -205,7 +205,7 @@ class TypescriptLanguagePlugin(LanguagePlugin):
     @staticmethod
     def _make_build_command(base_path, build_command=None):
         command = (
-            "npm install --optional --timing "
+            "npm install --optional "
             + f"&& sam build --debug --build-dir {base_path}/build"
         )
         if build_command is not None:
