@@ -106,7 +106,6 @@ describe('when getting resource', () => {
                 logicalResourceId: 'myBucket',
                 resourceProperties: 'state1',
                 previousResourceProperties: 'state2',
-                systemTags: { 'aws:cloudformation:stack-id': 'SampleStack' },
                 stackTags: { tag1: 'abc' },
                 previousStackTags: { tag1: 'def' },
             },

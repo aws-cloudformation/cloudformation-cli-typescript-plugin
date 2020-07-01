@@ -42,10 +42,7 @@ export class SessionProxy {
 
 @allArgsConstructor
 @builder
-export class ProgressEvent<
-    R extends BaseModel = BaseModel,
-    T = Map<string, any>
-> {
+export class ProgressEvent<R extends BaseModel = BaseModel, T = Map<string, any>> {
     /**
      * The status indicates whether the handler has reached a terminal state or is
      * still computing and requires more time to complete

@@ -1,11 +1,7 @@
 import CloudFormation from 'aws-sdk/clients/cloudformation';
 import { reportProgress } from '../../src/callback';
 import { SessionProxy } from '../../src/proxy';
-import {
-    BaseModel,
-    HandlerErrorCode,
-    OperationStatus,
-} from '../../src/interface';
+import { BaseModel, HandlerErrorCode, OperationStatus } from '../../src/interface';
 
 const mockResult = (output: any): jest.Mock => {
     return jest.fn().mockReturnValue({

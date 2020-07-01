@@ -55,7 +55,7 @@ export class RequestData<T = Map<string, any>> {
     logicalResourceId: LogicalResourceId;
     resourceProperties: T;
     previousResourceProperties?: T;
-    systemTags: { [index: string]: string };
+    systemTags?: { [index: string]: string };
     stackTags?: { [index: string]: string };
     previousStackTags?: { [index: string]: string };
 
