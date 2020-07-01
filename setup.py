@@ -27,6 +27,7 @@ setup(
     version=find_version("python", "rpdk", "typescript", "__init__.py"),
     description=__doc__,
     long_description=read("README.md"),
+    long_description_content_type="text/markdown",
     author="eduardomourar",
     author_email="eduardomourar@users.noreply.github.com",
     url="https://github.com/eduardomourar/cloudformation-cli-typescript-plugin",
