@@ -26,3 +26,9 @@ def translate_type(resolved_type):
         return f"Set<{item_type}>"
 
     raise ValueError(f"Unknown container type {resolved_type.container}")
+
+
+def contains_model(resolved_type):
+    if resolved_type.container == ContainerType.LIST:
+        return contains_model(resolved_type.type)
+    return resolved_type.container == ContainerType.MODEL
