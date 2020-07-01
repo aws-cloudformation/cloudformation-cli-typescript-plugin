@@ -2,7 +2,7 @@ import CloudFormation from 'aws-sdk/clients/cloudformation';
 import { reportProgress } from '../../src/callback';
 import { SessionProxy } from '../../src/proxy';
 import {
-    BaseResourceModel,
+    BaseModel,
     HandlerErrorCode,
     OperationStatus,
 } from '../../src/interface';
@@ -78,7 +78,7 @@ describe('when getting callback', () => {
             errorCode: HandlerErrorCode.InternalFailure,
             operationStatus: OperationStatus.Failed,
             currentOperationStatus: OperationStatus.InProgress,
-            resourceModel: {} as BaseResourceModel,
+            resourceModel: {} as BaseModel,
             message: 'test message',
         });
         expect(recordHandlerProgress).toHaveBeenCalledTimes(1);

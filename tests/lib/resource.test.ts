@@ -7,7 +7,7 @@ import { reportProgress } from '../../src/callback';
 import {
     Action,
     BaseResourceHandlerRequest,
-    BaseResourceModel,
+    BaseModel,
     CfnResponse,
     HandlerErrorCode,
     OperationStatus,
@@ -38,7 +38,7 @@ describe('when getting resource', () => {
     let mockSession: jest.SpyInstance;
     const TYPE_NAME = 'Test::Foo::Bar';
     class Resource extends BaseResource {}
-    class MockModel extends BaseResourceModel {
+    class MockModel extends BaseModel {
         ['constructor']: typeof MockModel;
         public static readonly TYPE_NAME: string = TYPE_NAME;
         public static deserialize(jsonData: any): MockModel {
@@ -170,7 +170,7 @@ describe('when getting resource', () => {
     });
 
     test('entrypoint handler raises', async () => {
-        class Model extends BaseResourceModel {
+        class Model extends BaseModel {
             ['constructor']: typeof Model;
             aString: string;
             public static deserialize(jsonData: any): Model {
@@ -312,7 +312,7 @@ describe('when getting resource', () => {
                 return { state: 'state2' };
             });
 
-        class Model extends BaseResourceModel {
+        class Model extends BaseModel {
             ['constructor']: typeof Model;
             public static deserialize = mockDeserialize;
         }
@@ -490,7 +490,7 @@ describe('when getting resource', () => {
                 return { state: 'state2' };
             });
 
-        class Model extends BaseResourceModel {
+        class Model extends BaseModel {
             ['constructor']: typeof Model;
             public static deserialize = mockDeserialize;
         }
@@ -538,7 +538,7 @@ describe('when getting resource', () => {
     });
 
     test('test entrypoint success', async () => {
-        class Model extends BaseResourceModel {
+        class Model extends BaseModel {
             ['constructor']: typeof Model;
         }
         const spyDeserialize: jest.SpyInstance = jest.spyOn(Model, 'deserialize');

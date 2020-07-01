@@ -6,7 +6,7 @@ import { allArgsConstructor, builder, IBuilder } from 'tombok';
 
 import {
     BaseResourceHandlerRequest,
-    BaseResourceModel,
+    BaseModel,
     HandlerErrorCode,
     OperationStatus,
 } from './interface';
@@ -43,7 +43,7 @@ export class SessionProxy {
 @allArgsConstructor
 @builder
 export class ProgressEvent<
-    R extends BaseResourceModel = BaseResourceModel,
+    R extends BaseModel = BaseModel,
     T = Map<string, any>
 > {
     /**
@@ -187,7 +187,7 @@ export class ProgressEvent<
 @allArgsConstructor
 @builder
 export class ResourceHandlerRequest<
-    T extends BaseResourceModel
+    T extends BaseModel
 > extends BaseResourceHandlerRequest<T> {
     public clientRequestToken: string;
     public desiredResourceState: T;

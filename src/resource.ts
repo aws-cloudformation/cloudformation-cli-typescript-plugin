@@ -6,7 +6,7 @@ import { reportProgress } from './callback';
 import { BaseHandlerException, InternalFailure, InvalidRequest } from './exceptions';
 import {
     Action,
-    BaseResourceModel,
+    BaseModel,
     BaseResourceHandlerRequest,
     Callable,
     CfnResponse,
@@ -91,7 +91,7 @@ function ensureSerialize(toResponse = false): MethodDecorator {
     };
 }
 
-export abstract class BaseResource<T extends BaseResourceModel = BaseResourceModel> {
+export abstract class BaseResource<T extends BaseModel = BaseModel> {
     constructor(
         public typeName: string,
         private modelCls: Constructor<T>,

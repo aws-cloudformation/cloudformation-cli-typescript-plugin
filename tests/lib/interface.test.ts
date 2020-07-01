@@ -1,7 +1,7 @@
-import { BaseResourceModel, Optional } from '../../src/interface';
+import { BaseModel, Optional } from '../../src/interface';
 
 describe('when getting interface', () => {
-    class ResourceModel extends BaseResourceModel {
+    class ResourceModel extends BaseModel {
         ['constructor']: typeof ResourceModel;
         public static readonly TYPE_NAME: string = 'Test::Resource::Model';
 

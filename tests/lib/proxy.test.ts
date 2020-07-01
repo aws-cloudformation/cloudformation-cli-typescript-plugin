@@ -1,6 +1,6 @@
 import { ProgressEvent, SessionProxy } from '../../src/proxy';
 import {
-    BaseResourceModel,
+    BaseModel,
     Credentials,
     HandlerErrorCode,
     OperationStatus,
@@ -10,7 +10,7 @@ import {
 describe('when getting session proxy', () => {
     const BEARER_TOKEN = 'f3390613-b2b5-4c31-a4c6-66813dff96a6';
 
-    class ResourceModel extends BaseResourceModel {
+    class ResourceModel extends BaseModel {
         public static readonly TYPE_NAME: string = 'Test::Resource::Model';
 
         public somekey: Optional<string>;
