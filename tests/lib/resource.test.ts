@@ -208,7 +208,10 @@ describe('when getting resource', () => {
     test('entrypoint without context', async () => {
         entrypointPayload['requestContext'] = null;
         const mockLogDelivery: jest.Mock = (ProviderLogHandler.setup as unknown) as jest.Mock;
-        const event: ProgressEvent = ProgressEvent.success(null, { c: 'd' });
+        const event: ProgressEvent = ProgressEvent.success(
+            new Map(Object.entries({ a: 'b' })),
+            { c: 'd' }
+        );
         const mockHandler: jest.Mock = jest.fn(() => event);
         const resource = new Resource(TYPE_NAME, MockModel);
         resource.addHandler(Action.Create, mockHandler);
