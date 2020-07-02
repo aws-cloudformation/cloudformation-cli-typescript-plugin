@@ -24,6 +24,7 @@ describe('when getting session proxy', () => {
             sessionToken: '',
         } as Credentials);
         expect(proxy).toBeInstanceOf(SessionProxy);
+        expect(proxy.client('CloudWatch')).toBeDefined();
     });
 
     test('get session returns null', () => {
@@ -80,6 +81,7 @@ describe('when getting session proxy', () => {
                 Object.entries({
                     somekey: 'a',
                     someotherkey: 'b',
+                    somenullkey: null,
                 })
             )
         );
