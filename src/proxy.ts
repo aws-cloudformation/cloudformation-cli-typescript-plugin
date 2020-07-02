@@ -6,7 +6,7 @@ import { allArgsConstructor, builder, IBuilder } from 'tombok';
 
 import {
     BaseResourceHandlerRequest,
-    BaseResourceModel,
+    BaseModel,
     HandlerErrorCode,
     OperationStatus,
 } from './interface';
@@ -42,10 +42,7 @@ export class SessionProxy {
 
 @allArgsConstructor
 @builder
-export class ProgressEvent<
-    R extends BaseResourceModel = BaseResourceModel,
-    T = Map<string, any>
-> {
+export class ProgressEvent<R extends BaseModel = BaseModel, T = Map<string, any>> {
     /**
      * The status indicates whether the handler has reached a terminal state or is
      * still computing and requires more time to complete
@@ -187,7 +184,7 @@ export class ProgressEvent<
 @allArgsConstructor
 @builder
 export class ResourceHandlerRequest<
-    T extends BaseResourceModel
+    T extends BaseModel
 > extends BaseResourceHandlerRequest<T> {
     public clientRequestToken: string;
     public desiredResourceState: T;

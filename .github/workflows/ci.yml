@@ -38,7 +38,7 @@ jobs:
       - name: Install Dependencies Node.js
         id: install_nodejs
         run: |
-          npm ci --optional --timing && npm run build
+          npm ci --optional && npm run build
       - name: Run Unit Tests
         id: unit_testing
         run: |
@@ -68,9 +68,9 @@ jobs:
           ls -la
           mkdir ./dist
           cp "$RPDK_PATH" ./dist
-          npm install --timing "./dist/$RPDK_PACKAGE"
+          npm install "./dist/$RPDK_PACKAGE"
           cfn generate -vv && cfn validate -vv
-          npm install --optional --timing
+          npm install --optional
           sam build --debug --build-dir ./build TypeFunction
           sam build --debug --build-dir ./build TestEntrypoint
           sam local invoke -t build/template.yaml --debug --event sam-tests/create.json  --log-file sam.log TestEntrypoint

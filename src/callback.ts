@@ -2,11 +2,11 @@ import { v4 as uuidv4 } from 'uuid';
 import CloudFormation from 'aws-sdk/clients/cloudformation';
 
 import { SessionProxy } from './proxy';
-import { BaseResourceModel, CfnResponse, OperationStatus } from './interface';
+import { BaseModel, CfnResponse, OperationStatus } from './interface';
 
 const LOGGER = console;
 
-interface ProgressOptions extends CfnResponse<BaseResourceModel> {
+interface ProgressOptions extends CfnResponse<BaseModel> {
     session: SessionProxy;
     currentOperationStatus?: OperationStatus;
 }

@@ -1,11 +1,7 @@
 import CloudFormation from 'aws-sdk/clients/cloudformation';
 import { reportProgress } from '../../src/callback';
 import { SessionProxy } from '../../src/proxy';
-import {
-    BaseResourceModel,
-    HandlerErrorCode,
-    OperationStatus,
-} from '../../src/interface';
+import { BaseModel, HandlerErrorCode, OperationStatus } from '../../src/interface';
 
 const mockResult = (output: any): jest.Mock => {
     return jest.fn().mockReturnValue({
@@ -78,7 +74,7 @@ describe('when getting callback', () => {
             errorCode: HandlerErrorCode.InternalFailure,
             operationStatus: OperationStatus.Failed,
             currentOperationStatus: OperationStatus.InProgress,
-            resourceModel: {} as BaseResourceModel,
+            resourceModel: {} as BaseModel,
             message: 'test message',
         });
         expect(recordHandlerProgress).toHaveBeenCalledTimes(1);

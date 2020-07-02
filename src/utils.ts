@@ -7,7 +7,7 @@ import { allArgsConstructor } from 'tombok';
 import {
     Action,
     BaseResourceHandlerRequest,
-    BaseResourceModel,
+    BaseModel,
     Credentials,
     RequestContext,
 } from './interface';
@@ -55,7 +55,7 @@ export class RequestData<T = Map<string, any>> {
     logicalResourceId: LogicalResourceId;
     resourceProperties: T;
     previousResourceProperties?: T;
-    systemTags: { [index: string]: string };
+    systemTags?: { [index: string]: string };
     stackTags?: { [index: string]: string };
     previousStackTags?: { [index: string]: string };
 
@@ -128,7 +128,7 @@ export class HandlerRequest<
 }
 
 @allArgsConstructor
-export class UnmodeledRequest extends BaseResourceHandlerRequest<BaseResourceModel> {
+export class UnmodeledRequest extends BaseResourceHandlerRequest<BaseModel> {
     constructor(...args: any[]) {
         super();
     }
@@ -139,7 +139,7 @@ export class UnmodeledRequest extends BaseResourceHandlerRequest<BaseResourceMod
         return request;
     }
 
-    public toModeled<T extends BaseResourceModel = BaseResourceModel>(
+    public toModeled<T extends BaseModel = BaseModel>(
         modelCls: Constructor<T> & { deserialize?: Function }
     ): BaseResourceHandlerRequest<T> {
         return new BaseResourceHandlerRequest<T>(
