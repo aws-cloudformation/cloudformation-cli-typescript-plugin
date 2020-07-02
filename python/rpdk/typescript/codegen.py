@@ -10,7 +10,7 @@ from rpdk.core.init import input_with_validation
 from rpdk.core.jsonutils.resolver import ContainerType, resolve_models
 from rpdk.core.plugin_base import LanguagePlugin
 
-from .resolver import translate_type
+from .resolver import contains_model, translate_type
 from .utils import safe_reserved
 
 LOG = logging.getLogger(__name__)
@@ -41,6 +41,7 @@ class TypescriptLanguagePlugin(LanguagePlugin):
             trim_blocks=True, lstrip_blocks=True, keep_trailing_newline=True
         )
         self.env.filters["translate_type"] = translate_type
+        self.env.filters["contains_model"] = contains_model
         self.env.filters["safe_reserved"] = safe_reserved
         self.env.globals["ContainerType"] = ContainerType
         self.namespace = None
@@ -204,7 +205,7 @@ class TypescriptLanguagePlugin(LanguagePlugin):
     @staticmethod
     def _make_build_command(base_path, build_command=None):
         command = (
-            "npm install --optional --timing "
+            "npm install --optional "
             + f"&& sam build --debug --build-dir {base_path}/build"
         )
         if build_command is not None:

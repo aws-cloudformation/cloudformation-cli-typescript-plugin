@@ -69,8 +69,8 @@ export interface RequestContext<T> {
 
 @builder
 @allArgsConstructor
-export class BaseResourceModel {
-    ['constructor']: typeof BaseResourceModel;
+export class BaseModel {
+    ['constructor']: typeof BaseModel;
     protected static readonly TYPE_NAME?: string;
 
     constructor(...args: any[]) {}
@@ -92,7 +92,7 @@ export class BaseResourceModel {
         return data;
     }
 
-    public static deserialize(jsonData: any): ThisType<BaseResourceModel> {
+    public static deserialize(jsonData: any): ThisType<BaseModel> {
         return new this(new Map<string, any>(Object.entries(jsonData)));
     }
 
@@ -104,7 +104,7 @@ export class BaseResourceModel {
 }
 
 @allArgsConstructor
-export class BaseResourceHandlerRequest<T extends BaseResourceModel> {
+export class BaseResourceHandlerRequest<T extends BaseModel> {
     public clientRequestToken: ClientRequestToken;
     public desiredResourceState?: T;
     public previousResourceState?: T;
