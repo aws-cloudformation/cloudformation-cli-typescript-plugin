@@ -115,9 +115,8 @@ export class BaseResourceHandlerRequest<T extends BaseModel> {
 }
 
 export interface CfnResponse<T> {
-    bearerToken: string;
     errorCode?: HandlerErrorCode;
-    operationStatus: OperationStatus;
+    status: OperationStatus;
     message: string;
     resourceModel?: T;
     resourceModels?: T[];

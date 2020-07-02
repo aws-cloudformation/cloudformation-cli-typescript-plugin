@@ -2,7 +2,6 @@ import 'reflect-metadata';
 import { boundMethod } from 'autobind-decorator';
 
 import { ProgressEvent, SessionProxy } from './proxy';
-import { reportProgress } from './callback';
 import { BaseHandlerException, InternalFailure, InvalidRequest } from './exceptions';
 import {
     Action,
@@ -18,9 +17,7 @@ import {
 } from './interface';
 import { ProviderLogHandler } from './log-delivery';
 import { MetricsPublisherProxy } from './metrics';
-import { cleanupCloudwatchEvents, rescheduleAfterMinutes } from './scheduler';
 import {
-    delay,
     Constructor,
     HandlerRequest,
     LambdaContext,
@@ -34,7 +31,6 @@ const MUTATING_ACTIONS: [Action, Action, Action] = [
     Action.Update,
     Action.Delete,
 ];
-const INVOCATION_TIMEOUT_MS = 60000;
 
 export type HandlerSignature = Callable<
     [Optional<SessionProxy>, any, Map<string, any>],
@@ -79,10 +75,7 @@ function ensureSerialize(toResponse = false): MethodDecorator {
             if (toResponse) {
                 // Use the raw event data as a last-ditch attempt to call back if the
                 // request is invalid.
-                const serialized = progress.serialize(
-                    true,
-                    mappedEvent.get('bearerToken')
-                );
+                const serialized = progress.serialize();
                 return Promise.resolve(serialized.toObject() as CfnResponse<Resource>);
             }
             return Promise.resolve(progress);
@@ -109,46 +102,6 @@ export abstract class BaseResource<T extends BaseModel = BaseModel> {
     public addHandler = (action: Action, f: HandlerSignature): HandlerSignature => {
         this.handlers.set(action, f);
         return f;
-    };
-
-    public static scheduleReinvocation = async (
-        handlerRequest: HandlerRequest,
-        handlerResponse: ProgressEvent,
-        context: LambdaContext,
-        session: SessionProxy
-    ): Promise<boolean> => {
-        if (handlerResponse.status !== OperationStatus.InProgress) {
-            return false;
-        }
-        // Modify requestContext in-place, so that invoke count is bumped on local
-        // reinvoke too.
-        if (!handlerRequest.requestContext) {
-            handlerRequest.requestContext = {
-                invocation: 0,
-            } as RequestContext<Map<string, any>>;
-        }
-        const reinvokeContext: RequestContext<Map<string, any>> =
-            handlerRequest.requestContext;
-        reinvokeContext.invocation = (reinvokeContext.invocation || 0) + 1;
-        const callbackDelaySeconds = handlerResponse.callbackDelaySeconds;
-        const remainingMs = context.getRemainingTimeInMillis();
-
-        // When a handler requests a sub-minute callback delay, and if the lambda
-        // invocation has enough runtime (with 20% buffer), we can re-run the handler
-        // locally otherwise we re-invoke through CloudWatchEvents.
-        const neededMsRemaining = callbackDelaySeconds * 1200 + INVOCATION_TIMEOUT_MS;
-        if (callbackDelaySeconds < 60 && remainingMs > neededMsRemaining) {
-            await delay(callbackDelaySeconds);
-            return true;
-        }
-        const callbackDelayMin = Number(callbackDelaySeconds / 60);
-        await rescheduleAfterMinutes(
-            session,
-            context.invokedFunctionArn,
-            callbackDelayMin,
-            handlerRequest
-        );
-        return false;
     };
 
     private invokeHandler = async (
@@ -265,13 +218,12 @@ export abstract class BaseResource<T extends BaseModel = BaseModel> {
     private static parseRequest = (
         eventData: Map<string, any>
     ): [
-        [Optional<SessionProxy>, Optional<SessionProxy>, SessionProxy],
+        [Optional<SessionProxy>, SessionProxy],
         Action,
         Map<string, any>,
         HandlerRequest
     ] => {
         let callerSession: Optional<SessionProxy>;
-        let platformSession: Optional<SessionProxy>;
         let providerSession: SessionProxy;
         let action: Action;
         let callbackContext: Map<string, any>;
@@ -283,35 +235,19 @@ export abstract class BaseResource<T extends BaseModel = BaseModel> {
                     'Event data is missing required property "awsAccountId".'
                 );
             }
-            const platformCredentials = event.requestData.platformCredentials;
-            platformSession = SessionProxy.getSession(platformCredentials);
             callerSession = SessionProxy.getSession(
                 event.requestData.callerCredentials
             );
             providerSession = SessionProxy.getSession(
                 event.requestData.providerCredentials
             );
-            // Credentials are used when rescheduling, so can't zero them out (for now).
-            if (
-                !platformSession ||
-                !platformCredentials ||
-                Object.keys(platformCredentials).length === 0
-            ) {
-                throw new Error('No platform credentials');
-            }
             action = event.action;
-            callbackContext =
-                event.requestContext?.callbackContext || new Map<string, any>();
+            callbackContext = event.callbackContext || new Map<string, any>();
         } catch (err) {
             LOGGER.error('Invalid request');
             throw new InvalidRequest(`${err} (${err.name})`);
         }
-        return [
-            [callerSession, platformSession, providerSession],
-            action,
-            callbackContext,
-            event,
-        ];
+        return [[callerSession, providerSession], action, callbackContext, event];
     };
 
     private castResourceRequest = (
@@ -357,7 +293,7 @@ export abstract class BaseResource<T extends BaseModel = BaseModel> {
             const [sessions, action, callback, event] = BaseResource.parseRequest(
                 eventData
             );
-            const [callerSession, platformSession, providerSession] = sessions;
+            const [callerSession, providerSession] = sessions;
             isLogSetup = await ProviderLogHandler.setup(event, providerSession);
             // LOGGER.debug('entrypoint eventData', eventData.toObject());
             const request = this.castResourceRequest(event);
@@ -366,81 +302,31 @@ export abstract class BaseResource<T extends BaseModel = BaseModel> {
                 event.awsAccountId,
                 event.resourceType
             );
-            metrics.addMetricsPublisher(platformSession);
             metrics.addMetricsPublisher(providerSession);
-            // Acknowledge the task for first time invocation.
-            if (
-                !event.requestContext ||
-                Object.keys(event.requestContext).length === 0
-            ) {
-                await reportProgress({
-                    session: platformSession,
-                    bearerToken: event.bearerToken,
-                    errorCode: null,
-                    operationStatus: OperationStatus.InProgress,
-                    currentOperationStatus: OperationStatus.Pending,
-                    resourceModel: null,
-                    message: '',
-                });
-            } else {
-                // If this invocation was triggered by a 're-invoke' CloudWatch Event,
-                // clean it up.
-                await cleanupCloudwatchEvents(
-                    platformSession,
-                    event.requestContext.cloudWatchEventsRuleName || '',
-                    event.requestContext.cloudWatchEventsTargetId || ''
+
+            const startTime = new Date(Date.now());
+            await metrics.publishInvocationMetric(startTime, action);
+            let error: Error;
+            try {
+                progress = await this.invokeHandler(
+                    callerSession,
+                    request,
+                    action,
+                    callback
                 );
+            } catch (err) {
+                error = err;
             }
-            let invoke = true;
-            while (invoke) {
-                const startTime = new Date(Date.now());
-                await metrics.publishInvocationMetric(startTime, action);
-                let error: Error;
-                try {
-                    progress = await this.invokeHandler(
-                        callerSession,
-                        request,
-                        action,
-                        callback
-                    );
-                } catch (err) {
-                    error = err;
-                }
-                const endTime = new Date(Date.now());
-                const milliseconds: number = endTime.getTime() - startTime.getTime();
-                await metrics.publishDurationMetric(endTime, action, milliseconds);
-                if (error) {
-                    await metrics.publishExceptionMetric(
-                        new Date(Date.now()),
-                        action,
-                        error
-                    );
-                    throw error;
-                }
-                if (progress.callbackContext) {
-                    const callback = progress.callbackContext;
-                    if (!event.requestContext) {
-                        event.requestContext = {} as RequestContext<Map<string, any>>;
-                    }
-                    event.requestContext.callbackContext = callback;
-                }
-                if (MUTATING_ACTIONS.includes(event.action)) {
-                    await reportProgress({
-                        session: platformSession,
-                        bearerToken: event.bearerToken,
-                        errorCode: progress.errorCode,
-                        operationStatus: progress.status,
-                        currentOperationStatus: OperationStatus.InProgress,
-                        resourceModel: progress.resourceModel,
-                        message: progress.message,
-                    });
-                }
-                invoke = await BaseResource.scheduleReinvocation(
-                    event,
-                    progress,
-                    context,
-                    platformSession
+            const endTime = new Date(Date.now());
+            const milliseconds: number = endTime.getTime() - startTime.getTime();
+            await metrics.publishDurationMetric(endTime, action, milliseconds);
+            if (error) {
+                await metrics.publishExceptionMetric(
+                    new Date(Date.now()),
+                    action,
+                    error
                 );
+                throw error;
             }
         } catch (err) {
             if (!err.stack) {

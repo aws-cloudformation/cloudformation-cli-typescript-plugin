@@ -49,7 +49,6 @@ export class TestEvent {
 @allArgsConstructor
 export class RequestData<T = Map<string, any>> {
     callerCredentials?: Credentials;
-    platformCredentials?: Credentials;
     providerCredentials?: Credentials;
     providerLogGroupName: LogGroupName;
     logicalResourceId: LogicalResourceId;
@@ -68,10 +67,7 @@ export class RequestData<T = Map<string, any>> {
         const reqData: RequestData = new RequestData(jsonData);
         jsonData.forEach((value: any, key: string) => {
             if (key.endsWith('Credentials')) {
-                type credentialsType =
-                    | 'callerCredentials'
-                    | 'platformCredentials'
-                    | 'providerCredentials';
+                type credentialsType = 'callerCredentials' | 'providerCredentials';
                 const prop: credentialsType = key as credentialsType;
                 const creds = value;
                 if (creds) {
@@ -95,13 +91,14 @@ export class HandlerRequest<
     action: Action;
     awsAccountId: string;
     bearerToken: string;
-    nextToken?: NextToken;
     region: string;
     responseEndpoint: string;
     resourceType: string;
     resourceTypeVersion: string;
     requestData: RequestData<ResourceT>;
     stackId: string;
+    callbackContext?: CallbackT;
+    nextToken?: NextToken;
     requestContext: RequestContext<CallbackT>;
 
     constructor(...args: any[]) {}
