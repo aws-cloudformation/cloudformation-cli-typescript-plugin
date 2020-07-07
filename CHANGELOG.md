@@ -6,6 +6,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2020-07-08
+### Added
+- [Support Library] Support protocol version 2.0.0 to response the handler result with callback directly and allow CloudFormation service to orchestrate the callback.
+
+
 ## [0.1.2] - 2020-05-25
 ### Fixed
 - [Support Library] Fix error messages not appearing in CloudWatch
@@ -37,7 +42,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - [Support Library] Base Model class as well as Progress Event class
 
 
-[Unreleased]: https://github.com/eduardomourar/cloudformation-cli-typescript-plugin/compare/v0.1.2...HEAD
+[Unreleased]: https://github.com/eduardomourar/cloudformation-cli-typescript-plugin/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/eduardomourar/cloudformation-cli-typescript-plugin/compare/v0.1.2...v0.2.0
 [0.1.2]: https://github.com/eduardomourar/cloudformation-cli-typescript-plugin/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/eduardomourar/cloudformation-cli-typescript-plugin/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/eduardomourar/cloudformation-cli-typescript-plugin/compare/v0.0.1...v0.1.0
