@@ -97,7 +97,7 @@ export class ProgressEvent<R extends BaseModel = BaseModel, T = Map<string, any>
         return null;
     }
 
-    public serialize(toTesponse = false, bearerToken?: string): Map<string, any> {
+    public serialize(): Map<string, any> {
         // To match Java serialization, which drops 'null' values, and the
         // contract tests currently expect this also.
         const json: Map<string, any> = new Map<string, any>(Object.entries(this)); //JSON.parse(JSON.stringify(this)));
@@ -107,26 +107,17 @@ export class ProgressEvent<R extends BaseModel = BaseModel, T = Map<string, any>
             }
         });
         // Mutate to what's expected in the response.
-        if (toTesponse) {
-            json.set('bearerToken', bearerToken);
-            json.set('operationStatus', json.get('status'));
-            json.delete('status');
-            if (this.resourceModel) {
-                json.set('resourceModel', this.resourceModel.toObject());
-            }
-            if (this.resourceModels) {
-                const models = this.resourceModels.map((resource: R) =>
-                    resource.toObject()
-                );
-                json.set('resourceModels', models);
-            }
-            json.delete('callbackDelaySeconds');
-            if (json.has('callbackContext')) {
-                json.delete('callbackContext');
-            }
-            if (this.errorCode) {
-                json.set('errorCode', this.errorCode);
-            }
+        if (this.resourceModel) {
+            json.set('resourceModel', this.resourceModel.toObject());
+        }
+        if (this.resourceModels) {
+            const models = this.resourceModels.map((resource: R) =>
+                resource.toObject()
+            );
+            json.set('resourceModels', models);
+        }
+        if (this.errorCode) {
+            json.set('errorCode', this.errorCode);
         }
         return json;
     }

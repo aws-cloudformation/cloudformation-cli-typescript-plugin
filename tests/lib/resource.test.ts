@@ -3,7 +3,6 @@ import CloudFormation from 'aws-sdk/clients/cloudformation';
 
 import * as exceptions from '../../src/exceptions';
 import { ProgressEvent, SessionProxy } from '../../src/proxy';
-import { reportProgress } from '../../src/callback';
 import {
     Action,
     BaseResourceHandlerRequest,
@@ -16,7 +15,6 @@ import {
 import { ProviderLogHandler } from '../../src/log-delivery';
 import { MetricsPublisherProxy } from '../../src/metrics';
 import { handlerEvent, HandlerSignatures, BaseResource } from '../../src/resource';
-import { cleanupCloudwatchEvents, rescheduleAfterMinutes } from '../../src/scheduler';
 import { HandlerRequest, LambdaContext } from '../../src/utils';
 
 const mockResult = (output: any): jest.Mock => {
@@ -27,10 +25,8 @@ const mockResult = (output: any): jest.Mock => {
 
 jest.mock('aws-sdk/clients/cloudformation');
 jest.mock('aws-sdk/clients/cloudwatchevents');
-jest.mock('../../src/callback');
 jest.mock('../../src/log-delivery');
 jest.mock('../../src/metrics');
-jest.mock('../../src/scheduler');
 
 describe('when getting resource', () => {
     let entrypointPayload: any;
@@ -79,7 +75,6 @@ describe('when getting resource', () => {
             bearerToken: '123456',
             region: 'us-east-1',
             action: 'CREATE',
-            responseEndpoint: 'cloudformation.us-west-2.amazonaws.com',
             resourceType: 'AWS::Test::TestModel',
             resourceTypeVersion: '1.0',
             requestContext: {},
@@ -89,12 +84,6 @@ describe('when getting resource', () => {
                     secretAccessKey: '66iOGPN5LnpZorcLr8Kh25u8AbjHVllv5/poh2O0',
                     sessionToken:
                         'lameHS2vQOknSHWhdFYTxm2eJc1JMn9YBNI4nV4mXue945KPL6DHfW8EsUQT5zwssYEC1NvYP9yD6Y5s5lKR3chflOHPFsIe6eqg',
-                },
-                platformCredentials: {
-                    accessKeyId: '32IEHAHFIAG538KYASAI',
-                    secretAccessKey: '0O2hop/5vllVHjbA8u52hK8rLcroZpnL5NPGOi66',
-                    sessionToken:
-                        'gqe6eIsFPHOlfhc3RKl5s5Y6Dy9PYvN1CEYsswz5TQUsE8WfHD6LPK549euXm4Vn4INBY9nMJ1cJe2mxTYFdhWHSnkOQv2SHemal',
                 },
                 providerCredentials: {
                     accessKeyId: 'HDI0745692Y45IUTYR78',
@@ -144,13 +133,12 @@ describe('when getting resource', () => {
     test('entrypoint handler error', async () => {
         const resource = getResource();
         const event: CfnResponse<Resource> = await resource.entrypoint({}, null);
-        expect(event.operationStatus).toBe(OperationStatus.Failed);
+        expect(event.status).toBe(OperationStatus.Failed);
         expect(event.errorCode).toBe(HandlerErrorCode.InvalidRequest);
     });
 
     test('entrypoint success', async () => {
         const mockLogDelivery: jest.Mock = (ProviderLogHandler.setup as unknown) as jest.Mock;
-        const mockReportProgress: jest.Mock = (reportProgress as unknown) as jest.Mock;
         const mockHandler: jest.Mock = jest.fn(() => ProgressEvent.success());
         const resource = new Resource(TYPE_NAME, MockModel);
         resource.addHandler(Action.Create, mockHandler);
@@ -159,11 +147,10 @@ describe('when getting resource', () => {
             null
         );
         expect(mockLogDelivery).toBeCalledTimes(1);
-        expect(mockReportProgress).toBeCalledTimes(2);
         expect(event).toMatchObject({
             message: '',
-            bearerToken: '123456',
-            operationStatus: OperationStatus.Success,
+            status: OperationStatus.Success,
+            callbackDelaySeconds: 0,
         });
         expect(mockHandler).toBeCalledTimes(1);
     });
@@ -195,39 +182,36 @@ describe('when getting resource', () => {
         expect(event).toMatchObject({
             errorCode: 'InvalidRequest',
             message: 'Error: handler failed',
-            bearerToken: '123456',
-            operationStatus: OperationStatus.Failed,
+            status: OperationStatus.Failed,
+            callbackDelaySeconds: 0,
         });
     });
 
     test('entrypoint non mutating action', async () => {
         const resource = new Resource(TYPE_NAME, MockModel);
         entrypointPayload['action'] = 'READ';
-        const mockReportProgress: jest.Mock = (reportProgress as unknown) as jest.Mock;
         const mockHandler: jest.Mock = jest.fn(() => ProgressEvent.success());
         resource.addHandler(Action.Create, mockHandler);
         await resource.entrypoint(entrypointPayload, null);
-        expect(mockReportProgress).toBeCalledTimes(1);
     });
 
     test('entrypoint with context', async () => {
         entrypointPayload['requestContext'] = { a: 'b' };
-        const mockCleanupEvents: jest.Mock = (cleanupCloudwatchEvents as unknown) as jest.Mock;
         const event: ProgressEvent = ProgressEvent.success(null, { c: 'd' });
         const mockHandler: jest.Mock = jest.fn(() => event);
         const resource = new Resource(TYPE_NAME, MockModel);
         resource.addHandler(Action.Create, mockHandler);
         await resource.entrypoint(entrypointPayload, null);
-        expect(mockCleanupEvents).toBeCalledTimes(1);
-        expect(mockCleanupEvents).toBeCalledWith(expect.anything(), '', '');
         expect(mockHandler).toBeCalledTimes(1);
     });
 
     test('entrypoint without context', async () => {
         entrypointPayload['requestContext'] = null;
         const mockLogDelivery: jest.Mock = (ProviderLogHandler.setup as unknown) as jest.Mock;
-        const mockReportProgress: jest.Mock = (reportProgress as unknown) as jest.Mock;
-        const event: ProgressEvent = ProgressEvent.success(null, { c: 'd' });
+        const event: ProgressEvent = ProgressEvent.success(
+            new Map(Object.entries({ a: 'b' })),
+            { c: 'd' }
+        );
         const mockHandler: jest.Mock = jest.fn(() => event);
         const resource = new Resource(TYPE_NAME, MockModel);
         resource.addHandler(Action.Create, mockHandler);
@@ -236,11 +220,10 @@ describe('when getting resource', () => {
             null
         );
         expect(mockLogDelivery).toBeCalledTimes(1);
-        expect(mockReportProgress).toBeCalledTimes(2);
         expect(response).toMatchObject({
             message: '',
-            bearerToken: '123456',
-            operationStatus: OperationStatus.Success,
+            status: OperationStatus.Success,
+            callbackDelaySeconds: 0,
         });
         expect(mockHandler).toBeCalledTimes(1);
     });
@@ -251,8 +234,8 @@ describe('when getting resource', () => {
         resource.addHandler(Action.Create, mockHandler);
         const expected = {
             message: '',
-            bearerToken: '123456',
-            operationStatus: OperationStatus.Success,
+            status: OperationStatus.Success,
+            callbackDelaySeconds: 0,
         };
         // Credentials are defined in payload, but null.
         entrypointPayload['requestData']['providerCredentials'] = null;
@@ -268,17 +251,6 @@ describe('when getting resource', () => {
         delete entrypointPayload['requestData']['callerCredentials'];
         response = await resource.entrypoint(entrypointPayload, null);
         expect(response).toMatchObject(expected);
-    });
-
-    test('parse request fail without platform creds', () => {
-        const resource = new Resource(TYPE_NAME, MockModel);
-        entrypointPayload['requestData']['platformCredentials'] = null;
-        const payload = new Map(Object.entries(entrypointPayload));
-        const parseRequest = () => {
-            resource.constructor['parseRequest'](payload);
-        };
-        expect(parseRequest).toThrow(exceptions.InvalidRequest);
-        expect(parseRequest).toThrow('Error: No platform credentials (Error)');
     });
 
     test('parse request invalid request', () => {
@@ -323,28 +295,22 @@ describe('when getting resource', () => {
             'parseRequest'
         ](payload);
 
-        expect(mockSession).toBeCalledTimes(3);
+        expect(mockSession).toBeCalledTimes(2);
         expect(mockSession).nthCalledWith(
             1,
-            entrypointPayload['requestData']['platformCredentials']
-        );
-        expect(mockSession).nthCalledWith(
-            2,
             entrypointPayload['requestData']['callerCredentials']
         );
         expect(mockSession).nthCalledWith(
-            3,
+            2,
             entrypointPayload['requestData']['providerCredentials']
         );
         // Credentials are used when rescheduling, so can't zero them out (for now).
         expect(request.requestData.callerCredentials).not.toBeNull();
         expect(request.requestData.providerCredentials).not.toBeNull();
-        expect(request.requestData.platformCredentials).not.toBeNull();
 
-        const [callerSession, platformSession, providerSession] = sessions;
-        expect(mockSession).nthReturnedWith(1, platformSession);
-        expect(mockSession).nthReturnedWith(2, callerSession);
-        expect(mockSession).nthReturnedWith(3, providerSession);
+        const [callerSession, providerSession] = sessions;
+        expect(mockSession).nthReturnedWith(1, callerSession);
+        expect(mockSession).nthReturnedWith(2, providerSession);
 
         expect(action).toBe(Action.Create);
         expect(callback).toMatchObject({});
@@ -368,7 +334,7 @@ describe('when getting resource', () => {
         const resource = getResource();
         const event: CfnResponse<Resource> = await resource.entrypoint({}, null);
         expect(mockParseRequest).toBeCalledTimes(1);
-        expect(event.operationStatus).toBe(OperationStatus.Failed);
+        expect(event.status).toBe(OperationStatus.Failed);
         expect(event.errorCode).toBe(HandlerErrorCode.InternalFailure);
         expect(event.message).toBe('exception');
     });
@@ -553,74 +519,5 @@ describe('when getting resource', () => {
         expect(spyDeserialize).nthCalledWith(1, { state: 'state1' });
         expect(spyDeserialize).nthCalledWith(2, { state: 'state2' });
         expect(mockHandler).toBeCalledTimes(1);
-    });
-
-    test('schedule reinvocation not in progress', async () => {
-        const mockReschedule: jest.Mock = (rescheduleAfterMinutes as unknown) as jest.Mock;
-        const session = new SessionProxy({});
-        const request = new HandlerRequest();
-        const context: LambdaContext = {} as LambdaContext;
-        const reinvoke = await Resource['scheduleReinvocation'](
-            request,
-            ProgressEvent.success(),
-            context,
-            session
-        );
-        expect(reinvoke).toBe(false);
-        expect(mockSession).not.toHaveBeenCalled();
-        expect(mockReschedule).not.toHaveBeenCalled();
-    });
-
-    test('schedule reinvocation local callback', async () => {
-        const event = ProgressEvent.progress();
-        event.callbackDelaySeconds = 5;
-        const session = new SessionProxy({});
-        const request = new HandlerRequest();
-        request.requestContext = {} as RequestContext<Map<string, any>>;
-        const context: LambdaContext = {
-            invokedFunctionArn: 'arn:aaa:bbb:ccc',
-            getRemainingTimeInMillis: jest.fn().mockReturnValue(600000),
-        } as LambdaContext;
-        const spySetTimeout = jest.spyOn(global, 'setTimeout');
-        const reinvoke = await Resource['scheduleReinvocation'](
-            request,
-            event,
-            context,
-            session
-        );
-        expect(reinvoke).toBe(true);
-        expect(spySetTimeout).toHaveBeenCalledTimes(1);
-        expect(spySetTimeout).toHaveBeenCalledWith(expect.any(Function), 5000);
-        expect(request.requestContext.invocation).toBe(1);
-    });
-
-    test('schedule reinvocation cloudwatch callback', async () => {
-        const event = ProgressEvent.progress();
-        event.callbackDelaySeconds = 60;
-        const mockReschedule: jest.Mock = (rescheduleAfterMinutes as unknown) as jest.Mock;
-        const session = new SessionProxy({});
-        const request = new HandlerRequest();
-        request.requestContext = {} as RequestContext<Map<string, any>>;
-        const context: LambdaContext = {
-            invokedFunctionArn: 'arn:aaa:bbb:ccc',
-            getRemainingTimeInMillis: jest.fn().mockReturnValue(6000),
-        } as LambdaContext;
-        const spySetTimeout = jest.spyOn(global, 'setTimeout');
-        const reinvoke = await Resource['scheduleReinvocation'](
-            request,
-            event,
-            context,
-            session
-        );
-        expect(reinvoke).toBe(false);
-        expect(mockReschedule).toBeCalledTimes(1);
-        expect(mockReschedule).toHaveBeenCalledWith(
-            expect.anything(),
-            'arn:aaa:bbb:ccc',
-            1,
-            request
-        );
-        expect(spySetTimeout).not.toHaveBeenCalled();
-        expect(request.requestContext.invocation).toBe(1);
     });
 });

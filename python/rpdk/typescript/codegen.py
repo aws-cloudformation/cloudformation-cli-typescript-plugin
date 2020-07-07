@@ -48,6 +48,7 @@ class TypescriptLanguagePlugin(LanguagePlugin):
         self.package_name = None
         self.package_root = None
         self._use_docker = True
+        self._protocol_version = "2.0.0"
         self._build_command = None
         self._lib_path = None
 
@@ -59,7 +60,8 @@ class TypescriptLanguagePlugin(LanguagePlugin):
         self._build_command = project.settings.get("buildCommand", None)
         self._lib_path = project.settings.get("supportLibrary", self.SUPPORT_LIB_URI)
 
-    def _prompt_for_use_docker(self, project):
+    def _init_settings(self, project):
+        LOG.debug("Writing settings")
         self._use_docker = input_with_validation(
             "Use docker for platform-independent packaging (Y/n)?\n",
             validate_no,
@@ -67,12 +69,13 @@ class TypescriptLanguagePlugin(LanguagePlugin):
             "with cross-platform Typescript packaging.",
         )
         project.settings["useDocker"] = self._use_docker
+        project.settings["protocolVersion"] = self._protocol_version
 
     def init(self, project):
         LOG.debug("Init started")
 
         self._init_from_project(project)
-        self._prompt_for_use_docker(project)
+        self._init_settings(project)
 
         project.runtime = self.RUNTIME
         project.entrypoint = self.ENTRY_POINT

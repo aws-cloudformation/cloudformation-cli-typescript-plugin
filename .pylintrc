@@ -22,3 +22,7 @@ good-names=e,ex,f,fp,i,j,k,v,n,_
 
 indent-string='    '
 max-line-length=88
+
+[DESIGN]
+
+max-attributes=12

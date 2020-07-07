@@ -86,7 +86,7 @@ def test__remove_build_artifacts_file_not_found(tmp_path: str):
 
 def test_initialize(project: Project):
     lib_path = project._plugin._lib_path
-    assert project.settings == {"useDocker": False}
+    assert project.settings == {"useDocker": False, "protocolVersion": "2.0.0"}
 
     files = get_files_in_project(project)
     assert set(files) == {

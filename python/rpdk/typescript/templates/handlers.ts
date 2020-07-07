@@ -12,7 +12,6 @@ import {
 } from '{{lib_name}}';
 import { ResourceModel } from './models';
 
-
 // Use this logger to forward log messages to CloudWatch Logs.
 const LOGGER = console;
 
@@ -44,7 +43,7 @@ class Resource extends BaseResource<ResourceModel> {
             if (session instanceof SessionProxy) {
                 const client = session.client('S3');
             }
-            // Setting Status to success will signal to cfn that the operation is complete
+            // Setting Status to success will signal to CloudFormation that the operation is complete
             progress.status = OperationStatus.Success;
         } catch(err) {
             LOGGER.log(err);
@@ -98,7 +97,6 @@ class Resource extends BaseResource<ResourceModel> {
         const model: ResourceModel = request.desiredResourceState;
         const progress: ProgressEvent<ResourceModel> = ProgressEvent.builder()
             .status(OperationStatus.InProgress)
-            .resourceModel(model)
             .build() as ProgressEvent<ResourceModel>;
         // TODO: put code here
         progress.status = OperationStatus.Success;

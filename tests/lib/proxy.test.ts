@@ -24,6 +24,7 @@ describe('when getting session proxy', () => {
             sessionToken: '',
         } as Credentials);
         expect(proxy).toBeInstanceOf(SessionProxy);
+        expect(proxy.client('CloudWatch')).toBeDefined();
     });
 
     test('get session returns null', () => {
@@ -58,13 +59,16 @@ describe('when getting session proxy', () => {
             .message(message)
             .status(OperationStatus.Success)
             .build();
-        const serialized = event.serialize(true, BEARER_TOKEN);
+        const serialized = event.serialize();
         expect(serialized).toEqual(
             new Map(
                 Object.entries({
-                    operationStatus: OperationStatus.Success,
+                    status: OperationStatus.Success,
                     message,
-                    bearerToken: BEARER_TOKEN,
+                    callbackContext: {
+                        a: 'b',
+                    },
+                    callbackDelaySeconds: 0,
                 })
             )
         );
@@ -77,6 +81,7 @@ describe('when getting session proxy', () => {
                 Object.entries({
                     somekey: 'a',
                     someotherkey: 'b',
+                    somenullkey: null,
                 })
             )
         );
@@ -89,17 +94,17 @@ describe('when getting session proxy', () => {
                 })
             )
         );
-        const serialized = event.serialize(true, BEARER_TOKEN);
+        const serialized = event.serialize();
         expect(serialized).toEqual(
             new Map(
                 Object.entries({
-                    operationStatus: OperationStatus.Success,
+                    status: OperationStatus.Success,
                     message,
-                    bearerToken: BEARER_TOKEN,
                     resourceModel: {
                         somekey: 'a',
                         someotherkey: 'b',
                     },
+                    callbackDelaySeconds: 0,
                 })
             )
         );
@@ -134,13 +139,12 @@ describe('when getting session proxy', () => {
                 })
             )
         );
-        const serialized = event.serialize(true, BEARER_TOKEN);
+        const serialized = event.serialize();
         expect(serialized).toEqual(
             new Map(
                 Object.entries({
-                    operationStatus: OperationStatus.Success,
+                    status: OperationStatus.Success,
                     message,
-                    bearerToken: BEARER_TOKEN,
                     resourceModels: [
                         {
                             somekey: 'a',
@@ -151,6 +155,7 @@ describe('when getting session proxy', () => {
                             someotherkey: 'd',
                         },
                     ],
+                    callbackDelaySeconds: 0,
                 })
             )
         );
@@ -167,14 +172,14 @@ describe('when getting session proxy', () => {
                 })
             )
         );
-        const serialized = event.serialize(true, BEARER_TOKEN);
+        const serialized = event.serialize();
         expect(serialized).toEqual(
             new Map(
                 Object.entries({
-                    operationStatus: OperationStatus.Success,
+                    status: OperationStatus.Success,
                     message,
-                    bearerToken: BEARER_TOKEN,
                     errorCode: HandlerErrorCode.InvalidRequest,
+                    callbackDelaySeconds: 0,
                 })
             )
         );
