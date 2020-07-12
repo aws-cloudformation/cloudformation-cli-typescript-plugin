@@ -277,6 +277,36 @@ describe('when getting resource', () => {
         expect(parseRequest).toThrow(/missing.+awsAccountId/i);
     });
 
+    test('parse request with object literal callback context', () => {
+        const callbackContext = new Map();
+        callbackContext.set('a', 'b');
+        entrypointPayload['callbackContext'] = { a: 'b' };
+        const payload = new Map(Object.entries(entrypointPayload));
+        const resource = getResource();
+        const [sessions, action, callback, request] = resource.constructor[
+            'parseRequest'
+        ](payload);
+        expect(sessions).toBeDefined();
+        expect(action).toBeDefined();
+        expect(callback).toMatchObject(callbackContext);
+        expect(request).toBeDefined();
+    });
+
+    test('parse request with map callback context', () => {
+        const callbackContext = new Map();
+        callbackContext.set('a', 'b');
+        entrypointPayload['callbackContext'] = callbackContext;
+        const payload = new Map(Object.entries(entrypointPayload));
+        const resource = getResource();
+        const [sessions, action, callback, request] = resource.constructor[
+            'parseRequest'
+        ](payload);
+        expect(sessions).toBeDefined();
+        expect(action).toBeDefined();
+        expect(callback).toMatchObject(callbackContext);
+        expect(request).toBeDefined();
+    });
+
     test('cast resource request invalid request', () => {
         const payload = new Map(Object.entries(entrypointPayload));
         const request = HandlerRequest.deserialize(payload);
@@ -459,6 +489,42 @@ describe('when getting resource', () => {
         };
         expect(parseTestRequest).toThrow(exceptions.InternalFailure);
         expect(parseTestRequest).toThrow(/missing.+credentials/i);
+    });
+
+    test('parse test request with object literal callback context', () => {
+        const callbackContext = new Map();
+        callbackContext.set('a', 'b');
+        testEntrypointPayload['callbackContext'] = { a: 'b' };
+        class Model extends BaseModel {
+            ['constructor']: typeof Model;
+        }
+        const resource = new Resource(TYPE_NAME, Model);
+        const payload = new Map(Object.entries(testEntrypointPayload));
+        const [session, request, action, callback] = resource['parseTestRequest'](
+            payload
+        );
+        expect(session).toBeDefined();
+        expect(action).toBeDefined();
+        expect(callback).toMatchObject(callbackContext);
+        expect(request).toBeDefined();
+    });
+
+    test('parse test request with map callback context', () => {
+        const callbackContext = new Map();
+        callbackContext.set('a', 'b');
+        testEntrypointPayload['callbackContext'] = callbackContext;
+        class Model extends BaseModel {
+            ['constructor']: typeof Model;
+        }
+        const resource = new Resource(TYPE_NAME, Model);
+        const payload = new Map(Object.entries(testEntrypointPayload));
+        const [session, request, action, callback] = resource['parseTestRequest'](
+            payload
+        );
+        expect(session).toBeDefined();
+        expect(action).toBeDefined();
+        expect(callback).toMatchObject(callbackContext);
+        expect(request).toBeDefined();
     });
 
     test('parse test request valid request', () => {
