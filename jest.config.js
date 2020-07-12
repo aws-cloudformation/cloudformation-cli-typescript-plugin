@@ -9,8 +9,8 @@ module.exports = {
     testRegex: '\\.test.ts$',
     coverageThreshold: {
         global: {
-            branches: 80,
-            statements: 90,
+            branches: 70,
+            statements: 80,
         },
     },
     coverageDirectory: 'coverage/ts',

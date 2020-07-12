@@ -188,5 +188,6 @@ Map.prototype.toObject = function (): any {
  * Defines the default JSON representation of a Map to be an array of key-value pairs.
  */
 Map.prototype.toJSON = function <K, V>(this: Map<K, V>): Array<[K, V]> {
-    return Array.from(this.entries());
+    // @ts-ignore
+    return Object.fromEntries(this);
 };
