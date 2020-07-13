@@ -1,6 +1,6 @@
 {
     "name": "cfn-rpdk",
-    "version": "0.2.0",
+    "version": "0.2.1",
     "description": "The CloudFormation Resource Provider Development Kit (RPDK) allows you to author your own resource providers that can be used by CloudFormation. This plugin library helps to provide runtime bindings for the execution of your providers by CloudFormation.",
     "main": "dist/index.js",
     "directories": {
