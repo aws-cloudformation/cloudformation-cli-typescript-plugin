@@ -13,7 +13,6 @@ import {
     HandlerErrorCode,
     OperationStatus,
     Optional,
-    RequestContext,
 } from './interface';
 import { ProviderLogHandler } from './log-delivery';
 import { MetricsPublisherProxy } from './metrics';
@@ -140,6 +139,7 @@ export abstract class BaseResource<T extends BaseModel = BaseModel> {
         let request: BaseResourceHandlerRequest<T>;
         let action: Action;
         let event: TestEvent;
+        let callbackContext: Map<string, any>;
         try {
             event = new TestEvent(eventData);
             const creds = event.credentials as Credentials;
@@ -162,17 +162,25 @@ export abstract class BaseResource<T extends BaseModel = BaseModel> {
 
             session = SessionProxy.getSession(creds, event.region);
             action = event.action;
+
+            if (!event.callbackContext) {
+                callbackContext = new Map<string, any>();
+            } else if (
+                event.callbackContext instanceof Array ||
+                event.callbackContext instanceof Map
+            ) {
+                callbackContext = new Map<string, any>(event.callbackContext);
+            } else {
+                callbackContext = new Map<string, any>(
+                    Object.entries(event.callbackContext)
+                );
+            }
         } catch (err) {
             LOGGER.error('Invalid request');
             throw new InternalFailure(`${err} (${err.name})`);
         }
 
-        return [
-            session,
-            request,
-            action,
-            event.callbackContext || new Map<string, any>(),
-        ];
+        return [session, request, action, callbackContext];
     };
 
     // @ts-ignore
@@ -242,7 +250,18 @@ export abstract class BaseResource<T extends BaseModel = BaseModel> {
                 event.requestData.providerCredentials
             );
             action = event.action;
-            callbackContext = event.callbackContext || new Map<string, any>();
+            if (!event.callbackContext) {
+                callbackContext = new Map<string, any>();
+            } else if (
+                event.callbackContext instanceof Array ||
+                event.callbackContext instanceof Map
+            ) {
+                callbackContext = new Map<string, any>(event.callbackContext);
+            } else {
+                callbackContext = new Map<string, any>(
+                    Object.entries(event.callbackContext)
+                );
+            }
         } catch (err) {
             LOGGER.error('Invalid request');
             throw new InvalidRequest(`${err} (${err.name})`);
