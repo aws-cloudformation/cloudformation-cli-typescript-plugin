@@ -15,34 +15,25 @@ describe('when getting interface', () => {
     });
 
     test('base resource model deserialize', () => {
-        expect(() => ResourceModel.deserialize(null)).toThrow(
-            'Cannot convert undefined or null to object'
-        );
+        const model = ResourceModel.deserialize(null);
+        expect(model).toBeNull();
     });
 
     test('base resource model serialize', () => {
-        const model = new ResourceModel(
-            new Map(
-                Object.entries({
-                    somekey: 'a',
-                    someotherkey: null,
-                })
-            )
-        );
-        const serialized = model.serialize();
-        expect(serialized.size).toBe(1);
-        expect(serialized.get('someotherkey')).not.toBeDefined();
+        const model = ResourceModel.deserialize({
+            somekey: 'a',
+            someotherkey: null,
+        });
+        const serialized = JSON.parse(JSON.stringify(model));
+        expect(Object.keys(serialized).length).toBe(1);
+        expect(serialized.someotherkey).not.toBeDefined();
     });
 
     test('base resource model to object', () => {
-        const model = new ResourceModel(
-            new Map(
-                Object.entries({
-                    somekey: 'a',
-                    someotherkey: 'b',
-                })
-            )
-        );
+        const model = new ResourceModel({
+            somekey: 'a',
+            someotherkey: 'b',
+        });
         const obj = model.toObject();
         expect(obj).toMatchObject({
             somekey: 'a',

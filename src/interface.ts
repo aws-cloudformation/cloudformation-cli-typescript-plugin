@@ -1,11 +1,14 @@
+import 'reflect-metadata';
 import {
     ClientRequestToken,
     LogicalResourceId,
     NextToken,
 } from 'aws-sdk/clients/cloudformation';
-import { allArgsConstructor, builder } from 'tombok';
+import { classToPlain, Exclude, plainToClass } from 'class-transformer';
 
 export type Optional<T> = T | undefined | null;
+
+export type Dict<T = any> = Record<string, T>;
 
 export interface Callable<R extends Array<any>, T> {
     (...args: R): T;
@@ -60,6 +63,47 @@ export interface Credentials {
     sessionToken: string;
 }
 
+/**
+ * Base class for data transfer objects that will contain
+ * serialization and deserialization mechanisms.
+ */
+export abstract class BaseDto {
+    constructor(partial?: unknown) {
+        if (partial) {
+            Object.assign(this, partial);
+        }
+    }
+
+    @Exclude()
+    public serialize(): Dict {
+        const data: Dict = classToPlain(this);
+        for (const key in data) {
+            const value = data[key];
+            if (value == null) {
+                delete data[key];
+            }
+        }
+        return data;
+    }
+
+    public static deserialize<T extends BaseDto>(this: new () => T, jsonData: Dict): T {
+        if (jsonData == null) {
+            return null;
+        }
+        return plainToClass(this, jsonData, { enableImplicitConversion: false });
+    }
+
+    @Exclude()
+    public toJSON(key?: string): Dict {
+        return this.serialize();
+    }
+
+    @Exclude()
+    public toObject(): Dict {
+        return this.serialize();
+    }
+}
+
 export interface RequestContext<T> {
     invocation: number;
     callbackContext: T;
@@ -67,54 +111,27 @@ export interface RequestContext<T> {
     cloudWatchEventsTargetId: string;
 }
 
-@builder
-@allArgsConstructor
-export class BaseModel {
+export class BaseModel extends BaseDto {
     ['constructor']: typeof BaseModel;
+
+    @Exclude()
     protected static readonly TYPE_NAME?: string;
 
-    constructor(...args: any[]) {}
-    public static builder(): any {
-        return null;
-    }
-
+    @Exclude()
     public getTypeName(): string {
         return Object.getPrototypeOf(this).constructor.TYPE_NAME;
     }
-
-    public serialize(): Map<string, any> {
-        const data: Map<string, any> = new Map<string, any>(Object.entries(this));
-        data.forEach((value: any, key: string) => {
-            if (value == null) {
-                data.delete(key);
-            }
-        });
-        return data;
-    }
-
-    public static deserialize(jsonData: any): ThisType<BaseModel> {
-        return new this(new Map<string, any>(Object.entries(jsonData)));
-    }
-
-    public toObject(): any {
-        // @ts-ignore
-        const obj = Object.fromEntries(this.serialize().entries());
-        return obj;
-    }
 }
 
-@allArgsConstructor
 export class BaseResourceHandlerRequest<T extends BaseModel> {
     public clientRequestToken: ClientRequestToken;
     public desiredResourceState?: T;
     public previousResourceState?: T;
     public logicalResourceIdentifier?: LogicalResourceId;
     public nextToken?: NextToken;
-
-    constructor(...args: any[]) {}
 }
 
-export interface CfnResponse<T> {
+export interface CfnResponse<T extends BaseModel> {
     errorCode?: HandlerErrorCode;
     status: OperationStatus;
     message: string;

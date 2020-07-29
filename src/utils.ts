@@ -191,3 +191,7 @@ Map.prototype.toJSON = function <K, V>(this: Map<K, V>): Array<[K, V]> {
     // @ts-ignore
     return Object.fromEntries(this);
 };
+
+BigInt.prototype.toJSON = function (): number {
+    return Number(this);
+};

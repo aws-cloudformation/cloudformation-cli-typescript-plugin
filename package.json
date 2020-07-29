@@ -19,7 +19,7 @@
         "test:debug": "npx --node-arg=--inspect jest --runInBand"
     },
     "engines": {
-        "node": ">=10.0.0",
+        "node": ">=10.4.0",
         "npm": ">=5.6.0"
     },
     "repository": {
@@ -34,6 +34,7 @@
     "homepage": "https://github.com/eduardomourar/cloudformation-cli-typescript-plugin#readme",
     "dependencies": {
         "autobind-decorator": "^2.4.0",
+        "class-transformer": "^0.2.3",
         "promise-sequential": "^1.1.1",
         "reflect-metadata": "^0.1.13",
         "tombok": "https://github.com/eduardomourar/tombok/releases/download/v0.0.1/tombok-0.0.1.tgz",

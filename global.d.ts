@@ -15,4 +15,11 @@ declare global {
          */
         toJSON(): Array<[K, V]>;
     }
+
+    interface BigInt {
+        /**
+         * Defines the default JSON representation of a BigInt to be a number.
+         */
+        toJSON(): number;
+    }
 }
