@@ -1,13 +1,14 @@
 import { InvalidRequest } from './exceptions';
+import { integer, Integer } from './interface';
 
-type primitive = string | number | boolean | bigint | object;
+type primitive = string | number | boolean | bigint | integer | object;
 type PrimitiveConstructor =
     | StringConstructor
     | NumberConstructor
     | BooleanConstructor
     | BigIntConstructor
+    | typeof Integer
     | ObjectConstructor;
-const LOGGER = console;
 
 /**
  * CloudFormation recasts all primitive types as strings, this tries to set them back to
@@ -46,7 +47,9 @@ export const transformValue = (
     if (value == null) {
         return value;
     }
-    classes.push(cls);
+    if (index === 0) {
+        classes.push(cls);
+    }
     const currentClass = classes[index || 0];
     if (value instanceof Map || Object.is(currentClass, Map)) {
         const temp = new Map(value instanceof Map ? value : Object.entries(value));
@@ -70,16 +73,24 @@ export const transformValue = (
         }
         if (
             Object.is(cls, String) ||
+            cls.name === 'String' ||
             Object.is(cls, Number) ||
+            cls.name === 'Number' ||
             Object.is(cls, Boolean) ||
-            Object.is(cls, BigInt)
+            cls.name === 'Boolean' ||
+            Object.is(cls, BigInt) ||
+            cls.name === 'BigInt' ||
+            Object.is(cls, Integer) ||
+            cls.name === 'Integer'
         ) {
             if (typeof value === 'string') {
                 return recastPrimitive(cls, key, value);
             }
             return value;
         } else {
-            throw new InvalidRequest(`Unsupported type: ${typeof value} for ${key}`);
+            throw new InvalidRequest(
+                `Unsupported type: ${typeof value} [${cls.name}] for ${key}`
+            );
         }
     }
 };

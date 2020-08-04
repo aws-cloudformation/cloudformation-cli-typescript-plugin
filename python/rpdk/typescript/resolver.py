@@ -2,14 +2,14 @@ from rpdk.core.jsonutils.resolver import UNDEFINED, ContainerType
 
 PRIMITIVE_TYPES = {
     "string": "string",
-    "integer": "bigint",
+    "integer": "integer",
     "boolean": "boolean",
     "number": "number",
     UNDEFINED: "object",
 }
 PRIMITIVE_WRAPPERS = {
     "string": "String",
-    "bigint": "BigInt",
+    "integer": "Integer",
     "boolean": "Boolean",
     "number": "Number",
     "object": "Object",

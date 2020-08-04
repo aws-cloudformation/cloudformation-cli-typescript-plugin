@@ -1,18 +1,76 @@
 import 'reflect-metadata';
 import {
     ClientRequestToken,
+    LogGroupName,
     LogicalResourceId,
     NextToken,
 } from 'aws-sdk/clients/cloudformation';
-import { classToPlain, Exclude, plainToClass } from 'class-transformer';
+import {
+    classToPlain,
+    ClassTransformOptions,
+    Exclude,
+    Expose,
+    plainToClass,
+} from 'class-transformer';
 
 export type Optional<T> = T | undefined | null;
-
 export type Dict<T = any> = Record<string, T>;
+export type Constructor<T = {}> = new (...args: any[]) => T;
+export type integer = bigint;
 
 export interface Callable<R extends Array<any>, T> {
     (...args: R): T;
 }
+
+interface Integer extends BigInt {
+    /**
+     * Defines the default JSON representation of
+     * Integer (BigInt) to be a number.
+     */
+    toJSON: () => number;
+}
+
+interface IntegerConstructor extends BigIntConstructor {
+    (value?: unknown): integer;
+    readonly prototype: Integer;
+    /**
+     * Returns true if the value passed is a safe integer
+     * to be parsed as number.
+     * @param value An integer value.
+     */
+    isSafeInteger(value: unknown): boolean;
+}
+
+/**
+ * Wrapper with additional JSON serialization for bigint type
+ */
+export const Integer: IntegerConstructor = new Proxy(BigInt, {
+    apply(
+        target: IntegerConstructor,
+        _thisArg: unknown,
+        argArray?: unknown[]
+    ): integer {
+        target.prototype.toJSON = function (): number {
+            return Number(this.valueOf());
+        };
+        const isSafeInteger = (value: unknown): boolean => {
+            if (
+                value &&
+                (value < BigInt(Number.MIN_SAFE_INTEGER) ||
+                    value > BigInt(Number.MAX_SAFE_INTEGER))
+            ) {
+                return false;
+            }
+            return true;
+        };
+        target.isSafeInteger = isSafeInteger;
+        const value = target(...argArray);
+        if (value && !isSafeInteger(value)) {
+            throw new RangeError(`Value is not a safe integer: ${value.toString()}`);
+        }
+        return value;
+    },
+}) as IntegerConstructor;
 
 export enum Action {
     Create = 'CREATE',
@@ -75,31 +133,44 @@ export abstract class BaseDto {
     }
 
     @Exclude()
-    public serialize(): Dict {
-        const data: Dict = classToPlain(this);
-        for (const key in data) {
-            const value = data[key];
-            if (value == null) {
-                delete data[key];
+    static serializer = {
+        classToPlain,
+        plainToClass,
+    };
+
+    @Exclude()
+    public serialize(removeNull = true): Dict {
+        const data: Dict = JSON.parse(JSON.stringify(classToPlain(this)));
+        // To match Java serialization, which drops 'null' values, and the
+        // contract tests currently expect this also.
+        if (removeNull) {
+            for (const key in data) {
+                const value = data[key];
+                if (value == null) {
+                    delete data[key];
+                }
             }
         }
         return data;
     }
 
-    public static deserialize<T extends BaseDto>(this: new () => T, jsonData: Dict): T {
+    public static deserialize<T extends BaseDto>(
+        this: new () => T,
+        jsonData: Dict,
+        options: ClassTransformOptions = {}
+    ): T {
         if (jsonData == null) {
             return null;
         }
-        return plainToClass(this, jsonData, { enableImplicitConversion: false });
+        return plainToClass(this, jsonData, {
+            enableImplicitConversion: false,
+            excludeExtraneousValues: true,
+            ...options,
+        });
     }
 
     @Exclude()
     public toJSON(key?: string): Dict {
-        return this.serialize();
-    }
-
-    @Exclude()
-    public toObject(): Dict {
         return this.serialize();
     }
 }
@@ -123,12 +194,74 @@ export class BaseModel extends BaseDto {
     }
 }
 
-export class BaseResourceHandlerRequest<T extends BaseModel> {
-    public clientRequestToken: ClientRequestToken;
-    public desiredResourceState?: T;
-    public previousResourceState?: T;
-    public logicalResourceIdentifier?: LogicalResourceId;
-    public nextToken?: NextToken;
+export class TestEvent extends BaseDto {
+    @Expose() credentials: Credentials;
+    @Expose() action: Action;
+    @Expose() request: Dict;
+    @Expose() callbackContext: Dict;
+    @Expose() region?: string;
+}
+
+export class RequestData<T = Dict> extends BaseDto {
+    @Expose() callerCredentials?: Credentials;
+    @Expose() providerCredentials?: Credentials;
+    @Expose() providerLogGroupName: LogGroupName;
+    @Expose() logicalResourceId: LogicalResourceId;
+    @Expose() resourceProperties: T;
+    @Expose() previousResourceProperties?: T;
+    @Expose() systemTags?: Dict<string>;
+    @Expose() stackTags?: Dict<string>;
+    @Expose() previousStackTags?: Dict<string>;
+}
+
+export class HandlerRequest<ResourceT = Dict, CallbackT = Dict> extends BaseDto {
+    @Expose() action: Action;
+    @Expose() awsAccountId: string;
+    @Expose() bearerToken: string;
+    @Expose() region: string;
+    @Expose() responseEndpoint: string;
+    @Expose() resourceType: string;
+    @Expose() resourceTypeVersion: string;
+    @Expose() requestData: RequestData<ResourceT>;
+    @Expose() stackId: string;
+    @Expose() callbackContext?: CallbackT;
+    @Expose() nextToken?: NextToken;
+    @Expose() requestContext: RequestContext<CallbackT>;
+}
+
+export class BaseResourceHandlerRequest<T extends BaseModel> extends BaseDto {
+    @Expose() clientRequestToken: ClientRequestToken;
+    @Expose() desiredResourceState?: T;
+    @Expose() previousResourceState?: T;
+    @Expose() logicalResourceIdentifier?: LogicalResourceId;
+    @Expose() nextToken?: NextToken;
+}
+
+export class UnmodeledRequest extends BaseResourceHandlerRequest<BaseModel> {
+    @Exclude()
+    public static fromUnmodeled(obj: Dict): UnmodeledRequest {
+        return UnmodeledRequest.deserialize(obj);
+    }
+
+    @Exclude()
+    public toModeled<T extends BaseModel = BaseModel>(
+        modelCls: Constructor<T> & { deserialize?: Function }
+    ): BaseResourceHandlerRequest<T> {
+        const request = BaseResourceHandlerRequest.deserialize<
+            BaseResourceHandlerRequest<T>
+        >({
+            clientRequestToken: this.clientRequestToken,
+            logicalResourceIdentifier: this.logicalResourceIdentifier,
+            nextToken: this.nextToken,
+        });
+        request.desiredResourceState = modelCls.deserialize(
+            this.desiredResourceState || {}
+        );
+        request.previousResourceState = modelCls.deserialize(
+            this.previousResourceState || {}
+        );
+        return request;
+    }
 }
 
 export interface CfnResponse<T extends BaseModel> {
@@ -138,4 +271,9 @@ export interface CfnResponse<T extends BaseModel> {
     resourceModel?: T;
     resourceModels?: T[];
     nextToken?: NextToken;
+}
+
+export interface LambdaContext {
+    invokedFunctionArn: string;
+    getRemainingTimeInMillis(): number;
 }

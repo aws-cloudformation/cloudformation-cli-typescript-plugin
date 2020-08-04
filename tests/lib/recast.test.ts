@@ -5,12 +5,6 @@ import {
     SimpleResourceModel,
 } from '../data/sample-model';
 
-const mockResult = (output: any): jest.Mock => {
-    return jest.fn().mockReturnValue({
-        promise: jest.fn().mockResolvedValue(output),
-    });
-};
-
 describe('when recasting objects', () => {
     beforeAll(() => {});
 
@@ -115,7 +109,9 @@ describe('when recasting objects', () => {
             transformValue(SimpleResourceModel, k, v, {});
         };
         expect(recastObject).toThrow(exceptions.InvalidRequest);
-        expect(recastObject).toThrow(`Unsupported type: ${typeof v} for ${k}`);
+        expect(recastObject).toThrow(
+            `Unsupported type: ${typeof v} [${SimpleResourceModel.name}] for ${k}`
+        );
     });
 
     test('recast primitive object type', () => {

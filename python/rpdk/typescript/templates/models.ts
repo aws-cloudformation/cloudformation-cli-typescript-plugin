@@ -1,5 +1,5 @@
 // This is a generated file. Modifications will be overwritten.
-import { BaseModel, Dict, Optional, transformValue } from '{{lib_name}}';
+import { BaseModel, Dict, integer, Integer, Optional, transformValue } from '{{lib_name}}';
 import { Exclude, Expose, Type, Transform } from 'class-transformer';
 
 {% for model, properties in models.items() %}
@@ -40,7 +40,7 @@ export class {{ model|uppercase_first_letter }} extends BaseModel {
         }
     )
     {% endif %}
-    {{ name|lowercase_first_letter|safe_reserved }}: Optional<{{ translated_type }}>;
+    {{ name|lowercase_first_letter|safe_reserved }}?: Optional<{{ translated_type }}>;
     {% endfor %}
 
     {% if model == "ResourceModel" %}
@@ -61,7 +61,7 @@ export class {{ model|uppercase_first_letter }} extends BaseModel {
 
         {% endfor %}
         // only return the identifier if it can be used, i.e. if all components are present
-        return identifier.length === {{ primaryIdentifier|length }} ? identifier : null;
+        return Object.keys(identifier).length === {{ primaryIdentifier|length }} ? identifier : null;
     }
 
     @Exclude()
@@ -94,7 +94,7 @@ export class {{ model|uppercase_first_letter }} extends BaseModel {
 
         {% endfor %}
         // only return the identifier if it can be used, i.e. if all components are present
-        return identifier.length === {{ identifiers|length }} ? identifier : null;
+        return Object.keys(identifier).length === {{ identifiers|length }} ? identifier : null;
     }
     {% endfor %}
     {% endif %}

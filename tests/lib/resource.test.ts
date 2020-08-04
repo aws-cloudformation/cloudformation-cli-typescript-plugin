@@ -6,15 +6,14 @@ import { ProgressEvent, SessionProxy } from '../../src/proxy';
 import {
     Action,
     BaseResourceHandlerRequest,
-    BaseModel,
-    CfnResponse,
     HandlerErrorCode,
+    HandlerRequest,
     OperationStatus,
 } from '../../src/interface';
 import { ProviderLogHandler } from '../../src/log-delivery';
 import { MetricsPublisherProxy } from '../../src/metrics';
 import { handlerEvent, HandlerSignatures, BaseResource } from '../../src/resource';
-import { HandlerRequest } from '../../src/utils';
+import { SimpleStateModel } from '../data/sample-model';
 
 const mockResult = (output: any): jest.Mock => {
     return jest.fn().mockReturnValue({
@@ -33,12 +32,9 @@ describe('when getting resource', () => {
     let mockSession: jest.SpyInstance;
     const TYPE_NAME = 'Test::Foo::Bar';
     class Resource extends BaseResource {}
-    class MockModel extends BaseModel {
+    class MockModel extends SimpleStateModel {
         ['constructor']: typeof MockModel;
         public static readonly TYPE_NAME: string = TYPE_NAME;
-        public static deserialize(jsonData: any): MockModel {
-            return new MockModel();
-        }
     }
 
     beforeEach(() => {
@@ -92,8 +88,8 @@ describe('when getting resource', () => {
                 },
                 providerLogGroupName: 'providerLoggingGroupName',
                 logicalResourceId: 'myBucket',
-                resourceProperties: 'state1',
-                previousResourceProperties: 'state2',
+                resourceProperties: { state: 'state1' },
+                previousResourceProperties: { state: 'state2' },
                 stackTags: { tag1: 'abc' },
                 previousStackTags: { tag1: 'def' },
             },
@@ -131,7 +127,7 @@ describe('when getting resource', () => {
 
     test('entrypoint handler error', async () => {
         const resource = getResource();
-        const event: CfnResponse<Resource> = await resource.entrypoint({}, null);
+        const event = await resource.entrypoint({}, null);
         expect(event.status).toBe(OperationStatus.Failed);
         expect(event.errorCode).toBe(HandlerErrorCode.InvalidRequest);
     });
@@ -141,10 +137,7 @@ describe('when getting resource', () => {
         const mockHandler: jest.Mock = jest.fn(() => ProgressEvent.success());
         const resource = new Resource(TYPE_NAME, MockModel);
         resource.addHandler(Action.Create, mockHandler);
-        const event: CfnResponse<Resource> = await resource.entrypoint(
-            entrypointPayload,
-            null
-        );
+        const event = await resource.entrypoint(entrypointPayload, null);
         expect(mockLogDelivery).toBeCalledTimes(1);
         expect(event).toMatchObject({
             message: '',
@@ -155,14 +148,7 @@ describe('when getting resource', () => {
     });
 
     test('entrypoint handler raises', async () => {
-        class Model extends BaseModel {
-            ['constructor']: typeof Model;
-            aString: string;
-            public static deserialize(jsonData: any): Model {
-                return new Model('test');
-            }
-        }
-        const resource = new Resource(TYPE_NAME, Model);
+        const resource = new Resource(TYPE_NAME, MockModel);
         const mockPublishException = (MetricsPublisherProxy.prototype
             .publishExceptionMetric as unknown) as jest.Mock;
         const mockInvokeHandler = jest.spyOn<typeof resource, any>(
@@ -172,10 +158,7 @@ describe('when getting resource', () => {
         mockInvokeHandler.mockImplementation(() => {
             throw new exceptions.InvalidRequest('handler failed');
         });
-        const event: CfnResponse<Resource> = await resource.entrypoint(
-            entrypointPayload,
-            null
-        );
+        const event = await resource.entrypoint(entrypointPayload, null);
         expect(mockPublishException).toBeCalledTimes(1);
         expect(mockInvokeHandler).toBeCalledTimes(1);
         expect(event).toMatchObject({
@@ -200,10 +183,7 @@ describe('when getting resource', () => {
         const mockHandler: jest.Mock = jest.fn(() => event);
         const resource = new Resource(TYPE_NAME, MockModel);
         resource.addHandler(Action.Create, mockHandler);
-        const response: CfnResponse<Resource> = await resource.entrypoint(
-            entrypointPayload,
-            null
-        );
+        const response = await resource.entrypoint(entrypointPayload, null);
         expect(response).toMatchObject({
             message: '',
             status: OperationStatus.Success,
@@ -213,7 +193,7 @@ describe('when getting resource', () => {
         expect(mockHandler).toBeCalledWith(
             expect.any(SessionProxy),
             expect.any(BaseResourceHandlerRequest),
-            new Map(Object.entries(entrypointPayload['callbackContext']))
+            entrypointPayload['callbackContext']
         );
     });
 
@@ -225,10 +205,7 @@ describe('when getting resource', () => {
         const mockHandler: jest.Mock = jest.fn(() => event);
         const resource = new Resource(TYPE_NAME, MockModel);
         resource.addHandler(Action.Create, mockHandler);
-        const response: CfnResponse<Resource> = await resource.entrypoint(
-            entrypointPayload,
-            null
-        );
+        const response = await resource.entrypoint(entrypointPayload, null);
         expect(mockLogDelivery).toBeCalledTimes(1);
         expect(response).toMatchObject({
             message: '',
@@ -240,7 +217,7 @@ describe('when getting resource', () => {
         expect(mockHandler).toBeCalledWith(
             expect.any(SessionProxy),
             expect.any(BaseResourceHandlerRequest),
-            new Map()
+            {}
         );
     });
 
@@ -256,10 +233,7 @@ describe('when getting resource', () => {
         // Credentials are defined in payload, but null.
         entrypointPayload['requestData']['providerCredentials'] = null;
         entrypointPayload['requestData']['callerCredentials'] = null;
-        let response: CfnResponse<Resource> = await resource.entrypoint(
-            entrypointPayload,
-            null
-        );
+        let response = await resource.entrypoint(entrypointPayload, null);
         expect(response).toMatchObject(expected);
 
         // Credentials are undefined in payload.
@@ -271,21 +245,19 @@ describe('when getting resource', () => {
 
     test('parse request invalid request', () => {
         const parseRequest = () => {
-            Resource['parseRequest'](new Map());
+            Resource['parseRequest']({});
         };
         expect(parseRequest).toThrow(exceptions.InvalidRequest);
         expect(parseRequest).toThrow(/missing.+awsAccountId/i);
     });
 
     test('parse request with object literal callback context', () => {
-        const callbackContext = new Map();
-        callbackContext.set('a', 'b');
+        const callbackContext = { a: 'b' };
         entrypointPayload['callbackContext'] = { a: 'b' };
-        const payload = new Map(Object.entries(entrypointPayload));
         const resource = getResource();
         const [sessions, action, callback, request] = resource.constructor[
             'parseRequest'
-        ](payload);
+        ](entrypointPayload);
         expect(sessions).toBeDefined();
         expect(action).toBeDefined();
         expect(callback).toMatchObject(callbackContext);
@@ -293,14 +265,12 @@ describe('when getting resource', () => {
     });
 
     test('parse request with map callback context', () => {
-        const callbackContext = new Map();
-        callbackContext.set('a', 'b');
+        const callbackContext = { a: 'b' };
         entrypointPayload['callbackContext'] = callbackContext;
-        const payload = new Map(Object.entries(entrypointPayload));
         const resource = getResource();
         const [sessions, action, callback, request] = resource.constructor[
             'parseRequest'
-        ](payload);
+        ](entrypointPayload);
         expect(sessions).toBeDefined();
         expect(action).toBeDefined();
         expect(callback).toMatchObject(callbackContext);
@@ -308,8 +278,7 @@ describe('when getting resource', () => {
     });
 
     test('cast resource request invalid request', () => {
-        const payload = new Map(Object.entries(entrypointPayload));
-        const request = HandlerRequest.deserialize(payload);
+        const request = HandlerRequest.deserialize(entrypointPayload);
         request.requestData = null;
         const resource = getResource();
         const castResourceRequest = () => {
@@ -320,26 +289,12 @@ describe('when getting resource', () => {
     });
 
     test('parse request valid request and cast resource request', () => {
-        const mockDeserialize: jest.Mock = jest
-            .fn()
-            .mockImplementationOnce(() => {
-                return { state: 'state1' };
-            })
-            .mockImplementationOnce(() => {
-                return { state: 'state2' };
-            });
+        const spyDeserialize: jest.SpyInstance = jest.spyOn(MockModel, 'deserialize');
+        const resource = new Resource(TYPE_NAME, MockModel);
 
-        class Model extends BaseModel {
-            ['constructor']: typeof Model;
-            public static deserialize = mockDeserialize;
-        }
-
-        const resource = new Resource(TYPE_NAME, Model);
-
-        const payload = new Map(Object.entries(entrypointPayload));
         const [sessions, action, callback, request] = resource.constructor[
             'parseRequest'
-        ](payload);
+        ](entrypointPayload);
 
         expect(mockSession).toBeCalledTimes(2);
         expect(mockSession).nthCalledWith(
@@ -362,8 +317,8 @@ describe('when getting resource', () => {
         expect(callback).toMatchObject({});
 
         const modeledRequest = resource['castResourceRequest'](request);
-        expect(mockDeserialize).nthCalledWith(1, 'state1');
-        expect(mockDeserialize).nthCalledWith(2, 'state2');
+        expect(spyDeserialize).nthCalledWith(1, { state: 'state1' });
+        expect(spyDeserialize).nthCalledWith(2, { state: 'state2' });
         expect(modeledRequest).toMatchObject({
             clientRequestToken: request.bearerToken,
             desiredResourceState: { state: 'state1' },
@@ -378,7 +333,7 @@ describe('when getting resource', () => {
             throw new Error('exception');
         });
         const resource = getResource();
-        const event: CfnResponse<Resource> = await resource.entrypoint({}, null);
+        const event = await resource.entrypoint({}, null);
         expect(mockParseRequest).toBeCalledTimes(1);
         expect(event.status).toBe(OperationStatus.Failed);
         expect(event.errorCode).toBe(HandlerErrorCode.InternalFailure);
@@ -422,8 +377,7 @@ describe('when getting resource', () => {
         const spyCreate = jest.spyOn(ResourceEventHandler.prototype, 'create');
         const handlers: HandlerSignatures = new HandlerSignatures();
         const resource = new ResourceEventHandler(TYPE_NAME, MockModel, handlers);
-        const payload = new Map(Object.entries(testEntrypointPayload));
-        const event = await resource.testEntrypoint(payload, null);
+        const event = await resource.testEntrypoint(testEntrypointPayload, null);
         expect(spyCreate).toHaveReturnedTimes(1);
         expect(event.status).toBe(OperationStatus.Success);
         expect(event.message).toBe(TYPE_NAME);
@@ -431,7 +385,7 @@ describe('when getting resource', () => {
 
     test('invoke handler not found', async () => {
         const resource = getResource();
-        const callbackContext = new Map();
+        const callbackContext = {};
         const actual = await resource['invokeHandler'](
             null,
             null,
@@ -453,7 +407,7 @@ describe('when getting resource', () => {
         const resource = getResource(handlers);
         const session = new SessionProxy({});
         const request = new BaseResourceHandlerRequest();
-        const callbackContext = new Map();
+        const callbackContext = {};
         const response = await resource['invokeHandler'](
             session,
             request,
@@ -471,7 +425,7 @@ describe('when getting resource', () => {
             const handlers: HandlerSignatures = new HandlerSignatures();
             handlers.set(action, mockHandler);
             const resource = getResource(handlers);
-            const callbackContext = new Map();
+            const callbackContext = {};
             expect(
                 resource['invokeHandler'](null, null, action, callbackContext)
             ).rejects.toEqual(
@@ -485,23 +439,18 @@ describe('when getting resource', () => {
     test('parse test request invalid request', () => {
         const resource = getResource();
         const parseTestRequest = () => {
-            resource['parseTestRequest'](new Map());
+            resource['parseTestRequest']({});
         };
         expect(parseTestRequest).toThrow(exceptions.InternalFailure);
         expect(parseTestRequest).toThrow(/missing.+credentials/i);
     });
 
     test('parse test request with object literal callback context', () => {
-        const callbackContext = new Map();
-        callbackContext.set('a', 'b');
-        testEntrypointPayload['callbackContext'] = { a: 'b' };
-        class Model extends BaseModel {
-            ['constructor']: typeof Model;
-        }
-        const resource = new Resource(TYPE_NAME, Model);
-        const payload = new Map(Object.entries(testEntrypointPayload));
+        const callbackContext = { a: 'b' };
+        testEntrypointPayload['callbackContext'] = callbackContext;
+        const resource = new Resource(TYPE_NAME, MockModel);
         const [session, request, action, callback] = resource['parseTestRequest'](
-            payload
+            testEntrypointPayload
         );
         expect(session).toBeDefined();
         expect(action).toBeDefined();
@@ -510,16 +459,11 @@ describe('when getting resource', () => {
     });
 
     test('parse test request with map callback context', () => {
-        const callbackContext = new Map();
-        callbackContext.set('a', 'b');
+        const callbackContext = { a: 'b' };
         testEntrypointPayload['callbackContext'] = callbackContext;
-        class Model extends BaseModel {
-            ['constructor']: typeof Model;
-        }
-        const resource = new Resource(TYPE_NAME, Model);
-        const payload = new Map(Object.entries(testEntrypointPayload));
+        const resource = new Resource(TYPE_NAME, MockModel);
         const [session, request, action, callback] = resource['parseTestRequest'](
-            payload
+            testEntrypointPayload
         );
         expect(session).toBeDefined();
         expect(action).toBeDefined();
@@ -528,32 +472,15 @@ describe('when getting resource', () => {
     });
 
     test('parse test request valid request', () => {
-        const mockDeserialize: jest.Mock = jest
-            .fn()
-            .mockImplementationOnce(() => {
-                return { state: 'state1' };
-            })
-            .mockImplementationOnce(() => {
-                return { state: 'state2' };
-            });
-
-        class Model extends BaseModel {
-            ['constructor']: typeof Model;
-            public static deserialize = mockDeserialize;
-        }
-
-        const resource = new Resource(TYPE_NAME, Model);
+        const resource = new Resource(TYPE_NAME, MockModel);
         resource.addHandler(Action.Create, jest.fn());
-        const payload = new Map(Object.entries(testEntrypointPayload));
         const [session, request, action, callback] = resource['parseTestRequest'](
-            payload
+            testEntrypointPayload
         );
 
         expect(mockSession).toBeCalledTimes(1);
         expect(mockSession).toHaveReturnedWith(session);
 
-        expect(mockDeserialize).nthCalledWith(1, { state: 'state1' });
-        expect(mockDeserialize).nthCalledWith(2, { state: 'state2' });
         expect(request).toMatchObject({
             clientRequestToken: 'ecba020e-b2e6-4742-a7d0-8a06ae7c4b2b',
             desiredResourceState: { state: 'state1' },
@@ -585,12 +512,8 @@ describe('when getting resource', () => {
     });
 
     test('test entrypoint success', async () => {
-        class Model extends BaseModel {
-            ['constructor']: typeof Model;
-        }
-        const spyDeserialize: jest.SpyInstance = jest.spyOn(Model, 'deserialize');
-
-        const resource = new Resource(TYPE_NAME, Model);
+        const spyDeserialize: jest.SpyInstance = jest.spyOn(MockModel, 'deserialize');
+        const resource = new Resource(TYPE_NAME, MockModel);
 
         const progressEvent: ProgressEvent = ProgressEvent.progress();
         const mockHandler: jest.Mock = jest.fn(() => progressEvent);
