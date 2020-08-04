@@ -35,11 +35,11 @@ class InnerType:
         if resolved_type.container == ContainerType.MODEL:
             return resolved_type.type
         if resolved_type.container == ContainerType.DICT:
-            self.classes.append('Map')
+            self.classes.append("Map")
         elif resolved_type.container == ContainerType.LIST:
-            self.classes.append('Array')
+            self.classes.append("Array")
         elif resolved_type.container == ContainerType.SET:
-            self.classes.append('Set')
+            self.classes.append("Set")
 
         return self.resolve_type(resolved_type.type)
 

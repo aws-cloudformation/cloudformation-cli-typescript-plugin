@@ -164,9 +164,7 @@ class TypescriptLanguagePlugin(LanguagePlugin):
             type_name=project.type_name,
             models=models,
             primaryIdentifier=project.schema.get("primaryIdentifier", []),
-            additionalIdentifiers=project.schema.get(
-                "additionalIdentifiers", []
-            ),
+            additionalIdentifiers=project.schema.get("additionalIdentifiers", []),
         )
         project.overwrite(path, contents)
 

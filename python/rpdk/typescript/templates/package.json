@@ -12,7 +12,8 @@
         "test": "echo \"Error: no test specified\" && exit 1"
     },
     "dependencies": {
-        "{{lib_name}}": "{{lib_path}}"
+        "{{lib_name}}": "{{lib_path}}",
+        "class-transformer": "^0.3.1"
     },
     "devDependencies": {
         "@types/node": "^12.0.0",
