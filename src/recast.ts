@@ -1,27 +1,20 @@
 import { InvalidRequest } from './exceptions';
-import { integer, Integer } from './interface';
+import { Callable, integer, Integer } from './interface';
 
 type primitive = string | number | boolean | bigint | integer | object;
-type PrimitiveConstructor =
-    | StringConstructor
-    | NumberConstructor
-    | BooleanConstructor
-    | BigIntConstructor
-    | typeof Integer
-    | ObjectConstructor;
 
 /**
  * CloudFormation recasts all primitive types as strings, this tries to set them back to
  * the types defined in the model class
  */
 export const recastPrimitive = (
-    cls: PrimitiveConstructor,
+    cls: Callable<any, primitive>,
     k: string,
     v: string
 ): primitive => {
     if (Object.is(cls, Object)) {
-        // If the type is plain object, we cannot guess what the original type was, so we leave
-        // it as a string
+        // If the type is plain object, we cannot guess what the original type was,
+        // so we leave it as a string
         return v;
     }
     if (Object.is(cls, Boolean)) {
