@@ -27,7 +27,10 @@ interface Integer extends BigInt {
      * Defines the default JSON representation of
      * Integer (BigInt) to be a number.
      */
-    toJSON: () => number;
+    toJSON(): number;
+
+    /** Returns the primitive value of the specified object. */
+    valueOf(): integer;
 }
 
 interface IntegerConstructor extends BigIntConstructor {

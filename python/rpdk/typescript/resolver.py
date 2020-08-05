@@ -40,6 +40,8 @@ class InnerType:
             self.classes.append("Array")
         elif resolved_type.container == ContainerType.SET:
             self.classes.append("Set")
+        else:
+            raise ValueError(f"Unknown container type {resolved_type.container}")
 
         return self.resolve_type(resolved_type.type)
 
