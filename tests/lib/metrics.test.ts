@@ -4,6 +4,7 @@ import awsUtil from 'aws-sdk/lib/util';
 import { Action, MetricTypes, StandardUnit } from '../../src/interface';
 import { SessionProxy } from '../../src/proxy';
 import {
+    DimensionRecord,
     MetricPublisher,
     MetricsPublisherProxy,
     formatDimensions,
@@ -51,9 +52,10 @@ describe('when getting metrics', () => {
     });
 
     test('format dimensions', () => {
-        const dimensions = new Map<string, string>();
-        dimensions.set('MyDimensionKeyOne', 'valOne');
-        dimensions.set('MyDimensionKeyTwo', 'valTwo');
+        const dimensions: DimensionRecord = {
+            MyDimensionKeyOne: 'valOne',
+            MyDimensionKeyTwo: 'valTwo',
+        };
         const result = formatDimensions(dimensions);
         expect(result).toMatchObject([
             { Name: 'MyDimensionKeyOne', Value: 'valOne' },
@@ -76,9 +78,10 @@ describe('when getting metrics', () => {
             ),
         });
         const publisher = new MetricPublisher(session, NAMESPACE);
-        const dimensions = new Map<string, string>();
-        dimensions.set('DimensionKeyActionType', Action.Create);
-        dimensions.set('DimensionKeyResourceType', RESOURCE_TYPE);
+        const dimensions: DimensionRecord = {
+            DimensionKeyActionType: Action.Create,
+            DimensionKeyResourceType: RESOURCE_TYPE,
+        };
         await publisher.publishMetric(
             MetricTypes.HandlerInvocationCount,
             dimensions,

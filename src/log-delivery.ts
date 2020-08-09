@@ -11,7 +11,8 @@ import S3, { PutObjectRequest, PutObjectOutput } from 'aws-sdk/clients/s3';
 import promiseSequential from 'promise-sequential';
 
 import { SessionProxy } from './proxy';
-import { delay, HandlerRequest } from './utils';
+import { HandlerRequest } from './interface';
+import { delay } from './utils';
 
 type Console = globalThis.Console;
 type PromiseFunction = () => Promise<any>;

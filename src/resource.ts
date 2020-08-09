@@ -9,20 +9,19 @@ import {
     BaseResourceHandlerRequest,
     Callable,
     CfnResponse,
+    Constructor,
     Credentials,
+    Dict,
     HandlerErrorCode,
+    HandlerRequest,
+    LambdaContext,
     OperationStatus,
     Optional,
+    TestEvent,
+    UnmodeledRequest,
 } from './interface';
 import { ProviderLogHandler } from './log-delivery';
 import { MetricsPublisherProxy } from './metrics';
-import {
-    Constructor,
-    HandlerRequest,
-    LambdaContext,
-    TestEvent,
-    UnmodeledRequest,
-} from './utils';
 
 const LOGGER = console;
 const MUTATING_ACTIONS: [Action, Action, Action] = [
@@ -32,7 +31,7 @@ const MUTATING_ACTIONS: [Action, Action, Action] = [
 ];
 
 export type HandlerSignature = Callable<
-    [Optional<SessionProxy>, any, Map<string, any>],
+    [Optional<SessionProxy>, any, Dict],
     Promise<ProgressEvent>
 >;
 export class HandlerSignatures extends Map<Action, HandlerSignature> {}
@@ -43,13 +42,12 @@ class HandlerEvents extends Map<Action, string | symbol> {}
  *
  * @returns {MethodDecorator}
  */
-function ensureSerialize(toResponse = false): MethodDecorator {
+function ensureSerialize<T extends BaseModel>(toResponse = false): MethodDecorator {
     return function (
-        target: any,
+        target: BaseResource<T>,
         propertyKey: string,
         descriptor: PropertyDescriptor
     ): PropertyDescriptor {
-        type Resource = typeof target;
         // Save a reference to the original method this way we keep the values currently in the
         // descriptor and don't overwrite what another decorator might have done to the descriptor.
         if (descriptor === undefined) {
@@ -58,24 +56,18 @@ function ensureSerialize(toResponse = false): MethodDecorator {
         const originalMethod = descriptor.value;
         // Wrapping the original method with new signature.
         descriptor.value = async function (
-            event: any | Map<string, any>,
+            event: any | Dict,
             context: any
-        ): Promise<ProgressEvent | CfnResponse<Resource>> {
-            let mappedEvent: Map<string, any>;
-            if (event instanceof Map) {
-                mappedEvent = new Map<string, any>(event);
-            } else {
-                mappedEvent = new Map<string, any>(Object.entries(event));
-            }
+        ): Promise<ProgressEvent | CfnResponse<T>> {
             const progress: ProgressEvent = await originalMethod.apply(this, [
-                mappedEvent,
+                event,
                 context,
             ]);
             if (toResponse) {
                 // Use the raw event data as a last-ditch attempt to call back if the
                 // request is invalid.
                 const serialized = progress.serialize();
-                return Promise.resolve(serialized.toObject() as CfnResponse<Resource>);
+                return Promise.resolve(serialized as CfnResponse<T>);
             }
             return Promise.resolve(progress);
         };
@@ -107,7 +99,7 @@ export abstract class BaseResource<T extends BaseModel = BaseModel> {
         session: Optional<SessionProxy>,
         request: BaseResourceHandlerRequest<T>,
         action: Action,
-        callbackContext: Map<string, any>
+        callbackContext: Dict
     ): Promise<ProgressEvent> => {
         const handle: HandlerSignature = this.handlers.get(action);
         if (!handle) {
@@ -128,20 +120,15 @@ export abstract class BaseResource<T extends BaseModel = BaseModel> {
     };
 
     private parseTestRequest = (
-        eventData: Map<string, any>
-    ): [
-        Optional<SessionProxy>,
-        BaseResourceHandlerRequest<T>,
-        Action,
-        Map<string, any>
-    ] => {
+        eventData: Dict
+    ): [Optional<SessionProxy>, BaseResourceHandlerRequest<T>, Action, Dict] => {
         let session: SessionProxy;
         let request: BaseResourceHandlerRequest<T>;
         let action: Action;
         let event: TestEvent;
-        let callbackContext: Map<string, any>;
+        let callbackContext: Dict;
         try {
-            event = new TestEvent(eventData);
+            event = TestEvent.deserialize(eventData);
             const creds = event.credentials as Credentials;
             if (!creds) {
                 throw new Error(
@@ -153,28 +140,13 @@ export abstract class BaseResource<T extends BaseModel = BaseModel> {
                     'Missing Model class to be used to deserialize JSON data.'
                 );
             }
-            if (event.request instanceof Map) {
-                event.request = new Map<string, any>(event.request);
-            } else {
-                event.request = new Map<string, any>(Object.entries(event.request));
-            }
-            request = new UnmodeledRequest(event.request).toModeled<T>(this.modelCls);
+            request = UnmodeledRequest.deserialize(event.request).toModeled<T>(
+                this.modelCls
+            );
 
             session = SessionProxy.getSession(creds, event.region);
             action = event.action;
-
-            if (!event.callbackContext) {
-                callbackContext = new Map<string, any>();
-            } else if (
-                event.callbackContext instanceof Array ||
-                event.callbackContext instanceof Map
-            ) {
-                callbackContext = new Map<string, any>(event.callbackContext);
-            } else {
-                callbackContext = new Map<string, any>(
-                    Object.entries(event.callbackContext)
-                );
-            }
+            callbackContext = event.callbackContext || {};
         } catch (err) {
             LOGGER.error('Invalid request');
             throw new InternalFailure(`${err} (${err.name})`);
@@ -185,15 +157,12 @@ export abstract class BaseResource<T extends BaseModel = BaseModel> {
 
     // @ts-ignore
     public async testEntrypoint(
-        eventData: any | Map<string, any>,
+        eventData: any | Dict,
         context: any
     ): Promise<ProgressEvent>;
     @boundMethod
-    @ensureSerialize()
-    public async testEntrypoint(
-        eventData: Map<string, any>,
-        context: any
-    ): Promise<ProgressEvent> {
+    @ensureSerialize<T>()
+    public async testEntrypoint(eventData: Dict, context: any): Promise<ProgressEvent> {
         let msg = 'Uninitialized';
         let progress: ProgressEvent;
         try {
@@ -224,17 +193,12 @@ export abstract class BaseResource<T extends BaseModel = BaseModel> {
     }
 
     private static parseRequest = (
-        eventData: Map<string, any>
-    ): [
-        [Optional<SessionProxy>, SessionProxy],
-        Action,
-        Map<string, any>,
-        HandlerRequest
-    ] => {
+        eventData: Dict
+    ): [[Optional<SessionProxy>, SessionProxy], Action, Dict, HandlerRequest] => {
         let callerSession: Optional<SessionProxy>;
         let providerSession: SessionProxy;
         let action: Action;
-        let callbackContext: Map<string, any>;
+        let callbackContext: Dict;
         let event: HandlerRequest;
         try {
             event = HandlerRequest.deserialize(eventData);
@@ -250,18 +214,7 @@ export abstract class BaseResource<T extends BaseModel = BaseModel> {
                 event.requestData.providerCredentials
             );
             action = event.action;
-            if (!event.callbackContext) {
-                callbackContext = new Map<string, any>();
-            } else if (
-                event.callbackContext instanceof Array ||
-                event.callbackContext instanceof Map
-            ) {
-                callbackContext = new Map<string, any>(event.callbackContext);
-            } else {
-                callbackContext = new Map<string, any>(
-                    Object.entries(event.callbackContext)
-                );
-            }
+            callbackContext = event.callbackContext || {};
         } catch (err) {
             LOGGER.error('Invalid request');
             throw new InvalidRequest(`${err} (${err.name})`);
@@ -288,13 +241,13 @@ export abstract class BaseResource<T extends BaseModel = BaseModel> {
 
     // @ts-ignore
     public async entrypoint(
-        eventData: any | Map<string, any>,
+        eventData: any | Dict,
         context: LambdaContext
-    ): Promise<CfnResponse<BaseResource>>;
+    ): Promise<CfnResponse<T>>;
     @boundMethod
-    @ensureSerialize(true)
+    @ensureSerialize<T>(true)
     public async entrypoint(
-        eventData: Map<string, any>,
+        eventData: Dict,
         context: LambdaContext
     ): Promise<ProgressEvent> {
         let isLogSetup = false;
@@ -314,7 +267,7 @@ export abstract class BaseResource<T extends BaseModel = BaseModel> {
             );
             const [callerSession, providerSession] = sessions;
             isLogSetup = await ProviderLogHandler.setup(event, providerSession);
-            // LOGGER.debug('entrypoint eventData', eventData.toObject());
+            // LOGGER.debug('entrypoint eventData', eventData);
             const request = this.castResourceRequest(event);
 
             const metrics = new MetricsPublisherProxy(

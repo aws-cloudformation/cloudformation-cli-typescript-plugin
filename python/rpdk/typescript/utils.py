@@ -9,6 +9,7 @@ LANGUAGE_KEYWORDS = {
     "as",
     "async",
     "await",
+    "bigint",
     "boolean",
     "break",
     "case",

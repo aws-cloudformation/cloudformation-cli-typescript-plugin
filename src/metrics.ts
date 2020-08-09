@@ -1,4 +1,4 @@
-import CloudWatch, { Dimension } from 'aws-sdk/clients/cloudwatch';
+import CloudWatch, { Dimension, DimensionName } from 'aws-sdk/clients/cloudwatch';
 
 import { SessionProxy } from './proxy';
 import { Action, MetricTypes, StandardUnit } from './interface';
@@ -7,14 +7,18 @@ import { BaseHandlerException } from './exceptions';
 const LOGGER = console;
 const METRIC_NAMESPACE_ROOT = 'AWS/CloudFormation';
 
-export function formatDimensions(dimensions: Map<string, string>): Array<Dimension> {
+export type DimensionRecord = Record<DimensionName, string>;
+
+export function formatDimensions(dimensions: DimensionRecord): Array<Dimension> {
     const formatted: Array<Dimension> = [];
-    dimensions.forEach((value: string, key: string) => {
-        formatted.push({
+    for (const key in dimensions) {
+        const value = dimensions[key];
+        const dimension: Dimension = {
             Name: key,
             Value: value,
-        });
-    });
+        };
+        formatted.push(dimension);
+    }
     return formatted;
 }
 
@@ -27,7 +31,7 @@ export class MetricPublisher {
 
     async publishMetric(
         metricName: MetricTypes,
-        dimensions: Map<string, string>,
+        dimensions: DimensionRecord,
         unit: StandardUnit,
         value: number,
         timestamp: Date
@@ -80,13 +84,12 @@ export class MetricsPublisherProxy {
         action: Action,
         error: Error
     ): Promise<any> {
-        const dimensions = new Map<string, string>();
-        dimensions.set('DimensionKeyActionType', action);
-        dimensions.set(
-            'DimensionKeyExceptionType',
-            (error as BaseHandlerException).errorCode || error.constructor.name
-        );
-        dimensions.set('DimensionKeyResourceType', this.resourceType);
+        const dimensions: DimensionRecord = {
+            DimensionKeyActionType: action,
+            DimensionKeyExceptionType:
+                (error as BaseHandlerException).errorCode || error.constructor.name,
+            DimensionKeyResourceType: this.resourceType,
+        };
         const promises: Array<Promise<void>> = this.publishers.map(
             (publisher: MetricPublisher) => {
                 return publisher.publishMetric(
@@ -102,9 +105,10 @@ export class MetricsPublisherProxy {
     }
 
     async publishInvocationMetric(timestamp: Date, action: Action): Promise<any> {
-        const dimensions = new Map<string, string>();
-        dimensions.set('DimensionKeyActionType', action);
-        dimensions.set('DimensionKeyResourceType', this.resourceType);
+        const dimensions: DimensionRecord = {
+            DimensionKeyActionType: action,
+            DimensionKeyResourceType: this.resourceType,
+        };
         const promises: Array<Promise<void>> = this.publishers.map(
             (publisher: MetricPublisher) => {
                 return publisher.publishMetric(
@@ -124,9 +128,10 @@ export class MetricsPublisherProxy {
         action: Action,
         milliseconds: number
     ): Promise<any> {
-        const dimensions = new Map<string, string>();
-        dimensions.set('DimensionKeyActionType', action);
-        dimensions.set('DimensionKeyResourceType', this.resourceType);
+        const dimensions: DimensionRecord = {
+            DimensionKeyActionType: action,
+            DimensionKeyResourceType: this.resourceType,
+        };
         const promises: Array<Promise<void>> = this.publishers.map(
             (publisher: MetricPublisher) => {
                 return publisher.publishMetric(
@@ -145,13 +150,12 @@ export class MetricsPublisherProxy {
         timestamp: Date,
         error: Error
     ): Promise<any> {
-        const dimensions = new Map<string, string>();
-        dimensions.set('DimensionKeyActionType', 'ProviderLogDelivery');
-        dimensions.set(
-            'DimensionKeyExceptionType',
-            (error as BaseHandlerException).errorCode || error.constructor.name
-        );
-        dimensions.set('DimensionKeyResourceType', this.resourceType);
+        const dimensions: DimensionRecord = {
+            DimensionKeyActionType: 'ProviderLogDelivery',
+            DimensionKeyExceptionType:
+                (error as BaseHandlerException).errorCode || error.constructor.name,
+            DimensionKeyResourceType: this.resourceType,
+        };
         const promises: Array<Promise<void>> = this.publishers.map(
             (publisher: MetricPublisher) => {
                 return publisher.publishMetric(

@@ -8,7 +8,7 @@ import promiseSequential from 'promise-sequential';
 import { Action } from '../../src/interface';
 import { SessionProxy } from '../../src/proxy';
 import { ProviderLogHandler } from '../../src/log-delivery';
-import { HandlerRequest, RequestData } from '../../src/utils';
+import { HandlerRequest, RequestData } from '../../src/interface';
 
 const mockResult = (output: any): jest.Mock => {
     return jest.fn().mockReturnValue({
@@ -93,57 +93,39 @@ describe('when delivering log', () => {
             };
         });
         session['client'] = cwLogs;
-        const request = new HandlerRequest(
-            new Map(
-                Object.entries({
-                    awsAccountId: '123412341234',
-                    resourceType: 'Foo::Bar::Baz',
-                    requestData: new RequestData(
-                        new Map(
-                            Object.entries({
-                                providerLogGroupName: 'test-group',
-                                logicalResourceId: 'MyResourceId',
-                                resourceProperties: {},
-                                systemTags: {},
-                            })
-                        )
-                    ),
-                    stackId:
-                        'arn:aws:cloudformation:us-east-1:123412341234:stack/baz/321',
-                })
-            )
-        );
+        const request = new HandlerRequest({
+            awsAccountId: '123412341234',
+            resourceType: 'Foo::Bar::Baz',
+            requestData: new RequestData({
+                providerLogGroupName: 'test-group',
+                logicalResourceId: 'MyResourceId',
+                resourceProperties: {},
+                systemTags: {},
+            }),
+            stackId: 'arn:aws:cloudformation:us-east-1:123412341234:stack/baz/321',
+        });
         await ProviderLogHandler.setup(request, session);
         // Get a copy of the instance and remove it from class
         // to avoid changing singleton.
         providerLogHandler = ProviderLogHandler.getInstance();
         ProviderLogHandler['instance'] = null;
         cwLogs.mockClear();
-        payload = new HandlerRequest(
-            new Map(
-                Object.entries({
-                    action: Action.Create,
-                    awsAccountId: '123412341234',
-                    bearerToken: uuidv4(),
-                    region: 'us-east-1',
-                    responseEndpoint: '',
-                    resourceType: 'Foo::Bar::Baz',
-                    resourceTypeVersion: '4',
-                    requestData: new RequestData(
-                        new Map(
-                            Object.entries({
-                                providerLogGroupName: 'test_group',
-                                logicalResourceId: 'MyResourceId',
-                                resourceProperties: {},
-                                systemTags: {},
-                            })
-                        )
-                    ),
-                    stackId:
-                        'arn:aws:cloudformation:us-east-1:123412341234:stack/baz/321',
-                })
-            )
-        );
+        payload = new HandlerRequest({
+            action: Action.Create,
+            awsAccountId: '123412341234',
+            bearerToken: uuidv4(),
+            region: 'us-east-1',
+            responseEndpoint: '',
+            resourceType: 'Foo::Bar::Baz',
+            resourceTypeVersion: '4',
+            requestData: new RequestData({
+                providerLogGroupName: 'test_group',
+                logicalResourceId: 'MyResourceId',
+                resourceProperties: {},
+                systemTags: {},
+            }),
+            stackId: 'arn:aws:cloudformation:us-east-1:123412341234:stack/baz/321',
+        });
     });
 
     afterEach(() => {

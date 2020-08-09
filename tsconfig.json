@@ -10,6 +10,7 @@
         "removeComments": true,
         "sourceMap": false,
         "experimentalDecorators": true,
+        "emitDecoratorMetadata": true,
         "outDir": "dist"
     },
     "include": [

@@ -10,7 +10,7 @@ from rpdk.core.init import input_with_validation
 from rpdk.core.jsonutils.resolver import ContainerType, resolve_models
 from rpdk.core.plugin_base import LanguagePlugin
 
-from .resolver import contains_model, translate_type
+from .resolver import contains_model, get_inner_type, translate_type
 from .utils import safe_reserved
 
 LOG = logging.getLogger(__name__)
@@ -42,6 +42,7 @@ class TypescriptLanguagePlugin(LanguagePlugin):
         )
         self.env.filters["translate_type"] = translate_type
         self.env.filters["contains_model"] = contains_model
+        self.env.filters["get_inner_type"] = get_inner_type
         self.env.filters["safe_reserved"] = safe_reserved
         self.env.globals["ContainerType"] = ContainerType
         self.namespace = None
@@ -159,7 +160,11 @@ class TypescriptLanguagePlugin(LanguagePlugin):
         LOG.debug("Writing file: %s", path)
         template = self.env.get_template("models.ts")
         contents = template.render(
-            lib_name=SUPPORT_LIB_NAME, type_name=project.type_name, models=models,
+            lib_name=SUPPORT_LIB_NAME,
+            type_name=project.type_name,
+            models=models,
+            primaryIdentifier=project.schema.get("primaryIdentifier", []),
+            additionalIdentifiers=project.schema.get("additionalIdentifiers", []),
         )
         project.overwrite(path, contents)
 
