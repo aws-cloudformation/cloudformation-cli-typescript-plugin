@@ -6,6 +6,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0] - 2020-08-09
+### Added
+- [CLI Plugin] Primary and additional identifiers can be retrieved using the appropriate methods in base model class
+- [Support Library] Recast properties from string to intended primitive type based on model
+- [Support Library] New wrapper class for integer types (simplification from bigint)
+
+### Changed
+- [CLI Plugin] Improve model serialization/deserialization to handle complex schemas
+- [Support Library] While leveraging `class-transformer` library, the properties can now be cast into proper types
+
+### Removed
+- [Support Library] Global definitions and auxiliary code extending ES6 Map
+
+
 ## [0.2.1] - 2020-07-14
 ### Fixed
 - [Support Library] Callback context not being properly formatted
@@ -47,7 +61,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - [Support Library] Base Model class as well as Progress Event class
 
 
-[Unreleased]: https://github.com/eduardomourar/cloudformation-cli-typescript-plugin/compare/v0.2.1...HEAD
+[Unreleased]: https://github.com/eduardomourar/cloudformation-cli-typescript-plugin/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/eduardomourar/cloudformation-cli-typescript-plugin/compare/v0.2.1...v0.3.0
 [0.2.1]: https://github.com/eduardomourar/cloudformation-cli-typescript-plugin/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/eduardomourar/cloudformation-cli-typescript-plugin/compare/v0.1.2...v0.2.0
 [0.1.2]: https://github.com/eduardomourar/cloudformation-cli-typescript-plugin/compare/v0.1.1...v0.1.2

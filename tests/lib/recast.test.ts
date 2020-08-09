@@ -62,13 +62,16 @@ describe('when recasting objects', () => {
             ],
         };
         const expected = {
-            ListSetInt: [[1, 2, 3]],
+            ListSetInt: [new Set([1, 2, 3])],
             ListListInt: [[1, 2, 3]],
             ListListAny: [[{ key: 'val' }]],
-            ASet: ['1', '2', '3'],
-            AnotherSet: ['a', 'b', 'c'],
-            AFreeformDict: { somekey: 'somevalue', someotherkey: '1' },
-            ANumberDict: { key: 52.76 },
+            ASet: new Set(['1', '2', '3']),
+            AnotherSet: new Set(['a', 'b', 'c']),
+            AFreeformDict: new Map([
+                ['somekey', 'somevalue'],
+                ['someotherkey', '1'],
+            ]),
+            ANumberDict: new Map([['key', 52.76]]),
             AnInt: 1,
             ABool: true,
             AList: [
