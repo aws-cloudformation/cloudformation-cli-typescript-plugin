@@ -1,7 +1,6 @@
 import {
     Action,
     BaseResource,
-    Dict,
     exceptions,
     handlerEvent,
     HandlerErrorCode,
@@ -16,7 +15,7 @@ import { ResourceModel } from './models';
 // Use this logger to forward log messages to CloudWatch Logs.
 const LOGGER = console;
 
-interface CallbackContext extends Dict {}
+interface CallbackContext extends Record<string, any> {}
 
 class Resource extends BaseResource<ResourceModel> {
 
@@ -36,10 +35,7 @@ class Resource extends BaseResource<ResourceModel> {
         callbackContext: CallbackContext,
     ): Promise<ProgressEvent> {
         const model: ResourceModel = request.desiredResourceState;
-        const progress: ProgressEvent<ResourceModel> = ProgressEvent.builder()
-            .status(OperationStatus.InProgress)
-            .resourceModel(model)
-            .build() as ProgressEvent<ResourceModel>;
+        const progress = ProgressEvent.progress<ProgressEvent<ResourceModel, CallbackContext>>(model);
         // TODO: put code here
 
         // Example:
@@ -75,10 +71,7 @@ class Resource extends BaseResource<ResourceModel> {
         callbackContext: CallbackContext,
     ): Promise<ProgressEvent> {
         const model: ResourceModel = request.desiredResourceState;
-        const progress: ProgressEvent<ResourceModel> = ProgressEvent.builder()
-            .status(OperationStatus.InProgress)
-            .resourceModel(model)
-            .build() as ProgressEvent<ResourceModel>;
+        const progress = ProgressEvent.progress<ProgressEvent<ResourceModel, CallbackContext>>(model);
         // TODO: put code here
         progress.status = OperationStatus.Success;
         return progress;
@@ -101,9 +94,7 @@ class Resource extends BaseResource<ResourceModel> {
         callbackContext: CallbackContext,
     ): Promise<ProgressEvent> {
         const model: ResourceModel = request.desiredResourceState;
-        const progress: ProgressEvent<ResourceModel> = ProgressEvent.builder()
-            .status(OperationStatus.InProgress)
-            .build() as ProgressEvent<ResourceModel>;
+        const progress = ProgressEvent.progress<ProgressEvent<ResourceModel, CallbackContext>>();
         // TODO: put code here
         progress.status = OperationStatus.Success;
         return progress;
@@ -126,10 +117,7 @@ class Resource extends BaseResource<ResourceModel> {
     ): Promise<ProgressEvent> {
         const model: ResourceModel = request.desiredResourceState;
         // TODO: put code here
-        const progress: ProgressEvent<ResourceModel> = ProgressEvent.builder()
-            .status(OperationStatus.Success)
-            .resourceModel(model)
-            .build() as ProgressEvent<ResourceModel>;
+        const progress = ProgressEvent.success<ProgressEvent<ResourceModel, CallbackContext>>(model);
         return progress;
     }
 
@@ -150,10 +138,10 @@ class Resource extends BaseResource<ResourceModel> {
     ): Promise<ProgressEvent> {
         const model: ResourceModel = request.desiredResourceState;
         // TODO: put code here
-        const progress: ProgressEvent<ResourceModel> = ProgressEvent.builder()
+        const progress = ProgressEvent.builder<ProgressEvent<ResourceModel, CallbackContext>>()
             .status(OperationStatus.Success)
             .resourceModels([model])
-            .build() as ProgressEvent<ResourceModel>;
+            .build();
         return progress;
     }
 }

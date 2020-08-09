@@ -44,7 +44,10 @@ export class SessionProxy {
 }
 
 @builder
-export class ProgressEvent<R extends BaseModel = BaseModel, T = Dict> extends BaseDto {
+export class ProgressEvent<
+    ResourceT extends BaseModel = BaseModel,
+    CallbackT = Dict
+> extends BaseDto {
     /**
      * The status indicates whether the handler has reached a terminal state or is
      * still computing and requires more time to complete
@@ -69,7 +72,7 @@ export class ProgressEvent<R extends BaseModel = BaseModel, T = Dict> extends Ba
      * metadata between subsequent retries; for example to pass through a Resource
      * identifier which can be used to continue polling for stabilization
      */
-    @Expose() callbackContext?: T;
+    @Expose() callbackContext?: CallbackT;
 
     /**
      * A callback will be scheduled with an initial delay of no less than the number
@@ -81,12 +84,12 @@ export class ProgressEvent<R extends BaseModel = BaseModel, T = Dict> extends Ba
      * The output resource instance populated by a READ for synchronous results and
      * by CREATE/UPDATE/DELETE for final response validation/confirmation
      */
-    @Expose() resourceModel?: R;
+    @Expose() resourceModel?: ResourceT;
 
     /**
      * The output resource instances populated by a LIST for synchronous results
      */
-    @Expose() resourceModels?: Array<R>;
+    @Expose() resourceModels?: Array<ResourceT>;
 
     /**
      * The token used to request additional pages of resources for a LIST operation
@@ -102,7 +105,7 @@ export class ProgressEvent<R extends BaseModel = BaseModel, T = Dict> extends Ba
 
     // TODO: remove workaround when decorator mutation implemented: https://github.com/microsoft/TypeScript/issues/4881
     @Exclude()
-    public static builder(template?: Partial<ProgressEvent>): IBuilder<ProgressEvent> {
+    public static builder<T extends ProgressEvent>(template?: Partial<T>): IBuilder<T> {
         return null;
     }
 
@@ -110,8 +113,11 @@ export class ProgressEvent<R extends BaseModel = BaseModel, T = Dict> extends Ba
      * Convenience method for constructing FAILED response
      */
     @Exclude()
-    public static failed(errorCode: HandlerErrorCode, message: string): ProgressEvent {
-        const event = ProgressEvent.builder()
+    public static failed<T extends ProgressEvent>(
+        errorCode: HandlerErrorCode,
+        message: string
+    ): T {
+        const event = ProgressEvent.builder<T>()
             .status(OperationStatus.Failed)
             .errorCode(errorCode)
             .message(message)
@@ -123,8 +129,8 @@ export class ProgressEvent<R extends BaseModel = BaseModel, T = Dict> extends Ba
      * Convenience method for constructing IN_PROGRESS response
      */
     @Exclude()
-    public static progress(model?: any, ctx?: any): ProgressEvent {
-        const progress = ProgressEvent.builder().status(OperationStatus.InProgress);
+    public static progress<T extends ProgressEvent>(model?: any, ctx?: any): T {
+        const progress = ProgressEvent.builder<T>().status(OperationStatus.InProgress);
         if (ctx) {
             progress.callbackContext(ctx);
         }
@@ -135,12 +141,12 @@ export class ProgressEvent<R extends BaseModel = BaseModel, T = Dict> extends Ba
         return event;
     }
 
-    @Exclude()
     /**
      * Convenience method for constructing a SUCCESS response
      */
-    public static success(model?: any, ctx?: any): ProgressEvent {
-        const event = ProgressEvent.progress(model, ctx);
+    @Exclude()
+    public static success<T extends ProgressEvent>(model?: any, ctx?: any): T {
+        const event = ProgressEvent.progress<T>(model, ctx);
         event.status = OperationStatus.Success;
         return event;
     }
