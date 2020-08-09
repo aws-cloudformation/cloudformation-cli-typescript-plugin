@@ -1,6 +1,7 @@
 import {
     Action,
     BaseResource,
+    Dict,
     exceptions,
     handlerEvent,
     HandlerErrorCode,
@@ -15,6 +16,8 @@ import { ResourceModel } from './models';
 // Use this logger to forward log messages to CloudWatch Logs.
 const LOGGER = console;
 
+interface CallbackContext extends Dict {}
+
 class Resource extends BaseResource<ResourceModel> {
 
     /**
@@ -23,13 +26,14 @@ class Resource extends BaseResource<ResourceModel> {
      *
      * @param session Current AWS session passed through from caller
      * @param request The request object for the provisioning request passed to the implementor
-     * @param callbackContext Custom context object to enable handlers to process re-invocation
+     * @param callbackContext Custom context object to allow the passing through of additional
+     * state or metadata between subsequent retries
      */
     @handlerEvent(Action.Create)
     public async create(
         session: Optional<SessionProxy>,
         request: ResourceHandlerRequest<ResourceModel>,
-        callbackContext: Map<string, any>,
+        callbackContext: CallbackContext,
     ): Promise<ProgressEvent> {
         const model: ResourceModel = request.desiredResourceState;
         const progress: ProgressEvent<ResourceModel> = ProgressEvent.builder()
@@ -61,13 +65,14 @@ class Resource extends BaseResource<ResourceModel> {
      *
      * @param session Current AWS session passed through from caller
      * @param request The request object for the provisioning request passed to the implementor
-     * @param callbackContext Custom context object to enable handlers to process re-invocation
+     * @param callbackContext Custom context object to allow the passing through of additional
+     * state or metadata between subsequent retries
      */
     @handlerEvent(Action.Update)
     public async update(
         session: Optional<SessionProxy>,
         request: ResourceHandlerRequest<ResourceModel>,
-        callbackContext: Map<string, any>,
+        callbackContext: CallbackContext,
     ): Promise<ProgressEvent> {
         const model: ResourceModel = request.desiredResourceState;
         const progress: ProgressEvent<ResourceModel> = ProgressEvent.builder()
@@ -86,13 +91,14 @@ class Resource extends BaseResource<ResourceModel> {
      *
      * @param session Current AWS session passed through from caller
      * @param request The request object for the provisioning request passed to the implementor
-     * @param callbackContext Custom context object to enable handlers to process re-invocation
+     * @param callbackContext Custom context object to allow the passing through of additional
+     * state or metadata between subsequent retries
      */
     @handlerEvent(Action.Delete)
     public async delete(
         session: Optional<SessionProxy>,
         request: ResourceHandlerRequest<ResourceModel>,
-        callbackContext: Map<string, any>,
+        callbackContext: CallbackContext,
     ): Promise<ProgressEvent> {
         const model: ResourceModel = request.desiredResourceState;
         const progress: ProgressEvent<ResourceModel> = ProgressEvent.builder()
@@ -109,13 +115,14 @@ class Resource extends BaseResource<ResourceModel> {
      *
      * @param session Current AWS session passed through from caller
      * @param request The request object for the provisioning request passed to the implementor
-     * @param callbackContext Custom context object to enable handlers to process re-invocation
+     * @param callbackContext Custom context object to allow the passing through of additional
+     * state or metadata between subsequent retries
      */
     @handlerEvent(Action.Read)
     public async read(
         session: Optional<SessionProxy>,
         request: ResourceHandlerRequest<ResourceModel>,
-        callbackContext: Map<string, any>,
+        callbackContext: CallbackContext,
     ): Promise<ProgressEvent> {
         const model: ResourceModel = request.desiredResourceState;
         // TODO: put code here
@@ -132,18 +139,20 @@ class Resource extends BaseResource<ResourceModel> {
      *
      * @param session Current AWS session passed through from caller
      * @param request The request object for the provisioning request passed to the implementor
-     * @param callbackContext Custom context object to enable handlers to process re-invocation
+     * @param callbackContext Custom context object to allow the passing through of additional
+     * state or metadata between subsequent retries
      */
     @handlerEvent(Action.List)
     public async list(
         session: Optional<SessionProxy>,
         request: ResourceHandlerRequest<ResourceModel>,
-        callbackContext: Map<string, any>,
+        callbackContext: CallbackContext,
     ): Promise<ProgressEvent> {
+        const model: ResourceModel = request.desiredResourceState;
         // TODO: put code here
         const progress: ProgressEvent<ResourceModel> = ProgressEvent.builder()
             .status(OperationStatus.Success)
-            .resourceModels([])
+            .resourceModels([model])
             .build() as ProgressEvent<ResourceModel>;
         return progress;
     }

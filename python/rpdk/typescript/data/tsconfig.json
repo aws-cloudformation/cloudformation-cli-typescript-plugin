@@ -8,7 +8,6 @@
         "moduleResolution": "node",
         "allowJs": true,
         "experimentalDecorators": true,
-        "emitDecoratorMetadata": true,
         "outDir": "dist"
     },
     "include": [
