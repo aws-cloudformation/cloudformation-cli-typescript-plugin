@@ -31,7 +31,7 @@ describe('when recasting objects', () => {
     test('recast complex object', () => {
         const payload = {
             ListListAny: [[{ key: 'val' }]],
-            ListListInt: [['1', '2', '3']],
+            ListListInt: [['1', '2', '3', '']],
             ListSetInt: [['1', '2', '3']],
             ASet: ['1', '2', '3'],
             AnotherSet: ['a', 'b', 'c'],
@@ -63,7 +63,7 @@ describe('when recasting objects', () => {
         };
         const expected = {
             ListSetInt: [new Set([1, 2, 3])],
-            ListListInt: [[1, 2, 3]],
+            ListListInt: [[1, 2, 3, null]],
             ListListAny: [[{ key: 'val' }]],
             ASet: new Set(['1', '2', '3']),
             AnotherSet: new Set(['a', 'b', 'c']),
@@ -139,5 +139,16 @@ describe('when recasting objects', () => {
         const v = '1252.53';
         const num = recastPrimitive(Number, k, v);
         expect(num).toBe(1252.53);
+    });
+
+    test('recast primitive boolean/number empty string', () => {
+        const k = 'key';
+        const v = '';
+        const bool = recastPrimitive(Boolean, k, v);
+        const num = recastPrimitive(Number, k, v);
+        const int = recastPrimitive(BigInt, k, v);
+        expect(bool).toBeNull();
+        expect(num).toBeNull();
+        expect(int).toBeNull();
     });
 });
