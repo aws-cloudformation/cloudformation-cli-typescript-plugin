@@ -1,4 +1,4 @@
-// {{ type_name }}
+# {{ type_name }}
 
 Congratulations on starting development! Next steps:
 
