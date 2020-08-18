@@ -141,11 +141,13 @@ describe('when recasting objects', () => {
         expect(num).toBe(1252.53);
     });
 
-    test('recast primitive number empty string', () => {
+    test('recast primitive boolean/number empty string', () => {
         const k = 'key';
         const v = '';
+        const bool = recastPrimitive(Boolean, k, v);
         const num = recastPrimitive(Number, k, v);
         const int = recastPrimitive(BigInt, k, v);
+        expect(bool).toBeNull();
         expect(num).toBeNull();
         expect(int).toBeNull();
     });

@@ -17,6 +17,15 @@ export const recastPrimitive = (
         // so we leave it as a string
         return v;
     }
+    if (
+        (Object.is(cls, Boolean) ||
+            Object.is(cls, Number) ||
+            Object.is(cls, BigInt) ||
+            Object.is(cls, Integer)) &&
+        v.length === 0
+    ) {
+        return null;
+    }
     if (Object.is(cls, Boolean)) {
         if (v.toLowerCase() === 'true') {
             return true;
