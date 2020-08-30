@@ -230,7 +230,11 @@ export abstract class BaseResource<T extends BaseModel = BaseModel> {
                 clientRequestToken: request.bearerToken,
                 desiredResourceState: request.requestData.resourceProperties,
                 previousResourceState: request.requestData.previousResourceProperties,
+                desiredResourceTags: request.requestData.stackTags,
+                systemTags: request.requestData.systemTags,
+                awsAccountId: request.awsAccountId,
                 logicalResourceIdentifier: request.requestData.logicalResourceId,
+                region: request.region,
             });
             return unmodeled.toModeled<T>(this.modelCls);
         } catch (err) {
