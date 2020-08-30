@@ -236,14 +236,34 @@ export class BaseResourceHandlerRequest<T extends BaseModel> extends BaseDto {
     @Expose() clientRequestToken: ClientRequestToken;
     @Expose() desiredResourceState?: T;
     @Expose() previousResourceState?: T;
+    @Expose() desiredResourceTags: Dict<string>;
+    @Expose() previousResourceTags: Dict<string>;
+    @Expose() systemTags: Dict<string>;
+    @Expose() awsAccountId: string;
+    @Expose() awsPartition: string;
     @Expose() logicalResourceIdentifier?: LogicalResourceId;
     @Expose() nextToken?: NextToken;
+    @Expose() region: string;
 }
 
 export class UnmodeledRequest extends BaseResourceHandlerRequest<BaseModel> {
     @Exclude()
     public static fromUnmodeled(obj: Dict): UnmodeledRequest {
         return UnmodeledRequest.deserialize(obj);
+    }
+
+    @Exclude()
+    public static getPartition(region: Optional<string>): Optional<string> {
+        if (!region) {
+            return null;
+        }
+        if (region.startsWith('cn')) {
+            return 'aws-cn';
+        }
+        if (region.startsWith('us-gov')) {
+            return 'aws-gov';
+        }
+        return 'aws';
     }
 
     @Exclude()
@@ -254,8 +274,13 @@ export class UnmodeledRequest extends BaseResourceHandlerRequest<BaseModel> {
             BaseResourceHandlerRequest<T>
         >({
             clientRequestToken: this.clientRequestToken,
+            desiredResourceTags: this.desiredResourceTags,
+            systemTags: this.systemTags,
+            awsAccountId: this.awsAccountId,
             logicalResourceIdentifier: this.logicalResourceIdentifier,
             nextToken: this.nextToken,
+            region: this.region,
+            awsPartition: UnmodeledRequest.getPartition(this.region),
         });
         request.desiredResourceState = modelCls.deserialize(
             this.desiredResourceState || {}

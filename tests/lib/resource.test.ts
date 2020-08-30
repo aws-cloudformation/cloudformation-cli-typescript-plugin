@@ -323,7 +323,12 @@ describe('when getting resource', () => {
             clientRequestToken: request.bearerToken,
             desiredResourceState: { state: 'state1' },
             previousResourceState: { state: 'state2' },
+            desiredResourceTags: request.requestData.stackTags,
+            systemTags: request.requestData.systemTags,
+            awsAccountId: request.awsAccountId,
             logicalResourceIdentifier: 'myBucket',
+            region: request.region,
+            awsPartition: 'aws',
         });
     });
 

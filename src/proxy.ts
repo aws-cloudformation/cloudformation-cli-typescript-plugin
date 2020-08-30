@@ -161,15 +161,4 @@ export class ProgressEvent<
  */
 export class ResourceHandlerRequest<
     T extends BaseModel
-> extends BaseResourceHandlerRequest<T> {
-    @Expose() clientRequestToken: string;
-    @Expose() desiredResourceState: T;
-    @Expose() previousResourceState: T;
-    @Expose() desiredResourceTags: Dict<string>;
-    @Expose() systemTags: Dict<string>;
-    @Expose() awsAccountId: string;
-    @Expose() awsPartition: string;
-    @Expose() logicalResourceIdentifier: string;
-    @Expose() nextToken: string;
-    @Expose() region: string;
-}
+> extends BaseResourceHandlerRequest<T> {}

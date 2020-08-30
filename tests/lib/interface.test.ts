@@ -1,4 +1,4 @@
-import { Integer } from '../../src/interface';
+import { Integer, UnmodeledRequest } from '../../src/interface';
 import { SerializableModel } from '../data/sample-model';
 
 describe('when getting interface', () => {
@@ -61,5 +61,15 @@ describe('when getting interface', () => {
         const serialized = model.serialize();
         expect(typeof serialized['SomeInt']).toBe('number');
         expect(serialized['SomeInt']).toBe(35190274);
+    });
+
+    test('unmodeled request partion', () => {
+        const partionMap = [null, 'aws', 'aws-cn', 'aws-gov'];
+        [null, 'us-east-1', 'cn-region1', 'us-gov-region1'].forEach(
+            (region: string, index: number) => {
+                const partion = UnmodeledRequest.getPartition(region);
+                expect(partion).toBe(partionMap[index]);
+            }
+        );
     });
 });
