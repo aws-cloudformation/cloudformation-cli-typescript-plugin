@@ -275,6 +275,7 @@ export class UnmodeledRequest extends BaseResourceHandlerRequest<BaseModel> {
         >({
             clientRequestToken: this.clientRequestToken,
             desiredResourceTags: this.desiredResourceTags,
+            previousResourceTags: this.previousResourceTags,
             systemTags: this.systemTags,
             awsAccountId: this.awsAccountId,
             logicalResourceIdentifier: this.logicalResourceIdentifier,

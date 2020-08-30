@@ -324,6 +324,7 @@ describe('when getting resource', () => {
             desiredResourceState: { state: 'state1' },
             previousResourceState: { state: 'state2' },
             desiredResourceTags: request.requestData.stackTags,
+            previousResourceTags: request.requestData.previousStackTags,
             systemTags: request.requestData.systemTags,
             awsAccountId: request.awsAccountId,
             logicalResourceIdentifier: 'myBucket',
