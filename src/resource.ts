@@ -274,10 +274,7 @@ export abstract class BaseResource<T extends BaseModel = BaseModel> {
             // LOGGER.debug('entrypoint eventData', eventData);
             const request = this.castResourceRequest(event);
 
-            const metrics = new MetricsPublisherProxy(
-                event.awsAccountId,
-                event.resourceType
-            );
+            const metrics = new MetricsPublisherProxy(event.resourceType);
             metrics.addMetricsPublisher(providerSession);
 
             const startTime = new Date(Date.now());

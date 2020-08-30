@@ -62,15 +62,15 @@ export class MetricsPublisherProxy {
     public namespace: string;
     private publishers: Array<MetricPublisher>;
 
-    constructor(public accountId: string, public resourceType: string) {
-        this.namespace = MetricsPublisherProxy.makeNamespace(accountId, resourceType);
+    constructor(public resourceType: string) {
+        this.namespace = MetricsPublisherProxy.makeNamespace(resourceType);
         this.resourceType = resourceType;
         this.publishers = [];
     }
 
-    static makeNamespace(accountId: string, resourceType: string): string {
+    static makeNamespace(resourceType: string): string {
         const suffix = resourceType.replace(/::/g, '/');
-        return `${METRIC_NAMESPACE_ROOT}/${accountId}/${suffix}`;
+        return `${METRIC_NAMESPACE_ROOT}/${suffix}`;
     }
 
     addMetricsPublisher(session?: SessionProxy): void {
