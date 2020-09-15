@@ -1,7 +1,6 @@
 {
     "extends": "./tsconfig.json",
     "include": [
-        "global.d.ts",
         "src/**/*.ts",
         "tests/**/*.ts",
         "jest.config.js"
