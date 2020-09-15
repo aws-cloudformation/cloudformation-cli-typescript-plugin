@@ -271,12 +271,14 @@ export abstract class BaseResource<T extends BaseModel = BaseModel> {
                 eventData
             );
             const [callerSession, providerSession] = sessions;
-            isLogSetup = await ProviderLogHandler.setup(event, providerSession);
             // LOGGER.debug('entrypoint eventData', eventData);
             const request = this.castResourceRequest(event);
 
-            const metrics = new MetricsPublisherProxy(event.resourceType);
-            metrics.addMetricsPublisher(providerSession);
+            const metrics = new MetricsPublisherProxy();
+            if (event.requestData.providerLogGroupName && providerSession) {
+                isLogSetup = await ProviderLogHandler.setup(event, providerSession);
+                metrics.addMetricsPublisher(providerSession, event.resourceType);
+            }
 
             const startTime = new Date(Date.now());
             await metrics.publishInvocationMetric(startTime, action);

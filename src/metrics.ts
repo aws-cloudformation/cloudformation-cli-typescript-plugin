@@ -22,11 +22,19 @@ export function formatDimensions(dimensions: DimensionRecord): Array<Dimension> 
     return formatted;
 }
 
-export class MetricPublisher {
-    public client: CloudWatch;
+/**
+ * A cloudwatch based metric publisher.
+ * Given a resource type and session,
+ * this publisher will publish metrics to CloudWatch.
+ * Can be used with the MetricsPublisherProxy.
+ */
+export class MetricsPublisher {
+    private namespace: string;
+    private client: CloudWatch;
 
-    constructor(session: SessionProxy, public namespace: string) {
+    constructor(session: SessionProxy, private resourceType: string) {
         this.client = session.client('CloudWatch') as CloudWatch;
+        this.namespace = MetricsPublisher.makeNamespace(resourceType);
     }
 
     async publishMetric(
@@ -56,29 +64,10 @@ export class MetricPublisher {
             LOGGER.error(`An error occurred while publishing metrics: ${err.message}`);
         }
     }
-}
 
-export class MetricsPublisherProxy {
-    public namespace: string;
-    private publishers: Array<MetricPublisher>;
-
-    constructor(public resourceType: string) {
-        this.namespace = MetricsPublisherProxy.makeNamespace(resourceType);
-        this.resourceType = resourceType;
-        this.publishers = [];
-    }
-
-    static makeNamespace(resourceType: string): string {
-        const suffix = resourceType.replace(/::/g, '/');
-        return `${METRIC_NAMESPACE_ROOT}/${suffix}`;
-    }
-
-    addMetricsPublisher(session?: SessionProxy): void {
-        if (session) {
-            this.publishers.push(new MetricPublisher(session, this.namespace));
-        }
-    }
-
+    /**
+     * Publishes an exception based metric
+     */
     async publishExceptionMetric(
         timestamp: Date,
         action: Action,
@@ -90,39 +79,35 @@ export class MetricsPublisherProxy {
                 (error as BaseHandlerException).errorCode || error.constructor.name,
             DimensionKeyResourceType: this.resourceType,
         };
-        const promises: Array<Promise<void>> = this.publishers.map(
-            (publisher: MetricPublisher) => {
-                return publisher.publishMetric(
-                    MetricTypes.HandlerException,
-                    dimensions,
-                    StandardUnit.Count,
-                    1.0,
-                    timestamp
-                );
-            }
+        return this.publishMetric(
+            MetricTypes.HandlerException,
+            dimensions,
+            StandardUnit.Count,
+            1.0,
+            timestamp
         );
-        return await Promise.all(promises);
     }
 
+    /**
+     * Publishes a metric related to invocations
+     */
     async publishInvocationMetric(timestamp: Date, action: Action): Promise<any> {
         const dimensions: DimensionRecord = {
             DimensionKeyActionType: action,
             DimensionKeyResourceType: this.resourceType,
         };
-        const promises: Array<Promise<void>> = this.publishers.map(
-            (publisher: MetricPublisher) => {
-                return publisher.publishMetric(
-                    MetricTypes.HandlerInvocationCount,
-                    dimensions,
-                    StandardUnit.Count,
-                    1.0,
-                    timestamp
-                );
-            }
+        return this.publishMetric(
+            MetricTypes.HandlerInvocationCount,
+            dimensions,
+            StandardUnit.Count,
+            1.0,
+            timestamp
         );
-        return await Promise.all(promises);
     }
 
+    /**
+     * Publishes an duration metric
+     */
     async publishDurationMetric(
         timestamp: Date,
         action: Action,
@@ -132,20 +117,18 @@ export class MetricsPublisherProxy {
             DimensionKeyActionType: action,
             DimensionKeyResourceType: this.resourceType,
         };
-        const promises: Array<Promise<void>> = this.publishers.map(
-            (publisher: MetricPublisher) => {
-                return publisher.publishMetric(
-                    MetricTypes.HandlerInvocationDuration,
-                    dimensions,
-                    StandardUnit.Milliseconds,
-                    milliseconds,
-                    timestamp
-                );
-            }
+        return this.publishMetric(
+            MetricTypes.HandlerInvocationDuration,
+            dimensions,
+            StandardUnit.Milliseconds,
+            milliseconds,
+            timestamp
         );
-        return await Promise.all(promises);
     }
 
+    /**
+     * Publishes an log delivery exception metric
+     */
     async publishLogDeliveryExceptionMetric(
         timestamp: Date,
         error: Error
@@ -156,15 +139,95 @@ export class MetricsPublisherProxy {
                 (error as BaseHandlerException).errorCode || error.constructor.name,
             DimensionKeyResourceType: this.resourceType,
         };
+        return this.publishMetric(
+            MetricTypes.HandlerException,
+            dimensions,
+            StandardUnit.Count,
+            1.0,
+            timestamp
+        );
+    }
+
+    static makeNamespace(resourceType: string): string {
+        const suffix = resourceType.replace(/::/g, '/');
+        return `${METRIC_NAMESPACE_ROOT}/${suffix}`;
+    }
+}
+
+/**
+ * A proxy for publishing metrics to multiple publishers.
+ * Iterates over available publishers and publishes.
+ */
+export class MetricsPublisherProxy {
+    private publishers: Array<MetricsPublisher>;
+
+    constructor() {
+        this.publishers = [];
+    }
+
+    /**
+     * Adds a metrics publisher to the list of publishers
+     */
+    addMetricsPublisher(session?: SessionProxy, typeName?: string): void {
+        if (session && typeName) {
+            this.publishers.push(new MetricsPublisher(session, typeName));
+        }
+    }
+
+    /**
+     * Publishes an exception based metric to the list of publishers
+     */
+    async publishExceptionMetric(
+        timestamp: Date,
+        action: Action,
+        error: Error
+    ): Promise<any> {
         const promises: Array<Promise<void>> = this.publishers.map(
-            (publisher: MetricPublisher) => {
-                return publisher.publishMetric(
-                    MetricTypes.HandlerException,
-                    dimensions,
-                    StandardUnit.Count,
-                    1.0,
-                    timestamp
-                );
+            (publisher: MetricsPublisher) => {
+                return publisher.publishExceptionMetric(timestamp, action, error);
+            }
+        );
+        return await Promise.all(promises);
+    }
+
+    /**
+     * Publishes a metric related to invocations to the list of publishers
+     */
+    async publishInvocationMetric(timestamp: Date, action: Action): Promise<any> {
+        const promises: Array<Promise<void>> = this.publishers.map(
+            (publisher: MetricsPublisher) => {
+                return publisher.publishInvocationMetric(timestamp, action);
+            }
+        );
+        return await Promise.all(promises);
+    }
+
+    /**
+     * Publishes a duration metric to the list of publishers
+     */
+    async publishDurationMetric(
+        timestamp: Date,
+        action: Action,
+        milliseconds: number
+    ): Promise<any> {
+        const promises: Array<Promise<void>> = this.publishers.map(
+            (publisher: MetricsPublisher) => {
+                return publisher.publishDurationMetric(timestamp, action, milliseconds);
+            }
+        );
+        return await Promise.all(promises);
+    }
+
+    /**
+     * Publishes a log delivery exception metric to the list of publishers
+     */
+    async publishLogDeliveryExceptionMetric(
+        timestamp: Date,
+        error: Error
+    ): Promise<any> {
+        const promises: Array<Promise<void>> = this.publishers.map(
+            (publisher: MetricsPublisher) => {
+                return publisher.publishLogDeliveryExceptionMetric(timestamp, error);
             }
         );
         return await Promise.all(promises);

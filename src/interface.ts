@@ -178,13 +178,6 @@ export abstract class BaseDto {
     }
 }
 
-export interface RequestContext<T> {
-    invocation: number;
-    callbackContext: T;
-    cloudWatchEventsRuleName: string;
-    cloudWatchEventsTargetId: string;
-}
-
 export class BaseModel extends BaseDto {
     ['constructor']: typeof BaseModel;
 
@@ -206,14 +199,16 @@ export class TestEvent extends BaseDto {
 }
 
 export class RequestData<T = Dict> extends BaseDto {
-    @Expose() callerCredentials?: Credentials;
-    @Expose() providerCredentials?: Credentials;
-    @Expose() providerLogGroupName: LogGroupName;
-    @Expose() logicalResourceId: LogicalResourceId;
     @Expose() resourceProperties: T;
-    @Expose() previousResourceProperties?: T;
+    @Expose() providerLogGroupName?: LogGroupName;
+    @Expose() logicalResourceId?: LogicalResourceId;
     @Expose() systemTags?: Dict<string>;
     @Expose() stackTags?: Dict<string>;
+    // platform credentials aren't really optional, but this is used to
+    // zero them out to prevent e.g. accidental logging
+    @Expose() callerCredentials?: Credentials;
+    @Expose() providerCredentials?: Credentials;
+    @Expose() previousResourceProperties?: T;
     @Expose() previousStackTags?: Dict<string>;
 }
 
@@ -223,13 +218,12 @@ export class HandlerRequest<ResourceT = Dict, CallbackT = Dict> extends BaseDto 
     @Expose() bearerToken: string;
     @Expose() region: string;
     @Expose() responseEndpoint: string;
-    @Expose() resourceType: string;
-    @Expose() resourceTypeVersion: string;
     @Expose() requestData: RequestData<ResourceT>;
-    @Expose() stackId: string;
+    @Expose() stackId?: string;
+    @Expose() resourceType?: string;
+    @Expose() resourceTypeVersion?: string;
     @Expose() callbackContext?: CallbackT;
     @Expose() nextToken?: NextToken;
-    @Expose() requestContext: RequestContext<CallbackT>;
 }
 
 export class BaseResourceHandlerRequest<T extends BaseModel> extends BaseDto {

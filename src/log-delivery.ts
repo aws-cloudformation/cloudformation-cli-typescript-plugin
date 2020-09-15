@@ -140,7 +140,7 @@ export class ProviderLogHandler {
         }
         let logHandler = ProviderLogHandler.getInstance();
         try {
-            if (providerSession && logGroup) {
+            if (providerSession && logGroup && request.resourceType) {
                 if (logHandler) {
                     // This is a re-used lambda container, log handler is already setup, so
                     // we just refresh the client with new creds.

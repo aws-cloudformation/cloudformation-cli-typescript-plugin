@@ -16,8 +16,11 @@ import { Exclude, Expose } from 'class-transformer';
 
 type ClientMap = typeof Aws;
 type Client = InstanceType<ClientMap[keyof ClientMap]>;
+export interface Session {
+    client: (name: keyof ClientMap, options?: ConfigurationOptions) => Client;
+}
 
-export class SessionProxy {
+export class SessionProxy implements Session {
     constructor(private options: ConfigurationOptions) {}
 
     public client(name: keyof ClientMap, options?: ConfigurationOptions): Client {

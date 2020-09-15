@@ -5,7 +5,7 @@ import { Action, MetricTypes, StandardUnit } from '../../src/interface';
 import { SessionProxy } from '../../src/proxy';
 import {
     DimensionRecord,
-    MetricPublisher,
+    MetricsPublisher,
     MetricsPublisherProxy,
     formatDimensions,
 } from '../../src/metrics';
@@ -18,7 +18,7 @@ const mockResult = (output: any): jest.Mock => {
 
 const MOCK_DATE = new Date('2020-01-01T23:05:38.964Z');
 const RESOURCE_TYPE = 'Aa::Bb::Cc';
-const NAMESPACE = MetricsPublisherProxy.makeNamespace(RESOURCE_TYPE);
+const NAMESPACE = MetricsPublisher.makeNamespace(RESOURCE_TYPE);
 
 jest.mock('aws-sdk/clients/cloudwatch');
 
@@ -76,7 +76,7 @@ describe('when getting metrics', () => {
                 })
             ),
         });
-        const publisher = new MetricPublisher(session, NAMESPACE);
+        const publisher = new MetricsPublisher(session, RESOURCE_TYPE);
         const dimensions: DimensionRecord = {
             DimensionKeyActionType: Action.Create,
             DimensionKeyResourceType: RESOURCE_TYPE,
@@ -108,7 +108,7 @@ describe('when getting metrics', () => {
                     Value: 1.0,
                 },
             ],
-            Namespace: 'AWS/CloudFormation/Aa/Bb/Cc',
+            Namespace: NAMESPACE,
         });
         expect(spyConsoleError).toHaveBeenCalledTimes(1);
         expect(spyConsoleError).toHaveBeenCalledWith(
@@ -119,15 +119,14 @@ describe('when getting metrics', () => {
     });
 
     test('publish exception metric', async () => {
-        const proxy = new MetricsPublisherProxy(RESOURCE_TYPE);
-        proxy.addMetricsPublisher(session);
-        proxy.addMetricsPublisher(session);
+        const proxy = new MetricsPublisherProxy();
+        proxy.addMetricsPublisher(session, RESOURCE_TYPE);
         await proxy.publishExceptionMetric(
             MOCK_DATE,
             Action.Create,
             new Error('fake-err')
         );
-        expect(putMetricData).toHaveBeenCalledTimes(2);
+        expect(putMetricData).toHaveBeenCalledTimes(1);
         expect(putMetricData).toHaveBeenCalledWith({
             MetricData: [
                 {
@@ -151,13 +150,13 @@ describe('when getting metrics', () => {
                     Value: 1.0,
                 },
             ],
-            Namespace: 'AWS/CloudFormation/Aa/Bb/Cc',
+            Namespace: NAMESPACE,
         });
     });
 
     test('publish invocation metric', async () => {
-        const proxy = new MetricsPublisherProxy(RESOURCE_TYPE);
-        proxy.addMetricsPublisher(session);
+        const proxy = new MetricsPublisherProxy();
+        proxy.addMetricsPublisher(session, RESOURCE_TYPE);
         await proxy.publishInvocationMetric(MOCK_DATE, Action.Create);
         expect(putMetricData).toHaveBeenCalledTimes(1);
         expect(putMetricData).toHaveBeenCalledWith({
@@ -179,13 +178,13 @@ describe('when getting metrics', () => {
                     Value: 1.0,
                 },
             ],
-            Namespace: 'AWS/CloudFormation/Aa/Bb/Cc',
+            Namespace: NAMESPACE,
         });
     });
 
     test('publish duration metric', async () => {
-        const proxy = new MetricsPublisherProxy(RESOURCE_TYPE);
-        proxy.addMetricsPublisher(session);
+        const proxy = new MetricsPublisherProxy();
+        proxy.addMetricsPublisher(session, RESOURCE_TYPE);
         await proxy.publishDurationMetric(MOCK_DATE, Action.Create, 100);
         expect(putMetricData).toHaveBeenCalledTimes(1);
         expect(putMetricData).toHaveBeenCalledWith({
@@ -207,13 +206,13 @@ describe('when getting metrics', () => {
                     Value: 100,
                 },
             ],
-            Namespace: 'AWS/CloudFormation/Aa/Bb/Cc',
+            Namespace: NAMESPACE,
         });
     });
 
     test('publish log delivery exception metric', async () => {
-        const proxy = new MetricsPublisherProxy(RESOURCE_TYPE);
-        proxy.addMetricsPublisher(session);
+        const proxy = new MetricsPublisherProxy();
+        proxy.addMetricsPublisher(session, RESOURCE_TYPE);
         await proxy.publishLogDeliveryExceptionMetric(MOCK_DATE, new TypeError('test'));
         expect(putMetricData).toHaveBeenCalledTimes(1);
         expect(putMetricData).toHaveBeenCalledWith({
@@ -239,13 +238,13 @@ describe('when getting metrics', () => {
                     Value: 1.0,
                 },
             ],
-            Namespace: 'AWS/CloudFormation/Aa/Bb/Cc',
+            Namespace: NAMESPACE,
         });
     });
 
     test('metrics publisher proxy add metrics publisher null safe', () => {
-        const proxy = new MetricsPublisherProxy(RESOURCE_TYPE);
-        proxy.addMetricsPublisher(null);
+        const proxy = new MetricsPublisherProxy();
+        proxy.addMetricsPublisher(null, null);
         expect(proxy['publishers']).toMatchObject([]);
     });
 });

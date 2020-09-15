@@ -131,13 +131,13 @@ describe('when getting session proxy', () => {
     test('progress event serialize to response with error code', () => {
         const message = 'message of event with error code';
         const event = new ProgressEvent({
-            status: OperationStatus.Success,
+            status: OperationStatus.Failed,
             message,
             errorCode: HandlerErrorCode.InvalidRequest,
         });
         const serialized = event.serialize();
         expect(serialized).toMatchObject({
-            status: OperationStatus.Success,
+            status: OperationStatus.Failed,
             message,
             errorCode: HandlerErrorCode.InvalidRequest,
             callbackDelaySeconds: 0,

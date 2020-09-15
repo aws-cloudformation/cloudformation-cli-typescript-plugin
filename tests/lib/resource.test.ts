@@ -70,9 +70,10 @@ describe('when getting resource', () => {
             bearerToken: '123456',
             region: 'us-east-1',
             action: 'CREATE',
+            responseEndpoint: null,
             resourceType: 'AWS::Test::TestModel',
             resourceTypeVersion: '1.0',
-            requestContext: {},
+            callbackContext: {},
             requestData: {
                 callerCredentials: {
                     accessKeyId: 'IASAYK835GAIFHAHEI23',
@@ -425,21 +426,28 @@ describe('when getting resource', () => {
         expect(mockHandler).toBeCalledWith(session, request, callbackContext);
     });
 
-    test('invoke handler non mutating must be synchronous', () => {
-        [Action.List, Action.Read].forEach((action: Action) => {
+    test('invoke handler non mutating must be synchronous', async () => {
+        const promises: any[] = [];
+        [Action.List, Action.Read].forEach(async (action: Action) => {
             const mockHandler: jest.Mock = jest.fn(() => ProgressEvent.progress());
             const handlers: HandlerSignatures = new HandlerSignatures();
             handlers.set(action, mockHandler);
             const resource = getResource(handlers);
             const callbackContext = {};
-            expect(
-                resource['invokeHandler'](null, null, action, callbackContext)
-            ).rejects.toEqual(
-                new exceptions.InternalFailure(
-                    'READ and LIST handlers must return synchronously.'
+            promises.push(
+                resource['invokeHandler'](null, null, action, callbackContext).catch(
+                    (e: exceptions.BaseHandlerException) => {
+                        expect(e).toMatchObject({
+                            errorCode: HandlerErrorCode.InternalFailure,
+                            message:
+                                'READ and LIST handlers must return synchronously.',
+                        });
+                    }
                 )
             );
         });
+        expect.assertions(promises.length);
+        await Promise.all(promises);
     });
 
     test('parse test request invalid request', () => {
