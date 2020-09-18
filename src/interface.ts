@@ -217,8 +217,8 @@ export class HandlerRequest<ResourceT = Dict, CallbackT = Dict> extends BaseDto 
     @Expose() awsAccountId: string;
     @Expose() bearerToken: string;
     @Expose() region: string;
-    @Expose() responseEndpoint: string;
     @Expose() requestData: RequestData<ResourceT>;
+    @Expose() responseEndpoint?: string;
     @Expose() stackId?: string;
     @Expose() resourceType?: string;
     @Expose() resourceTypeVersion?: string;
