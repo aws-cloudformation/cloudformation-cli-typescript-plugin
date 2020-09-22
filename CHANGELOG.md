@@ -6,6 +6,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.3] - 2020-09-23
+### Changed
+- [CLI Plugin] Update CloudFormation CLI dependency package
+- [Support Library] Make certain request fields optional to unblock contract testing (#25)
+- [Support Library] Update optional dependency to newer AWS SDK Javascript used in Lambda runtime
+
+
 ## [0.3.2] - 2020-08-31
 ### Added
 - [CLI Plugin] Wildcard .gitignore pattern in case rpdk.log rotates
@@ -75,7 +82,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - [Support Library] Base Model class as well as Progress Event class
 
 
-[Unreleased]: https://github.com/eduardomourar/cloudformation-cli-typescript-plugin/compare/v0.3.2...HEAD
+[Unreleased]: https://github.com/eduardomourar/cloudformation-cli-typescript-plugin/compare/v0.3.3...HEAD
+[0.3.3]: https://github.com/eduardomourar/cloudformation-cli-typescript-plugin/compare/v0.3.2...v0.3.3
 [0.3.2]: https://github.com/eduardomourar/cloudformation-cli-typescript-plugin/compare/v0.3.1...v0.3.2
 [0.3.1]: https://github.com/eduardomourar/cloudformation-cli-typescript-plugin/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/eduardomourar/cloudformation-cli-typescript-plugin/compare/v0.2.1...v0.3.0
