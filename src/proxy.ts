@@ -1,5 +1,5 @@
-import { ConfigurationOptions } from 'aws-sdk/lib/config';
 import { CredentialsOptions } from 'aws-sdk/lib/credentials';
+import { ServiceConfigurationOptions } from 'aws-sdk/lib/service';
 import * as Aws from 'aws-sdk/clients/all';
 import { NextToken } from 'aws-sdk/clients/cloudformation';
 import { builder, IBuilder } from 'tombok';
@@ -16,11 +16,17 @@ import { Exclude, Expose } from 'class-transformer';
 
 type ClientMap = typeof Aws;
 type Client = InstanceType<ClientMap[keyof ClientMap]>;
+export interface Session {
+    client: (name: keyof ClientMap, options?: ServiceConfigurationOptions) => Client;
+}
 
-export class SessionProxy {
-    constructor(private options: ConfigurationOptions) {}
+export class SessionProxy implements Session {
+    constructor(private options: ServiceConfigurationOptions) {}
 
-    public client(name: keyof ClientMap, options?: ConfigurationOptions): Client {
+    public client(
+        name: keyof ClientMap,
+        options?: ServiceConfigurationOptions
+    ): Client {
         const clients: { [K in keyof ClientMap]: ClientMap[K] } = Aws;
         const service: Client = new clients[name]({
             ...this.options,

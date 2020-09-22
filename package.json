@@ -62,7 +62,7 @@
         "typescript": "^3.7.0"
     },
     "optionalDependencies": {
-        "aws-sdk": "~2.631.0"
+        "aws-sdk": "~2.712.0"
     },
     "prettier": {
         "parser": "typescript",

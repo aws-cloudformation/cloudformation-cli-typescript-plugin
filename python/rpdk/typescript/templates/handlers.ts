@@ -12,7 +12,7 @@ import {
 } from '{{lib_name}}';
 import { ResourceModel } from './models';
 
-// Use this logger to forward log messages to CloudWatch Logs.
+// Use this logger to forward messages to CloudWatch Logs.
 const LOGGER = console;
 
 interface CallbackContext extends Record<string, any> {}

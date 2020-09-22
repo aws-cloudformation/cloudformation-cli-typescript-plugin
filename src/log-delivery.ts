@@ -148,10 +148,6 @@ export class ProviderLogHandler {
                         'CloudWatchLogs'
                     ) as CloudWatchLogs;
                 } else {
-                    // Filter provider messages from platform.
-                    const provider: string = request.resourceType
-                        .replace(/::/g, '_')
-                        .toLowerCase();
                     logHandler = ProviderLogHandler.instance = new ProviderLogHandler({
                         accountId: request.awsAccountId,
                         groupName: logGroup,
