@@ -178,6 +178,13 @@ export abstract class BaseDto {
     }
 }
 
+export interface RequestContext<T> {
+    invocation: number;
+    callbackContext: T;
+    cloudWatchEventsRuleName: string;
+    cloudWatchEventsTargetId: string;
+}
+
 export class BaseModel extends BaseDto {
     ['constructor']: typeof BaseModel;
 
@@ -224,6 +231,7 @@ export class HandlerRequest<ResourceT = Dict, CallbackT = Dict> extends BaseDto 
     @Expose() resourceTypeVersion?: string;
     @Expose() callbackContext?: CallbackT;
     @Expose() nextToken?: NextToken;
+    @Expose() requestContext?: RequestContext<CallbackT>;
 }
 
 export class BaseResourceHandlerRequest<T extends BaseModel> extends BaseDto {
