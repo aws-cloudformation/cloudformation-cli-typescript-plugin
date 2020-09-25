@@ -450,6 +450,47 @@ describe('when getting resource', () => {
         await Promise.all(promises);
     });
 
+    test('invoke handler try object modification', async () => {
+        const event: ProgressEvent = ProgressEvent.progress();
+        const mockHandler: jest.Mock = jest.fn(() => event);
+        const handlers: HandlerSignatures = new HandlerSignatures();
+        handlers.set(Action.Create, mockHandler);
+        const resource = getResource(handlers);
+        const callbackContext = {
+            state: 'original-state',
+        };
+        const request = new BaseResourceHandlerRequest<MockModel>();
+        request.desiredResourceState = new MockModel();
+        request.desiredResourceState.state = 'original-desired-state';
+        request.previousResourceState = new MockModel();
+        request.awsAccountId = '123456789012';
+        await resource['invokeHandler'](null, request, Action.Create, callbackContext);
+        const modifyCurrentState = () => {
+            request.desiredResourceState.state = 'another-state';
+        };
+        const modifyPreviousState = () => {
+            request.previousResourceState = null;
+        };
+        const modifyAwsAccountId = () => {
+            request.awsAccountId = '';
+        };
+        const modifyCallbackContext = () => {
+            callbackContext.state = 'another-state';
+        };
+        expect(modifyCurrentState).toThrow(
+            /cannot assign to read only property 'state' of object/i
+        );
+        expect(modifyPreviousState).toThrow(
+            /cannot assign to read only property 'previousResourceState' of object/i
+        );
+        expect(modifyAwsAccountId).toThrow(
+            /cannot assign to read only property 'awsAccountId' of object/i
+        );
+        expect(modifyCallbackContext).toThrow(
+            /cannot assign to read only property 'state' of object/i
+        );
+    });
+
     test('parse test request invalid request', () => {
         const resource = getResource();
         const parseTestRequest = () => {

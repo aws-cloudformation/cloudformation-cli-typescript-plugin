@@ -22,6 +22,7 @@ import {
 } from './interface';
 import { ProviderLogHandler } from './log-delivery';
 import { MetricsPublisherProxy } from './metrics';
+import { deepFreeze } from './utils';
 
 const LOGGER = console;
 const MUTATING_ACTIONS: [Action, Action, Action] = [
@@ -108,6 +109,10 @@ export abstract class BaseResource<T extends BaseModel = BaseModel> {
                 `No handler for ${action}`
             );
         }
+        // We will make the callback context and resource states readonly
+        // to avoid modification at a later time
+        deepFreeze(callbackContext);
+        deepFreeze(request);
         const progress = await handle(session, request, callbackContext);
         const isInProgress = progress.status === OperationStatus.InProgress;
         const isMutable = MUTATING_ACTIONS.some((x) => x === action);
