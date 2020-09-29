@@ -1,10 +1,10 @@
 import CloudWatch, { Dimension, DimensionName } from 'aws-sdk/clients/cloudwatch';
 
+import { LambdaLogger } from './log-delivery';
 import { SessionProxy } from './proxy';
 import { Action, MetricTypes, StandardUnit } from './interface';
 import { BaseHandlerException } from './exceptions';
 
-const LOGGER = console;
 const METRIC_NAMESPACE_ROOT = 'AWS/CloudFormation';
 
 export type DimensionRecord = Record<DimensionName, string>;
@@ -32,9 +32,17 @@ export class MetricsPublisher {
     private namespace: string;
     private client: CloudWatch;
 
-    constructor(session: SessionProxy, private resourceType: string) {
-        this.client = session.client('CloudWatch') as CloudWatch;
+    constructor(
+        private readonly session: SessionProxy,
+        private readonly logger: LambdaLogger,
+        private readonly resourceType: string
+    ) {
         this.namespace = MetricsPublisher.makeNamespace(resourceType);
+        this.refreshClient();
+    }
+
+    public refreshClient(): void {
+        this.client = this.session.client('CloudWatch') as CloudWatch;
     }
 
     async publishMetric(
@@ -59,9 +67,11 @@ export class MetricsPublisher {
                     ],
                 })
                 .promise();
-            LOGGER.debug('Response from "putMetricData"', metric);
+            this.logger.log(`Response from "putMetricData"\n${metric}`);
         } catch (err) {
-            LOGGER.error(`An error occurred while publishing metrics: ${err.message}`);
+            this.logger.log(
+                `An error occurred while publishing metrics: ${err.message}`
+            );
         }
     }
 
@@ -159,18 +169,14 @@ export class MetricsPublisher {
  * Iterates over available publishers and publishes.
  */
 export class MetricsPublisherProxy {
-    private publishers: Array<MetricsPublisher>;
-
-    constructor() {
-        this.publishers = [];
-    }
+    private publishers: Array<MetricsPublisher> = [];
 
     /**
      * Adds a metrics publisher to the list of publishers
      */
-    addMetricsPublisher(session?: SessionProxy, typeName?: string): void {
-        if (session && typeName) {
-            this.publishers.push(new MetricsPublisher(session, typeName));
+    addMetricsPublisher(metricsPublisher?: MetricsPublisher): void {
+        if (metricsPublisher) {
+            this.publishers.push(metricsPublisher);
         }
     }
 

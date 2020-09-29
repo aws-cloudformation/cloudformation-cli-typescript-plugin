@@ -9,12 +9,16 @@ import CloudWatchLogs, {
 } from 'aws-sdk/clients/cloudwatchlogs';
 import S3, { PutObjectRequest, PutObjectOutput } from 'aws-sdk/clients/s3';
 import promiseSequential from 'promise-sequential';
+import { v4 as uuidv4 } from 'uuid';
 
 import { SessionProxy } from './proxy';
 import { HandlerRequest } from './interface';
+import { MetricsPublisherProxy } from './metrics';
 import { delay } from './utils';
+import { exceptions } from '.';
 
 type Console = globalThis.Console;
+export type LambdaLogger = Partial<Console>;
 type PromiseFunction = () => Promise<any>;
 
 interface LogOptions {
@@ -27,6 +31,241 @@ interface LogOptions {
 
 class LogEmitter extends EventEmitter {}
 
+export interface Logger {
+    /**
+     * Log a message to the default provider on this runtime.
+     *
+     * @param message the message to emit to log
+     */
+    log(message: string): void;
+}
+
+/**
+ * Proxies logging requests to the default LambdaLogger (CloudWatch Logs)
+ */
+export class LoggerProxy implements Logger {
+    private readonly logPublishers = new Array<LogPublisher>();
+
+    public addLogPublisher(logPublisher: LogPublisher): void {
+        this.logPublishers.push(logPublisher);
+    }
+
+    public log(message: string): void {
+        this.logPublishers.forEach(async (logPublisher: LogPublisher) => {
+            await logPublisher.publishLogEvent(message);
+        });
+    }
+}
+
+interface LogFilter {
+    applyFilter(rawInput: string): string;
+}
+
+export abstract class LogPublisher {
+    private logFilterList: LogFilter[];
+
+    constructor(...filters: readonly LogFilter[]) {
+        this.logFilterList = Array.from(filters);
+    }
+
+    protected abstract publishMessage(message: string): void;
+
+    /**
+     * Redact or scrub loggers in someway to help prevent leaking of certain
+     * information.
+     */
+    private filterMessage(message: string): string {
+        let toReturn: string = message;
+        this.logFilterList.forEach((filter: LogFilter) => {
+            toReturn = filter.applyFilter(toReturn);
+        });
+        return toReturn;
+    }
+
+    public publishLogEvent(message: string): void {
+        this.publishMessage(this.filterMessage(message));
+    }
+}
+
+export class LambdaLogPublisher extends LogPublisher {
+    constructor(
+        private readonly logger: LambdaLogger,
+        ...logFilters: readonly LogFilter[]
+    ) {
+        super(...logFilters);
+    }
+
+    protected publishMessage(message: string): void {
+        this.logger.log(message);
+    }
+}
+
+export class CloudWatchLogPublisher extends LogPublisher {
+    private client: CloudWatchLogs;
+
+    // Note: PutLogEvents returns a result that includes a sequence number.
+    // That same sequence number must be used in the subsequent put for the same
+    // (log group, log stream) pair.
+    // Ref: https://forums.aws.amazon.com/message.jspa?messageID=676799
+    private nextSequenceToken: string = null;
+
+    constructor(
+        private readonly session: SessionProxy,
+        private readonly logGroupName: string,
+        private readonly logStreamName: string,
+        private readonly platformLambdaLogger: LambdaLogger,
+        private readonly metricsPublisherProxy: MetricsPublisherProxy,
+        ...logFilters: readonly LogFilter[]
+    ) {
+        super(...logFilters);
+        this.refreshClient();
+    }
+
+    public refreshClient(): void {
+        this.client = this.session.client('CloudWatchLogs') as CloudWatchLogs;
+    }
+
+    protected async publishMessage(message: string): Promise<void> {
+        try {
+            if (this.skipLogging() || !this.client) {
+                return;
+            }
+            const currentTime = new Date(Date.now());
+            const record: InputLogEvent = {
+                message: JSON.stringify({ message }),
+                timestamp: Math.round(currentTime.getTime()),
+            };
+            const logEventsParams: PutLogEventsRequest = {
+                logGroupName: this.logGroupName,
+                logStreamName: this.logStreamName,
+                logEvents: [record],
+            };
+            if (this.nextSequenceToken) {
+                logEventsParams.sequenceToken = this.nextSequenceToken;
+            }
+
+            const logRequest = this.client.putLogEvents(logEventsParams);
+            logRequest.httpRequest.headers['x-amzn-logs-format'] = 'json/emf';
+
+            const response: PutLogEventsResponse = await logRequest.promise();
+            this.nextSequenceToken = response?.nextSequenceToken || null;
+        } catch (err) {
+            this.platformLambdaLogger.log(
+                `An error occurred while putting log events [${message}] " + "to resource owner account, with error: ${err.toString()}`
+            );
+            this.emitMetricsForLoggingFailure(err);
+        }
+    }
+
+    private skipLogging(): boolean {
+        return !this.logStreamName;
+    }
+
+    private async emitMetricsForLoggingFailure(err: Error): Promise<void> {
+        if (!this.metricsPublisherProxy) {
+            await this.metricsPublisherProxy.publishLogDeliveryExceptionMetric(
+                new Date(Date.now()),
+                err
+            );
+        }
+    }
+}
+
+export class CloudWatchLogHelper {
+    private client: CloudWatchLogs;
+
+    constructor(
+        private readonly session: SessionProxy,
+        private logGroupName: string,
+        private logStreamName: string,
+        private readonly platformLambdaLogger: LambdaLogger,
+        private readonly metricsPublisherProxy: MetricsPublisherProxy
+    ) {
+        if (!this.logStreamName) {
+            this.logStreamName = uuidv4();
+        }
+    }
+
+    public refreshClient(): void {
+        this.client = this.session.client('CloudWatchLogs') as CloudWatchLogs;
+    }
+
+    public async prepareLogStream(logStreamName?: string): Promise<string> {
+        if (!this.client) {
+            throw Error(
+                'CloudWatchLogs client was not initialized. You must call refreshClient() first.'
+            );
+        }
+        try {
+            await this.createLogGroup();
+            return await this.createLogStream(logStreamName);
+        } catch (err) {
+            this.log(
+                `Initializing logging group setting failed with error: ${err.toString()}`
+            );
+            this.emitMetricsForLoggingFailure(err);
+        }
+        return null;
+    }
+
+    private async createLogGroup(): Promise<void> {
+        try {
+            const response = await this.client
+                .createLogGroup({
+                    logGroupName: this.logGroupName,
+                })
+                .promise();
+            this.log(`Response from "createLogGroup"\n${response}`);
+        } catch (err) {
+            const errorCode = err.code || err.name;
+            if (errorCode !== 'ResourceAlreadyExistsException') {
+                throw err;
+            }
+        }
+    }
+
+    private async createLogStream(
+        logStreamName: string = this.logStreamName
+    ): Promise<string> {
+        try {
+            this.log(
+                `Creating Log stream with name ${logStreamName} for log group ${this.logGroupName}.`
+            );
+            const response = await this.client
+                .createLogStream({
+                    logGroupName: this.logGroupName,
+                    logStreamName: logStreamName,
+                })
+                .promise();
+            this.log(`Response from "createLogStream"\n${response}`);
+            return logStreamName;
+        } catch (err) {
+            const errorCode = err.code || err.name;
+            if (errorCode !== 'ResourceAlreadyExistsException') {
+                throw err;
+            }
+        }
+    }
+
+    private log(message: string): void {
+        if (this.platformLambdaLogger) {
+            this.platformLambdaLogger.log(message);
+        }
+    }
+
+    private async emitMetricsForLoggingFailure(err: Error): Promise<void> {
+        if (!this.metricsPublisherProxy) {
+            await this.metricsPublisherProxy.publishLogDeliveryExceptionMetric(
+                new Date(Date.now()),
+                err
+            );
+        }
+    }
+}
+
+/**
+ * @deprecated
+ */
 export class ProviderLogHandler {
     private static instance: ProviderLogHandler;
     public emitter: LogEmitter;
