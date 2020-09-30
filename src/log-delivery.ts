@@ -1,5 +1,6 @@
 import { boundMethod } from 'autobind-decorator';
 import { EventEmitter } from 'events';
+import { format } from 'util';
 import CloudWatchLogs, {
     DescribeLogStreamsResponse,
     LogStream,
@@ -7,6 +8,7 @@ import CloudWatchLogs, {
     PutLogEventsRequest,
     PutLogEventsResponse,
 } from 'aws-sdk/clients/cloudwatchlogs';
+import { ServiceConfigurationOptions } from 'aws-sdk/lib/service';
 import S3, { PutObjectRequest, PutObjectOutput } from 'aws-sdk/clients/s3';
 import promiseSequential from 'promise-sequential';
 import { v4 as uuidv4 } from 'uuid';
@@ -35,26 +37,10 @@ export interface Logger {
     /**
      * Log a message to the default provider on this runtime.
      *
-     * @param message the message to emit to log
+     * @param message The primary message.
+     * @param optionalParams All additional used as substitution values.
      */
-    log(message: string): void;
-}
-
-/**
- * Proxies logging requests to the default LambdaLogger (CloudWatch Logs)
- */
-export class LoggerProxy implements Logger {
-    private readonly logPublishers = new Array<LogPublisher>();
-
-    public addLogPublisher(logPublisher: LogPublisher): void {
-        this.logPublishers.push(logPublisher);
-    }
-
-    public log(message: string): void {
-        this.logPublishers.forEach(async (logPublisher: LogPublisher) => {
-            await logPublisher.publishLogEvent(message);
-        });
-    }
+    log(message?: any, ...optionalParams: any[]): void;
 }
 
 interface LogFilter {
@@ -68,7 +54,7 @@ export abstract class LogPublisher {
         this.logFilterList = Array.from(filters);
     }
 
-    protected abstract publishMessage(message: string): void;
+    protected abstract publishMessage(message: string): Promise<void>;
 
     /**
      * Redact or scrub loggers in someway to help prevent leaking of certain
@@ -82,8 +68,8 @@ export abstract class LogPublisher {
         return toReturn;
     }
 
-    public publishLogEvent(message: string): void {
-        this.publishMessage(this.filterMessage(message));
+    public async publishLogEvent(message: string): Promise<void> {
+        await this.publishMessage(this.filterMessage(message));
     }
 }
 
@@ -95,8 +81,8 @@ export class LambdaLogPublisher extends LogPublisher {
         super(...logFilters);
     }
 
-    protected publishMessage(message: string): void {
-        this.logger.log(message);
+    protected publishMessage(message: string): Promise<void> {
+        return Promise.resolve(this.logger.log(message));
     }
 }
 
@@ -121,18 +107,23 @@ export class CloudWatchLogPublisher extends LogPublisher {
         this.refreshClient();
     }
 
-    public refreshClient(): void {
-        this.client = this.session.client('CloudWatchLogs') as CloudWatchLogs;
+    public refreshClient(options?: ServiceConfigurationOptions): void {
+        this.client = this.session.client('CloudWatchLogs', options) as CloudWatchLogs;
     }
 
     protected async publishMessage(message: string): Promise<void> {
         try {
-            if (this.skipLogging() || !this.client) {
+            if (this.skipLogging()) {
                 return;
+            }
+            if (!this.client) {
+                throw Error(
+                    'CloudWatchLogs client was not initialized. You must call refreshClient() first.'
+                );
             }
             const currentTime = new Date(Date.now());
             const record: InputLogEvent = {
-                message: JSON.stringify({ message }),
+                message,
                 timestamp: Math.round(currentTime.getTime()),
             };
             const logEventsParams: PutLogEventsRequest = {
@@ -144,16 +135,57 @@ export class CloudWatchLogPublisher extends LogPublisher {
                 logEventsParams.sequenceToken = this.nextSequenceToken;
             }
 
-            const logRequest = this.client.putLogEvents(logEventsParams);
-            logRequest.httpRequest.headers['x-amzn-logs-format'] = 'json/emf';
+            const putLogRequest = this.client.putLogEvents(logEventsParams);
+            putLogRequest.httpRequest.headers['x-amzn-logs-format'] = 'json/emf';
 
-            const response: PutLogEventsResponse = await logRequest.promise();
+            const response: PutLogEventsResponse = await putLogRequest.promise();
+            this.platformLambdaLogger.log('Response from "putLogEvents"', response);
             this.nextSequenceToken = response?.nextSequenceToken || null;
+            return;
         } catch (err) {
+            const errorCode = err.code || err.name;
             this.platformLambdaLogger.log(
-                `An error occurred while putting log events [${message}] " + "to resource owner account, with error: ${err.toString()}`
+                `Error from "putLogEvents" with sequence token ${this.nextSequenceToken}`,
+                err
             );
-            this.emitMetricsForLoggingFailure(err);
+            if (
+                errorCode === 'DataAlreadyAcceptedException' ||
+                errorCode === 'InvalidSequenceTokenException' ||
+                errorCode === 'ThrottlingException'
+            ) {
+                this.nextSequenceToken = null;
+                // Delay to avoid throttling
+                await delay(1);
+                try {
+                    const response: DescribeLogStreamsResponse = await this.client
+                        .describeLogStreams({
+                            logGroupName: this.logGroupName,
+                            logStreamNamePrefix: this.logStreamName,
+                            limit: 1,
+                        })
+                        .promise();
+                    this.platformLambdaLogger.log(
+                        'Response from "describeLogStreams"',
+                        response
+                    );
+                    if (response.logStreams && response.logStreams.length) {
+                        const logStream = response.logStreams[0] as LogStream;
+                        this.nextSequenceToken = logStream.uploadSequenceToken;
+                    }
+                } catch (err) {
+                    this.platformLambdaLogger.log(
+                        'Error from "describeLogStreams"',
+                        err
+                    );
+                }
+                return;
+            } else {
+                this.platformLambdaLogger.log(
+                    `An error occurred while putting log events [${message}] to resource owner account, with error: ${err.toString()}`
+                );
+                this.emitMetricsForLoggingFailure(err);
+                throw err;
+            }
         }
     }
 
@@ -162,7 +194,7 @@ export class CloudWatchLogPublisher extends LogPublisher {
     }
 
     private async emitMetricsForLoggingFailure(err: Error): Promise<void> {
-        if (!this.metricsPublisherProxy) {
+        if (this.metricsPublisherProxy) {
             await this.metricsPublisherProxy.publishLogDeliveryExceptionMetric(
                 new Date(Date.now()),
                 err
@@ -186,19 +218,22 @@ export class CloudWatchLogHelper {
         }
     }
 
-    public refreshClient(): void {
-        this.client = this.session.client('CloudWatchLogs') as CloudWatchLogs;
+    public refreshClient(options?: ServiceConfigurationOptions): void {
+        this.client = this.session.client('CloudWatchLogs', options) as CloudWatchLogs;
     }
 
-    public async prepareLogStream(logStreamName?: string): Promise<string> {
+    public async prepareLogStream(
+        logStreamName?: string,
+        logGroupName?: string
+    ): Promise<string> {
         if (!this.client) {
             throw Error(
                 'CloudWatchLogs client was not initialized. You must call refreshClient() first.'
             );
         }
         try {
-            await this.createLogGroup();
-            return await this.createLogStream(logStreamName);
+            await this.createLogGroup(logGroupName);
+            return await this.createLogStream(logStreamName, logGroupName);
         } catch (err) {
             this.log(
                 `Initializing logging group setting failed with error: ${err.toString()}`
@@ -208,14 +243,17 @@ export class CloudWatchLogHelper {
         return null;
     }
 
-    private async createLogGroup(): Promise<void> {
+    private async createLogGroup(
+        logGroupName: string = this.logGroupName
+    ): Promise<void> {
         try {
+            this.log(`Creating Log group with name ${logGroupName}.`);
             const response = await this.client
                 .createLogGroup({
-                    logGroupName: this.logGroupName,
+                    logGroupName,
                 })
                 .promise();
-            this.log(`Response from "createLogGroup"\n${response}`);
+            this.log('Response from "createLogGroup"', response);
         } catch (err) {
             const errorCode = err.code || err.name;
             if (errorCode !== 'ResourceAlreadyExistsException') {
@@ -225,36 +263,37 @@ export class CloudWatchLogHelper {
     }
 
     private async createLogStream(
-        logStreamName: string = this.logStreamName
+        logStreamName: string = this.logStreamName,
+        logGroupName: string = this.logGroupName
     ): Promise<string> {
         try {
             this.log(
-                `Creating Log stream with name ${logStreamName} for log group ${this.logGroupName}.`
+                `Creating Log stream with name ${logStreamName} for log group ${logGroupName}.`
             );
             const response = await this.client
                 .createLogStream({
-                    logGroupName: this.logGroupName,
-                    logStreamName: logStreamName,
+                    logGroupName,
+                    logStreamName,
                 })
                 .promise();
-            this.log(`Response from "createLogStream"\n${response}`);
-            return logStreamName;
+            this.log('Response from "createLogStream"', response);
         } catch (err) {
             const errorCode = err.code || err.name;
             if (errorCode !== 'ResourceAlreadyExistsException') {
                 throw err;
             }
         }
+        return Promise.resolve(logStreamName);
     }
 
-    private log(message: string): void {
+    private log(message?: any, ...optionalParams: any[]): void {
         if (this.platformLambdaLogger) {
-            this.platformLambdaLogger.log(message);
+            this.platformLambdaLogger.log(message, ...optionalParams);
         }
     }
 
     private async emitMetricsForLoggingFailure(err: Error): Promise<void> {
-        if (!this.metricsPublisherProxy) {
+        if (this.metricsPublisherProxy) {
             await this.metricsPublisherProxy.publishLogDeliveryExceptionMetric(
                 new Date(Date.now()),
                 err
@@ -263,292 +302,118 @@ export class CloudWatchLogHelper {
     }
 }
 
-/**
- * @deprecated
- */
-export class ProviderLogHandler {
-    private static instance: ProviderLogHandler;
-    public emitter: LogEmitter;
-    public client: CloudWatchLogs;
-    public sequenceToken: string = null;
-    public accountId: string;
-    public groupName: string;
-    public stream: string;
-    public logger: Console;
-    public clientS3: S3;
-    private stack: Array<PromiseFunction> = [];
-    private isProcessing = false;
+export class S3LogPublisher extends LogPublisher {
+    private client: S3;
 
-    /**
-     * The ProviderLogHandler's constructor should always be private to prevent direct
-     * construction calls with the `new` operator.
-     */
-    private constructor(options: LogOptions) {
-        this.accountId = options.accountId;
-        this.groupName = options.groupName;
-        this.stream = options.stream.replace(/:/g, '__');
-        this.client = options.session.client('CloudWatchLogs') as CloudWatchLogs;
-        this.clientS3 = null;
-        // Attach the logger methods to localized event emitter.
-        const emitter = new LogEmitter();
-        this.emitter = emitter;
-        const logger = options.logger || global.console;
-        this.logger = logger;
-        this.emitter.on('log', (...args: any[]) => {
-            // this.logger.debug('Emitting log event...');
-        });
-        // Create maps of each logger method and then alias that.
-        Object.entries(this.logger).forEach(([key, val]) => {
-            if (typeof val === 'function') {
-                if (['log', 'error', 'warn', 'info'].includes(key)) {
-                    this.logger[key as 'log' | 'error' | 'warn' | 'info'] = (
-                        ...args: any[]
-                    ): void => {
-                        if (!this.isProcessing) {
-                            const logLevel = key.toUpperCase();
-                            // Add log level when not present
-                            if (
-                                args.length &&
-                                (typeof args[0] !== 'string' ||
-                                    args[0]
-                                        .substring(0, logLevel.length)
-                                        .toUpperCase() !== logLevel)
-                            ) {
-                                args.unshift(logLevel);
-                            }
-                            this.stack.push(() =>
-                                this.deliverLog(args).catch(this.logger.debug)
-                            );
-                            // For adding other event watchers later.
-                            setImmediate(() => {
-                                this.emitter.emit('log', ...args);
-                            });
-                        } else {
-                            this.logger.debug(
-                                'Logs are being delivered at the moment...'
-                            );
-                        }
-
-                        // Calls the logger method.
-                        val.apply(this.logger, args);
-                    };
-                }
-            }
-        });
+    constructor(
+        private readonly session: SessionProxy,
+        private readonly bucketName: string,
+        private readonly folderName: string,
+        private readonly platformLambdaLogger: LambdaLogger,
+        private readonly metricsPublisherProxy: MetricsPublisherProxy,
+        ...logFilters: readonly LogFilter[]
+    ) {
+        super(...logFilters);
+        if (!folderName) {
+            this.folderName = uuidv4();
+        }
+        this.folderName = this.folderName.replace(/[^a-z0-9!_'.*()/-]/gi, '_');
+        this.refreshClient();
     }
 
-    private async initialize(): Promise<void> {
-        this.sequenceToken = null;
-        this.stack = [];
+    public refreshClient(options?: ServiceConfigurationOptions): void {
+        this.client = this.session.client('S3', options) as S3;
+    }
+
+    protected async publishMessage(message: string): Promise<void> {
         try {
-            await this.deliverLogCloudWatch(['Initialize CloudWatch']);
-            this.clientS3 = null;
-        } catch (err) {
-            // If unable to deliver logs to CloudWatch, S3 will be used as a fallback.
-            this.clientS3 = new S3({
-                region: this.client.config.region,
-                accessKeyId: this.client.config.accessKeyId,
-                secretAccessKey: this.client.config.secretAccessKey,
-                sessionToken: this.client.config.sessionToken,
-            });
-            await this.deliverLogS3([err]);
-        }
-    }
-
-    /**
-     * The static method that controls the access to the singleton instance.
-     *
-     * This implementation let you subclass the ProviderLogHandler class while keeping
-     * just one instance of each subclass around.
-     */
-    public static getInstance(): ProviderLogHandler {
-        if (!ProviderLogHandler.instance) {
-            return null;
-        }
-        return ProviderLogHandler.instance;
-    }
-
-    public static async setup(
-        request: HandlerRequest,
-        providerSession?: SessionProxy
-    ): Promise<boolean> {
-        const logGroup: string = request.requestData?.providerLogGroupName;
-        let streamName = `${request.awsAccountId}-${request.region}`;
-        if (request.stackId && request.requestData?.logicalResourceId) {
-            streamName = `${request.stackId}/${request.requestData.logicalResourceId}`;
-        }
-        let logHandler = ProviderLogHandler.getInstance();
-        try {
-            if (providerSession && logGroup) {
-                if (logHandler) {
-                    // This is a re-used lambda container, log handler is already setup, so
-                    // we just refresh the client with new creds.
-                    logHandler.client = providerSession.client(
-                        'CloudWatchLogs'
-                    ) as CloudWatchLogs;
-                } else {
-                    logHandler = ProviderLogHandler.instance = new ProviderLogHandler({
-                        accountId: request.awsAccountId,
-                        groupName: logGroup,
-                        stream: streamName,
-                        session: providerSession,
-                    });
-                }
-                await logHandler.initialize();
+            if (this.skipLogging()) {
+                return;
             }
-        } catch (err) {
-            console.debug('Error on ProviderLogHandler setup:', err);
-            logHandler = null;
-        }
-        return Promise.resolve(logHandler !== null);
-    }
-
-    @boundMethod
-    public async processLogs(): Promise<void> {
-        this.isProcessing = true;
-        if (this.stack.length > 0) {
-            this.stack.push(() => this.deliverLog(['Log delivery finalized.']));
-        }
-        await promiseSequential(this.stack);
-        this.stack = [];
-        this.isProcessing = false;
-    }
-
-    private async createLogGroup(): Promise<void> {
-        try {
-            const response = await this.client
-                .createLogGroup({
-                    logGroupName: this.groupName,
-                })
-                .promise();
-            this.logger.debug('Response from "createLogGroup"', response);
-        } catch (err) {
-            const errorCode = err.code || err.name;
-            if (errorCode !== 'ResourceAlreadyExistsException') {
-                throw err;
+            if (!this.client) {
+                throw Error(
+                    'S3 client was not initialized. You must call refreshClient() first.'
+                );
             }
-        }
-    }
-
-    private async createLogStream(): Promise<void> {
-        try {
-            const response = await this.client
-                .createLogStream({
-                    logGroupName: this.groupName,
-                    logStreamName: this.stream,
-                })
-                .promise();
-            this.logger.debug('Response from "createLogStream"', response);
-        } catch (err) {
-            const errorCode = err.code || err.name;
-            if (errorCode !== 'ResourceAlreadyExistsException') {
-                throw err;
-            }
-        }
-    }
-
-    private async putLogEvents(record: InputLogEvent): Promise<PutLogEventsResponse> {
-        if (!record.timestamp) {
             const currentTime = new Date(Date.now());
-            record.timestamp = Math.round(currentTime.getTime());
-        }
-        const logEventsParams: PutLogEventsRequest = {
-            logGroupName: this.groupName,
-            logStreamName: this.stream,
-            logEvents: [record],
-        };
-        if (this.sequenceToken) {
-            logEventsParams.sequenceToken = this.sequenceToken;
-        }
-        try {
-            const response: PutLogEventsResponse = await this.client
-                .putLogEvents(logEventsParams)
-                .promise();
-            this.sequenceToken = response?.nextSequenceToken || null;
-            this.logger.debug('Response from "putLogEvents"', response);
-            return response;
+            const timestamp = currentTime.toISOString().replace(/[^a-z0-9]/gi, '');
+            const putObjectParams: PutObjectRequest = {
+                Bucket: this.bucketName,
+                Key: `${this.folderName}/${timestamp}-${Math.floor(
+                    Math.random() * 100
+                )}.json`,
+                ContentType: 'application/json',
+                Body: message,
+            };
+
+            const response = await this.client.putObject(putObjectParams).promise();
+            this.platformLambdaLogger.log('Response from "putObject"', response);
+            return;
         } catch (err) {
-            const errorCode = err.code || err.name;
-            this.logger.debug(
-                `Error from "putLogEvents" with sequence token ${this.sequenceToken}`,
+            this.platformLambdaLogger.log(
+                `An error occurred while putting log events [${message}] to resource owner account, with error: ${err.toString()}`
+            );
+            this.emitMetricsForLoggingFailure(err);
+            throw err;
+        }
+    }
+
+    private skipLogging(): boolean {
+        return !this.bucketName;
+    }
+
+    private async emitMetricsForLoggingFailure(err: Error): Promise<void> {
+        if (this.metricsPublisherProxy) {
+            await this.metricsPublisherProxy.publishLogDeliveryExceptionMetric(
+                new Date(Date.now()),
                 err
             );
-            if (
-                errorCode === 'DataAlreadyAcceptedException' ||
-                errorCode === 'InvalidSequenceTokenException'
-            ) {
-                this.sequenceToken = null;
-                // Delay to avoid throttling
-                await delay(1);
-                try {
-                    const response: DescribeLogStreamsResponse = await this.client
-                        .describeLogStreams({
-                            logGroupName: this.groupName,
-                            logStreamNamePrefix: this.stream,
-                            limit: 1,
-                        })
-                        .promise();
-                    this.logger.debug('Response from "describeLogStreams"', response);
-                    if (response.logStreams && response.logStreams.length) {
-                        const logStream = response.logStreams[0] as LogStream;
-                        this.sequenceToken = logStream.uploadSequenceToken;
-                    }
-                } catch (err) {
-                    this.logger.debug('Error from "describeLogStreams"', err);
-                }
-            } else {
-                throw err;
-            }
+        }
+    }
+}
+
+export class S3LogHelper {
+    private client: S3;
+
+    constructor(
+        private readonly session: SessionProxy,
+        private bucketName: string,
+        private readonly platformLambdaLogger: LambdaLogger,
+        private readonly metricsPublisherProxy: MetricsPublisherProxy
+    ) {
+        if (!this.bucketName) {
+            this.bucketName = uuidv4();
         }
     }
 
-    @boundMethod
-    private async deliverLogCloudWatch(
-        messages: any[]
-    ): Promise<PutLogEventsResponse | void> {
-        const currentTime = new Date(Date.now());
-        const record: InputLogEvent = {
-            message: JSON.stringify({ messages }),
-            timestamp: Math.round(currentTime.getTime()),
-        };
+    public refreshClient(options?: ServiceConfigurationOptions): void {
+        this.client = this.session.client('S3', options) as S3;
+    }
+
+    public async prepareBucket(bucketName?: string): Promise<string> {
+        if (!this.client) {
+            throw Error(
+                'S3 client was not initialized. You must call refreshClient() first.'
+            );
+        }
         try {
-            const response = await this.putLogEvents(record);
-            return response;
+            return await this.createBucket(bucketName);
         } catch (err) {
-            const errorCode = err.code || err.name;
-            this.logger.debug('Error from "deliverLogCloudWatch"', err);
-            if (errorCode === 'ResourceNotFoundException') {
-                if (err.message.includes('log group does not exist')) {
-                    await this.createLogGroup();
-                }
-                await this.createLogStream();
-            } else if (
-                errorCode !== 'DataAlreadyAcceptedException' &&
-                errorCode !== 'InvalidSequenceTokenException'
-            ) {
-                throw err;
-            }
-            try {
-                const response = await this.putLogEvents(record);
-                return response;
-            } catch (err) {
-                // Additional retry for sequence token error
-                if (this.sequenceToken) {
-                    return this.putLogEvents(record);
-                }
-                throw err;
-            }
+            this.log(`Initializing S3 bucket failed with error: ${err.toString()}`);
+            this.emitMetricsForLoggingFailure(err);
         }
+        return null;
     }
 
-    private async createBucket(): Promise<void> {
+    private async createBucket(bucketName: string = this.bucketName): Promise<string> {
         try {
-            const response = await this.clientS3
+            this.log(`Creating S3 bucket with name ${bucketName}.`);
+            const response = await this.client
                 .createBucket({
-                    Bucket: `${this.groupName}-${this.accountId}`,
+                    Bucket: bucketName,
                 })
                 .promise();
-            this.logger.debug('Response from "createBucket"', response);
+            this.log('Response from "createBucket"', response);
         } catch (err) {
             const errorCode = err.code || err.name;
             if (
@@ -558,66 +423,412 @@ export class ProviderLogHandler {
                 throw err;
             }
         }
+        return Promise.resolve(bucketName);
     }
 
-    private async putLogObject(body: any): Promise<PutObjectOutput> {
-        const currentTime = new Date(Date.now());
-        const bucket = `${this.groupName}-${this.accountId}`;
-        const folder = this.stream.replace(/[^a-z0-9!_'.*()/-]/gi, '_');
-        const timestamp = currentTime.toISOString().replace(/[^a-z0-9]/gi, '');
-        const params: PutObjectRequest = {
-            Bucket: bucket,
-            Key: `${folder}/${timestamp}-${Math.floor(Math.random() * 100)}.json`,
-            ContentType: 'application/json',
-            Body: JSON.stringify(body),
-        };
-        try {
-            const response: PutObjectOutput = await this.clientS3
-                .putObject(params)
-                .promise();
-            this.logger.debug('Response from "putLogObject"', response);
-            return response;
-        } catch (err) {
-            this.logger.debug('Error from "putLogObject"', err);
-            throw err;
+    private log(message?: any, ...optionalParams: any[]): void {
+        if (this.platformLambdaLogger) {
+            this.platformLambdaLogger.log(message, ...optionalParams);
         }
     }
 
-    @boundMethod
-    private async deliverLogS3(messages: any[]): Promise<PutObjectOutput> {
-        const body = {
-            groupName: this.groupName,
-            stream: this.stream,
-            messages,
-        };
-        try {
-            const response = await this.putLogObject(body);
-            return response;
-        } catch (err) {
-            const errorCode = err.code || err.name;
-            const statusCode = err.statusCode || 0;
-            this.logger.debug('Error from "deliverLogS3"', err);
-            if (
-                errorCode === 'NoSuchBucket' ||
-                (statusCode >= 400 && statusCode < 500)
-            ) {
-                if (err.message.includes('bucket does not exist')) {
-                    await this.createBucket();
-                }
-                return this.putLogObject(body);
-            } else {
-                throw err;
-            }
+    private async emitMetricsForLoggingFailure(err: Error): Promise<void> {
+        if (this.metricsPublisherProxy) {
+            await this.metricsPublisherProxy.publishLogDeliveryExceptionMetric(
+                new Date(Date.now()),
+                err
+            );
         }
-    }
-
-    @boundMethod
-    private async deliverLog(
-        messages: any[]
-    ): Promise<PutLogEventsResponse | PutObjectOutput | void> {
-        if (this.clientS3) {
-            return this.deliverLogS3(messages);
-        }
-        return this.deliverLogCloudWatch(messages);
     }
 }
+
+/**
+ * Proxies logging requests to the default LambdaLogger (CloudWatch Logs)
+ */
+export class LoggerProxy implements Logger {
+    private readonly logPublishers = new Array<LogPublisher>();
+    private readonly queue = new Array<PromiseFunction>();
+
+    public addLogPublisher(logPublisher: LogPublisher): void {
+        this.logPublishers.push(logPublisher);
+    }
+
+    public async processQueue(): Promise<void> {
+        await promiseSequential(this.queue);
+        console.debug('Log delivery finalized.');
+        this.queue.length = 0;
+    }
+
+    public log(message?: any, ...optionalParams: any[]): void {
+        const formatted = format(message, ...optionalParams);
+        this.logPublishers.forEach((logPublisher: LogPublisher) => {
+            this.queue.push(async () => {
+                try {
+                    await logPublisher.publishLogEvent(formatted);
+                } catch (err) {
+                    console.log(err);
+                    await logPublisher.publishLogEvent(formatted).catch(console.log);
+                }
+            });
+        });
+    }
+}
+
+/**
+ * @deprecated
+ */
+// export class ProviderLogHandler {
+//     private static instance: ProviderLogHandler;
+//     public emitter: LogEmitter;
+//     public client: CloudWatchLogs;
+//     public sequenceToken: string = null;
+//     public accountId: string;
+//     public groupName: string;
+//     public stream: string;
+//     public logger: Console;
+//     public clientS3: S3;
+//     private stack: Array<PromiseFunction> = [];
+//     private isProcessing = false;
+
+//     /**
+//      * The ProviderLogHandler's constructor should always be private to prevent direct
+//      * construction calls with the `new` operator.
+//      */
+//     private constructor(options: LogOptions) {
+//         this.accountId = options.accountId;
+//         this.groupName = options.groupName;
+//         this.stream = options.stream.replace(/:/g, '__');
+//         this.client = options.session.client('CloudWatchLogs') as CloudWatchLogs;
+//         this.clientS3 = null;
+//         // Attach the logger methods to localized event emitter.
+//         const emitter = new LogEmitter();
+//         this.emitter = emitter;
+//         const logger = options.logger || global.console;
+//         this.logger = logger;
+//         this.emitter.on('log', (...args: any[]) => {
+//             // this.logger.debug('Emitting log event...');
+//         });
+//         // Create maps of each logger method and then alias that.
+//         Object.entries(this.logger).forEach(([key, val]) => {
+//             if (typeof val === 'function') {
+//                 if (['log', 'error', 'warn', 'info'].includes(key)) {
+//                     this.logger[key as 'log' | 'error' | 'warn' | 'info'] = (
+//                         ...args: any[]
+//                     ): void => {
+//                         if (!this.isProcessing) {
+//                             const logLevel = key.toUpperCase();
+//                             // Add log level when not present
+//                             if (
+//                                 args.length &&
+//                                 (typeof args[0] !== 'string' ||
+//                                     args[0]
+//                                         .substring(0, logLevel.length)
+//                                         .toUpperCase() !== logLevel)
+//                             ) {
+//                                 args.unshift(logLevel);
+//                             }
+//                             this.stack.push(() =>
+//                                 this.deliverLog(args).catch(this.logger.debug)
+//                             );
+//                             // For adding other event watchers later.
+//                             setImmediate(() => {
+//                                 this.emitter.emit('log', ...args);
+//                             });
+//                         } else {
+//                             this.logger.debug(
+//                                 'Logs are being delivered at the moment...'
+//                             );
+//                         }
+
+//                         // Calls the logger method.
+//                         val.apply(this.logger, args);
+//                     };
+//                 }
+//             }
+//         });
+//     }
+
+//     private async initialize(): Promise<void> {
+//         this.sequenceToken = null;
+//         this.stack = [];
+//         try {
+//             await this.deliverLogCloudWatch(['Initialize CloudWatch']);
+//             this.clientS3 = null;
+//         } catch (err) {
+//             // If unable to deliver logs to CloudWatch, S3 will be used as a fallback.
+//             this.clientS3 = new S3({
+//                 region: this.client.config.region,
+//                 accessKeyId: this.client.config.accessKeyId,
+//                 secretAccessKey: this.client.config.secretAccessKey,
+//                 sessionToken: this.client.config.sessionToken,
+//             });
+//             await this.deliverLogS3([err]);
+//         }
+//     }
+
+//     /**
+//      * The static method that controls the access to the singleton instance.
+//      *
+//      * This implementation let you subclass the ProviderLogHandler class while keeping
+//      * just one instance of each subclass around.
+//      */
+//     public static getInstance(): ProviderLogHandler {
+//         if (!ProviderLogHandler.instance) {
+//             return null;
+//         }
+//         return ProviderLogHandler.instance;
+//     }
+
+//     public static async setup(
+//         request: HandlerRequest,
+//         providerSession?: SessionProxy
+//     ): Promise<boolean> {
+//         const logGroup: string = request.requestData?.providerLogGroupName;
+//         let streamName = `${request.awsAccountId}-${request.region}`;
+//         if (request.stackId && request.requestData?.logicalResourceId) {
+//             streamName = `${request.stackId}/${request.requestData.logicalResourceId}`;
+//         }
+//         let logHandler = ProviderLogHandler.getInstance();
+//         try {
+//             if (providerSession && logGroup) {
+//                 if (logHandler) {
+//                     // This is a re-used lambda container, log handler is already setup, so
+//                     // we just refresh the client with new creds.
+//                     logHandler.client = providerSession.client(
+//                         'CloudWatchLogs'
+//                     ) as CloudWatchLogs;
+//                 } else {
+//                     logHandler = ProviderLogHandler.instance = new ProviderLogHandler({
+//                         accountId: request.awsAccountId,
+//                         groupName: logGroup,
+//                         stream: streamName,
+//                         session: providerSession,
+//                     });
+//                 }
+//                 await logHandler.initialize();
+//             }
+//         } catch (err) {
+//             console.debug('Error on ProviderLogHandler setup:', err);
+//             logHandler = null;
+//         }
+//         return Promise.resolve(logHandler !== null);
+//     }
+
+//     @boundMethod
+//     public async processLogs(): Promise<void> {
+//         this.isProcessing = true;
+//         if (this.stack.length > 0) {
+//             this.stack.push(() => this.deliverLog(['Log delivery finalized.']));
+//         }
+//         await promiseSequential(this.stack);
+//         this.stack = [];
+//         this.isProcessing = false;
+//     }
+
+//     private async createLogGroup(): Promise<void> {
+//         try {
+//             const response = await this.client
+//                 .createLogGroup({
+//                     logGroupName: this.groupName,
+//                 })
+//                 .promise();
+//             this.logger.debug('Response from "createLogGroup"', response);
+//         } catch (err) {
+//             const errorCode = err.code || err.name;
+//             if (errorCode !== 'ResourceAlreadyExistsException') {
+//                 throw err;
+//             }
+//         }
+//     }
+
+//     private async createLogStream(): Promise<void> {
+//         try {
+//             const response = await this.client
+//                 .createLogStream({
+//                     logGroupName: this.groupName,
+//                     logStreamName: this.stream,
+//                 })
+//                 .promise();
+//             this.logger.debug('Response from "createLogStream"', response);
+//         } catch (err) {
+//             const errorCode = err.code || err.name;
+//             if (errorCode !== 'ResourceAlreadyExistsException') {
+//                 throw err;
+//             }
+//         }
+//     }
+
+//     private async putLogEvents(record: InputLogEvent): Promise<PutLogEventsResponse> {
+//         if (!record.timestamp) {
+//             const currentTime = new Date(Date.now());
+//             record.timestamp = Math.round(currentTime.getTime());
+//         }
+//         const logEventsParams: PutLogEventsRequest = {
+//             logGroupName: this.groupName,
+//             logStreamName: this.stream,
+//             logEvents: [record],
+//         };
+//         if (this.sequenceToken) {
+//             logEventsParams.sequenceToken = this.sequenceToken;
+//         }
+//         try {
+//             const response: PutLogEventsResponse = await this.client
+//                 .putLogEvents(logEventsParams)
+//                 .promise();
+//             this.sequenceToken = response?.nextSequenceToken || null;
+//             this.logger.debug('Response from "putLogEvents"', response);
+//             return response;
+//         } catch (err) {
+//             const errorCode = err.code || err.name;
+//             this.logger.debug(
+//                 `Error from "putLogEvents" with sequence token ${this.sequenceToken}`,
+//                 err
+//             );
+//             if (
+//                 errorCode === 'DataAlreadyAcceptedException' ||
+//                 errorCode === 'InvalidSequenceTokenException'
+//             ) {
+//                 this.sequenceToken = null;
+//                 // Delay to avoid throttling
+//                 await delay(1);
+//                 try {
+//                     const response: DescribeLogStreamsResponse = await this.client
+//                         .describeLogStreams({
+//                             logGroupName: this.groupName,
+//                             logStreamNamePrefix: this.stream,
+//                             limit: 1,
+//                         })
+//                         .promise();
+//                     this.logger.debug('Response from "describeLogStreams"', response);
+//                     if (response.logStreams && response.logStreams.length) {
+//                         const logStream = response.logStreams[0] as LogStream;
+//                         this.sequenceToken = logStream.uploadSequenceToken;
+//                     }
+//                 } catch (err) {
+//                     this.logger.debug('Error from "describeLogStreams"', err);
+//                 }
+//             } else {
+//                 throw err;
+//             }
+//         }
+//     }
+
+//     @boundMethod
+//     private async deliverLogCloudWatch(
+//         messages: any[]
+//     ): Promise<PutLogEventsResponse | void> {
+//         const currentTime = new Date(Date.now());
+//         const record: InputLogEvent = {
+//             message: JSON.stringify({ messages }),
+//             timestamp: Math.round(currentTime.getTime()),
+//         };
+//         try {
+//             const response = await this.putLogEvents(record);
+//             return response;
+//         } catch (err) {
+//             const errorCode = err.code || err.name;
+//             this.logger.debug('Error from "deliverLogCloudWatch"', err);
+//             if (errorCode === 'ResourceNotFoundException') {
+//                 if (err.message.includes('log group does not exist')) {
+//                     await this.createLogGroup();
+//                 }
+//                 await this.createLogStream();
+//             } else if (
+//                 errorCode !== 'DataAlreadyAcceptedException' &&
+//                 errorCode !== 'InvalidSequenceTokenException'
+//             ) {
+//                 throw err;
+//             }
+//             try {
+//                 const response = await this.putLogEvents(record);
+//                 return response;
+//             } catch (err) {
+//                 // Additional retry for sequence token error
+//                 if (this.sequenceToken) {
+//                     return this.putLogEvents(record);
+//                 }
+//                 throw err;
+//             }
+//         }
+//     }
+
+//     private async createBucket(): Promise<void> {
+//         try {
+//             const response = await this.clientS3
+//                 .createBucket({
+//                     Bucket: `${this.groupName}-${this.accountId}`,
+//                 })
+//                 .promise();
+//             this.logger.debug('Response from "createBucket"', response);
+//         } catch (err) {
+//             const errorCode = err.code || err.name;
+//             if (
+//                 errorCode !== 'BucketAlreadyOwnedByYou' &&
+//                 errorCode !== 'BucketAlreadyExists'
+//             ) {
+//                 throw err;
+//             }
+//         }
+//     }
+
+//     private async putLogObject(body: any): Promise<PutObjectOutput> {
+//         const currentTime = new Date(Date.now());
+//         const bucket = `${this.groupName}-${this.accountId}`;
+//         const folder = this.stream.replace(/[^a-z0-9!_'.*()/-]/gi, '_');
+//         const timestamp = currentTime.toISOString().replace(/[^a-z0-9]/gi, '');
+//         const params: PutObjectRequest = {
+//             Bucket: bucket,
+//             Key: `${folder}/${timestamp}-${Math.floor(Math.random() * 100)}.json`,
+//             ContentType: 'application/json',
+//             Body: JSON.stringify(body),
+//         };
+//         try {
+//             const response: PutObjectOutput = await this.clientS3
+//                 .putObject(params)
+//                 .promise();
+//             this.logger.debug('Response from "putLogObject"', response);
+//             return response;
+//         } catch (err) {
+//             this.logger.debug('Error from "putLogObject"', err);
+//             throw err;
+//         }
+//     }
+
+//     @boundMethod
+//     private async deliverLogS3(messages: any[]): Promise<PutObjectOutput> {
+//         const body = {
+//             groupName: this.groupName,
+//             stream: this.stream,
+//             messages,
+//         };
+//         try {
+//             const response = await this.putLogObject(body);
+//             return response;
+//         } catch (err) {
+//             const errorCode = err.code || err.name;
+//             const statusCode = err.statusCode || 0;
+//             this.logger.debug('Error from "deliverLogS3"', err);
+//             if (
+//                 errorCode === 'NoSuchBucket' ||
+//                 (statusCode >= 400 && statusCode < 500)
+//             ) {
+//                 if (err.message.includes('bucket does not exist')) {
+//                     await this.createBucket();
+//                 }
+//                 return this.putLogObject(body);
+//             } else {
+//                 throw err;
+//             }
+//         }
+//     }
+
+//     @boundMethod
+//     private async deliverLog(
+//         messages: any[]
+//     ): Promise<PutLogEventsResponse | PutObjectOutput | void> {
+//         if (this.clientS3) {
+//             return this.deliverLogS3(messages);
+//         }
+//         return this.deliverLogCloudWatch(messages);
+//     }
+// }

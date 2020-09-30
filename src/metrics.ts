@@ -1,4 +1,5 @@
 import CloudWatch, { Dimension, DimensionName } from 'aws-sdk/clients/cloudwatch';
+import { ServiceConfigurationOptions } from 'aws-sdk/lib/service';
 
 import { LambdaLogger } from './log-delivery';
 import { SessionProxy } from './proxy';
@@ -41,8 +42,8 @@ export class MetricsPublisher {
         this.refreshClient();
     }
 
-    public refreshClient(): void {
-        this.client = this.session.client('CloudWatch') as CloudWatch;
+    public refreshClient(options?: ServiceConfigurationOptions): void {
+        this.client = this.session.client('CloudWatch', options) as CloudWatch;
     }
 
     async publishMetric(

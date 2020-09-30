@@ -27,6 +27,8 @@ import {
     LambdaLogPublisher,
     LoggerProxy,
     LogPublisher,
+    S3LogHelper,
+    S3LogPublisher,
 } from './log-delivery';
 import { MetricsPublisher, MetricsPublisherProxy } from './metrics';
 import { deepFreeze } from './utils';
@@ -98,7 +100,8 @@ export abstract class BaseResource<T extends BaseModel = BaseModel> {
 
     private platformLambdaLogger: LogPublisher;
     private cloudWatchLogHelper: CloudWatchLogHelper;
-    private providerEventsLogger: CloudWatchLogPublisher;
+    private s3LogHelper: S3LogHelper;
+    private providerEventsLogger: CloudWatchLogPublisher | S3LogPublisher;
 
     constructor(
         public typeName: string,
@@ -125,7 +128,8 @@ export abstract class BaseResource<T extends BaseModel = BaseModel> {
         resourceType: string,
         providerCredentials: Credentials,
         providerLogGroupName: string,
-        providerLogStreamName: string
+        providerLogStreamName?: string,
+        awsAccountId?: string
     ): Promise<void> {
         this.loggerProxy = new LoggerProxy();
         this.metricsPublisherProxy = new MetricsPublisherProxy();
@@ -156,22 +160,42 @@ export abstract class BaseResource<T extends BaseModel = BaseModel> {
             this.providerMetricsPublisher.refreshClient();
 
             if (!this.providerEventsLogger) {
-                this.cloudWatchLogHelper = new CloudWatchLogHelper(
-                    this.providerSession,
-                    providerLogGroupName,
-                    providerLogStreamName,
-                    this.lambdaLogger,
-                    this.metricsPublisherProxy
-                );
-                this.cloudWatchLogHelper.refreshClient();
-
-                this.providerEventsLogger = new CloudWatchLogPublisher(
-                    this.providerSession,
-                    providerLogGroupName,
-                    await this.cloudWatchLogHelper.prepareLogStream(),
-                    this.lambdaLogger,
-                    this.metricsPublisherProxy
-                );
+                try {
+                    this.cloudWatchLogHelper = new CloudWatchLogHelper(
+                        this.providerSession,
+                        providerLogGroupName,
+                        providerLogStreamName,
+                        this.lambdaLogger,
+                        this.metricsPublisherProxy
+                    );
+                    this.cloudWatchLogHelper.refreshClient();
+                    this.providerEventsLogger = new CloudWatchLogPublisher(
+                        this.providerSession,
+                        providerLogGroupName,
+                        await this.cloudWatchLogHelper.prepareLogStream(),
+                        this.lambdaLogger,
+                        this.metricsPublisherProxy
+                    );
+                } catch (err) {
+                    this.log(err);
+                    // We will fallback to S3 log publisher.
+                    // This will not be work in Production,
+                    // because there is no permission to create S3 bucket
+                    this.s3LogHelper = new S3LogHelper(
+                        this.providerSession,
+                        providerLogGroupName,
+                        this.lambdaLogger,
+                        this.metricsPublisherProxy
+                    );
+                    this.s3LogHelper.refreshClient();
+                    this.providerEventsLogger = new S3LogPublisher(
+                        this.providerSession,
+                        await this.s3LogHelper.prepareBucket(),
+                        `${providerLogStreamName}-${awsAccountId}`,
+                        this.lambdaLogger,
+                        this.metricsPublisherProxy
+                    );
+                }
             }
             this.loggerProxy.addLogPublisher(this.providerEventsLogger);
             this.providerEventsLogger.refreshClient();
@@ -198,15 +222,16 @@ export abstract class BaseResource<T extends BaseModel = BaseModel> {
     /**
      * null-safe logger redirect
      *
-     * @param message A string containing the event to log.
+     * @param message The primary message.
+     * @param optionalParams All additional parameters used as substitution values.
      */
-    private log(message: string): void {
+    private log(message?: any, ...optionalParams: any[]): void {
         if (this.loggerProxy) {
-            this.loggerProxy.log(message);
+            this.loggerProxy.log(message, ...optionalParams);
         } else {
             // Lambda logger is the only fallback if metrics publisher proxy is not
             // initialized.
-            this.lambdaLogger.log(message);
+            this.lambdaLogger.log(message, ...optionalParams);
         }
     }
 
@@ -309,10 +334,10 @@ export abstract class BaseResource<T extends BaseModel = BaseModel> {
             }
             err.stack = `${new Error().stack}\n${err.stack}`;
             if (err instanceof BaseHandlerException) {
-                this.log(`Handler error: ${err.message}\n${err}`);
+                this.log(`Handler error: ${err.message}`, err);
                 progress = err.toProgressEvent();
             } else {
-                this.log(`Exception caught: ${err.message}\n${err}`);
+                this.log(`Exception caught: ${err.message}`, err);
                 msg = err.message || msg;
                 progress = ProgressEvent.failed(HandlerErrorCode.InternalFailure, msg);
             }
@@ -391,10 +416,10 @@ export abstract class BaseResource<T extends BaseModel = BaseModel> {
                 eventData
             );
             const [callerCredentials, providerCredentials] = credentials;
-            // this.log(`entrypoint eventData\n${eventData}`);
+            // this.log('entrypoint eventData', eventData);
             const request = this.castResourceRequest(event);
 
-            let streamName = `${request.awsAccountId}-${request.region}`;
+            let streamName = `${event.awsAccountId}-${event.region}`;
             if (event.stackId && request.logicalResourceIdentifier) {
                 streamName = `${event.stackId}/${request.logicalResourceIdentifier}`;
             }
@@ -404,7 +429,8 @@ export abstract class BaseResource<T extends BaseModel = BaseModel> {
                 event.resourceType || this.typeName,
                 providerCredentials,
                 event.requestData?.providerLogGroupName,
-                streamName
+                streamName,
+                event.awsAccountId
             );
 
             // if (event.requestData.providerLogGroupName && this.providerSession) {
@@ -449,10 +475,10 @@ export abstract class BaseResource<T extends BaseModel = BaseModel> {
             }
             err.stack = `${new Error().stack}\n${err.stack}`;
             if (err instanceof BaseHandlerException) {
-                this.log(`Handler error: ${err.message}\n${err}`);
+                this.log(`Handler error: ${err.message}`, err);
                 progress = err.toProgressEvent();
             } else {
-                this.log(`Exception caught: ${err.message}\n${err}`);
+                this.log(`Exception caught: ${err.message}`, err);
                 progress = ProgressEvent.failed(
                     HandlerErrorCode.InternalFailure,
                     err.message
@@ -463,6 +489,9 @@ export abstract class BaseResource<T extends BaseModel = BaseModel> {
         //     const providerLogHandler = ProviderLogHandler.getInstance();
         //     await providerLogHandler.processLogs();
         // }
+        if (this.loggerProxy) {
+            await this.loggerProxy.processQueue();
+        }
         return progress;
     }
 }
