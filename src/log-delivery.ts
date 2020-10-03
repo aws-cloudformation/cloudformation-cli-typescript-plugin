@@ -136,7 +136,9 @@ export class CloudWatchLogPublisher extends LogPublisher {
             }
 
             const putLogRequest = this.client.putLogEvents(logEventsParams);
-            putLogRequest.httpRequest.headers['x-amzn-logs-format'] = 'json/emf';
+            if (putLogRequest.httpRequest) {
+                putLogRequest.httpRequest.headers['x-amzn-logs-format'] = 'json/emf';
+            }
 
             const response: PutLogEventsResponse = await putLogRequest.promise();
             this.platformLambdaLogger.log('Response from "putLogEvents"', response);
@@ -168,7 +170,7 @@ export class CloudWatchLogPublisher extends LogPublisher {
                         'Response from "describeLogStreams"',
                         response
                     );
-                    if (response.logStreams && response.logStreams.length) {
+                    if (response.logStreams?.length) {
                         const logStream = response.logStreams[0] as LogStream;
                         this.nextSequenceToken = logStream.uploadSequenceToken;
                     }
@@ -215,6 +217,8 @@ export class CloudWatchLogHelper {
     ) {
         if (!this.logStreamName) {
             this.logStreamName = uuidv4();
+        } else {
+            this.logStreamName = logStreamName.replace(/:/g, '__');
         }
     }
 
@@ -222,18 +226,17 @@ export class CloudWatchLogHelper {
         this.client = this.session.client('CloudWatchLogs', options) as CloudWatchLogs;
     }
 
-    public async prepareLogStream(
-        logStreamName?: string,
-        logGroupName?: string
-    ): Promise<string> {
+    public async prepareLogStream(): Promise<string> {
         if (!this.client) {
             throw Error(
                 'CloudWatchLogs client was not initialized. You must call refreshClient() first.'
             );
         }
         try {
-            await this.createLogGroup(logGroupName);
-            return await this.createLogStream(logStreamName, logGroupName);
+            if (!(await this.doesLogGroupExist())) {
+                await this.createLogGroup();
+            }
+            return await this.createLogStream();
         } catch (err) {
             this.log(
                 `Initializing logging group setting failed with error: ${err.toString()}`
@@ -243,14 +246,39 @@ export class CloudWatchLogHelper {
         return null;
     }
 
-    private async createLogGroup(
-        logGroupName: string = this.logGroupName
-    ): Promise<void> {
+    private async doesLogGroupExist(): Promise<boolean> {
+        let logGroupExists = false;
         try {
-            this.log(`Creating Log group with name ${logGroupName}.`);
+            const response = await this.client
+                .describeLogGroups({
+                    logGroupNamePrefix: this.logGroupName,
+                })
+                .promise();
+            this.log('Response from "describeLogGroups"', response);
+            if (response.logGroups?.length) {
+                logGroupExists = response.logGroups.some((logGroup) => {
+                    return logGroup.logGroupName === this.logGroupName;
+                });
+            }
+            this.log(
+                `Log group with name ${this.logGroupName} does${
+                    logGroupExists ? '' : ' not'
+                } exist in resource owner account.`
+            );
+        } catch (err) {
+            this.log(err);
+            this.emitMetricsForLoggingFailure(err);
+            logGroupExists = false;
+        }
+        return Promise.resolve(logGroupExists);
+    }
+
+    private async createLogGroup(): Promise<string> {
+        try {
+            this.log(`Creating Log group with name ${this.logGroupName}.`);
             const response = await this.client
                 .createLogGroup({
-                    logGroupName,
+                    logGroupName: this.logGroupName,
                 })
                 .promise();
             this.log('Response from "createLogGroup"', response);
@@ -260,20 +288,18 @@ export class CloudWatchLogHelper {
                 throw err;
             }
         }
+        return Promise.resolve(this.logGroupName);
     }
 
-    private async createLogStream(
-        logStreamName: string = this.logStreamName,
-        logGroupName: string = this.logGroupName
-    ): Promise<string> {
+    private async createLogStream(): Promise<string> {
         try {
             this.log(
-                `Creating Log stream with name ${logStreamName} for log group ${logGroupName}.`
+                `Creating Log stream with name ${this.logStreamName} for log group ${this.logGroupName}.`
             );
             const response = await this.client
                 .createLogStream({
-                    logGroupName,
-                    logStreamName,
+                    logGroupName: this.logGroupName,
+                    logStreamName: this.logStreamName,
                 })
                 .promise();
             this.log('Response from "createLogStream"', response);
@@ -283,7 +309,7 @@ export class CloudWatchLogHelper {
                 throw err;
             }
         }
-        return Promise.resolve(logStreamName);
+        return Promise.resolve(this.logStreamName);
     }
 
     private log(message?: any, ...optionalParams: any[]): void {
@@ -314,10 +340,6 @@ export class S3LogPublisher extends LogPublisher {
         ...logFilters: readonly LogFilter[]
     ) {
         super(...logFilters);
-        if (!folderName) {
-            this.folderName = uuidv4();
-        }
-        this.folderName = this.folderName.replace(/[^a-z0-9!_'.*()/-]/gi, '_');
         this.refreshClient();
     }
 
@@ -378,39 +400,44 @@ export class S3LogHelper {
     constructor(
         private readonly session: SessionProxy,
         private bucketName: string,
+        private folderName: string,
         private readonly platformLambdaLogger: LambdaLogger,
         private readonly metricsPublisherProxy: MetricsPublisherProxy
     ) {
-        if (!this.bucketName) {
-            this.bucketName = uuidv4();
+        if (!this.folderName) {
+            this.folderName = uuidv4();
         }
+        this.folderName = this.folderName.replace(/[^a-z0-9!_'.*()/-]/gi, '_');
     }
 
     public refreshClient(options?: ServiceConfigurationOptions): void {
         this.client = this.session.client('S3', options) as S3;
     }
 
-    public async prepareBucket(bucketName?: string): Promise<string> {
+    public async prepareFolder(): Promise<string> {
         if (!this.client) {
             throw Error(
                 'S3 client was not initialized. You must call refreshClient() first.'
             );
         }
         try {
-            return await this.createBucket(bucketName);
+            await this.createBucket();
+            return await this.createFolder();
         } catch (err) {
-            this.log(`Initializing S3 bucket failed with error: ${err.toString()}`);
+            this.log(
+                `Initializing S3 bucket and folder failed with error: ${err.toString()}`
+            );
             this.emitMetricsForLoggingFailure(err);
         }
         return null;
     }
 
-    private async createBucket(bucketName: string = this.bucketName): Promise<string> {
+    private async createBucket(): Promise<void> {
         try {
-            this.log(`Creating S3 bucket with name ${bucketName}.`);
+            this.log(`Creating S3 bucket with name ${this.bucketName}.`);
             const response = await this.client
                 .createBucket({
-                    Bucket: bucketName,
+                    Bucket: this.bucketName,
                 })
                 .promise();
             this.log('Response from "createBucket"', response);
@@ -423,7 +450,34 @@ export class S3LogHelper {
                 throw err;
             }
         }
-        return Promise.resolve(bucketName);
+    }
+
+    private async createFolder(): Promise<string> {
+        try {
+            this.log(
+                `Creating folder with name ${this.folderName} for bucket ${this.bucketName}.`
+            );
+            const folderItems = await this.client
+                .listObjectsV2({
+                    Bucket: this.bucketName,
+                    Prefix: `${this.folderName}/`,
+                })
+                .promise();
+            this.log('Response from "listObjects"', folderItems);
+            if (!folderItems.Contents?.length) {
+                const response = await this.client
+                    .putObject({
+                        Bucket: this.bucketName,
+                        Key: `${this.folderName}/`,
+                        ContentLength: 0,
+                    })
+                    .promise();
+                this.log('Response from "putObject"', response);
+            }
+        } catch (err) {
+            throw err;
+        }
+        return Promise.resolve(this.folderName);
     }
 
     private log(message?: any, ...optionalParams: any[]): void {
@@ -462,13 +516,11 @@ export class LoggerProxy implements Logger {
     public log(message?: any, ...optionalParams: any[]): void {
         const formatted = format(message, ...optionalParams);
         this.logPublishers.forEach((logPublisher: LogPublisher) => {
-            this.queue.push(async () => {
-                try {
-                    await logPublisher.publishLogEvent(formatted);
-                } catch (err) {
+            this.queue.push(() => {
+                return logPublisher.publishLogEvent(formatted).catch((err: Error) => {
                     console.log(err);
-                    await logPublisher.publishLogEvent(formatted).catch(console.log);
-                }
+                    return logPublisher.publishLogEvent(formatted).catch(console.log);
+                });
             });
         });
     }
