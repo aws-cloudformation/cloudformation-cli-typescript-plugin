@@ -184,14 +184,15 @@ export abstract class BaseResource<T extends BaseModel = BaseModel> {
                     this.s3LogHelper = new S3LogHelper(
                         this.providerSession,
                         providerLogGroupName,
+                        `${providerLogStreamName}-${awsAccountId}`,
                         this.lambdaLogger,
                         this.metricsPublisherProxy
                     );
                     this.s3LogHelper.refreshClient();
                     this.providerEventsLogger = new S3LogPublisher(
                         this.providerSession,
-                        await this.s3LogHelper.prepareBucket(),
-                        `${providerLogStreamName}-${awsAccountId}`,
+                        providerLogGroupName,
+                        await this.s3LogHelper.prepareFolder(),
                         this.lambdaLogger,
                         this.metricsPublisherProxy
                     );

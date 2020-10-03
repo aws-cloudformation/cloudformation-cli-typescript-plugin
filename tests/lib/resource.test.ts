@@ -9,7 +9,11 @@ import {
     HandlerRequest,
     OperationStatus,
 } from '../../src/interface';
-import { LoggerProxy } from '../../src/log-delivery';
+import {
+    CloudWatchLogHelper,
+    LoggerProxy,
+    S3LogPublisher,
+} from '../../src/log-delivery';
 import { MetricsPublisherProxy } from '../../src/metrics';
 import { handlerEvent, HandlerSignatures, BaseResource } from '../../src/resource';
 import { SimpleStateModel } from '../data/sample-model';
@@ -233,6 +237,32 @@ describe('when getting resource', () => {
         delete entrypointPayload['requestData']['callerCredentials'];
         response = await resource.entrypoint(entrypointPayload, null);
         expect(response).toMatchObject(expected);
+    });
+
+    test('entrypoint with log stream failure', async () => {
+        const mockHandler: jest.Mock = jest.fn(() => ProgressEvent.success());
+        const resource = new Resource(TYPE_NAME, MockModel);
+        resource.addHandler(Action.Create, mockHandler);
+        const spyInitializeRuntime = jest.spyOn<typeof resource, any>(
+            resource,
+            'initializeRuntime'
+        );
+        const spyPrepareLogStream = jest.spyOn<any, any>(
+            CloudWatchLogHelper.prototype,
+            'prepareLogStream'
+        );
+        spyPrepareLogStream.mockRejectedValue(() => {
+            throw new Error();
+        });
+        const response = await resource.entrypoint(entrypointPayload, null);
+        expect(spyInitializeRuntime).toBeCalledTimes(1);
+        expect(spyPrepareLogStream).toBeCalledTimes(1);
+        expect(resource['providerEventsLogger']).toBeInstanceOf(S3LogPublisher);
+        expect(response).toMatchObject({
+            message: '',
+            status: OperationStatus.Success,
+            callbackDelaySeconds: 0,
+        });
     });
 
     test('parse request invalid request', () => {
