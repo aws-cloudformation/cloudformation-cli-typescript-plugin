@@ -30,7 +30,7 @@ export function formatDimensions(dimensions: DimensionRecord): Array<Dimension> 
  * Can be used with the MetricsPublisherProxy.
  */
 export class MetricsPublisher {
-    private namespace: string;
+    private resourceNamespace: string;
     private client: CloudWatch;
 
     constructor(
@@ -38,8 +38,7 @@ export class MetricsPublisher {
         private readonly logger: LambdaLogger,
         private readonly resourceType: string
     ) {
-        this.namespace = MetricsPublisher.makeNamespace(resourceType);
-        this.refreshClient();
+        this.resourceNamespace = resourceType.replace(/::/g, '/');
     }
 
     public refreshClient(options?: ServiceConfigurationOptions): void {
@@ -53,10 +52,15 @@ export class MetricsPublisher {
         value: number,
         timestamp: Date
     ): Promise<void> {
+        if (!this.client) {
+            throw Error(
+                'CloudWatch client was not initialized. You must call refreshClient() first.'
+            );
+        }
         try {
             const metric = await this.client
                 .putMetricData({
-                    Namespace: this.namespace,
+                    Namespace: `${METRIC_NAMESPACE_ROOT}/${this.resourceNamespace}`,
                     MetricData: [
                         {
                             MetricName: metricName,
@@ -68,11 +72,9 @@ export class MetricsPublisher {
                     ],
                 })
                 .promise();
-            this.logger.log(`Response from "putMetricData"\n${metric}`);
+            this.log('Response from "putMetricData"', metric);
         } catch (err) {
-            this.logger.log(
-                `An error occurred while publishing metrics: ${err.message}`
-            );
+            this.log(`An error occurred while publishing metrics: ${err.message}`);
         }
     }
 
@@ -150,18 +152,24 @@ export class MetricsPublisher {
                 (error as BaseHandlerException).errorCode || error.constructor.name,
             DimensionKeyResourceType: this.resourceType,
         };
-        return this.publishMetric(
-            MetricTypes.HandlerException,
-            dimensions,
-            StandardUnit.Count,
-            1.0,
-            timestamp
-        );
+        try {
+            return await this.publishMetric(
+                MetricTypes.HandlerException,
+                dimensions,
+                StandardUnit.Count,
+                1.0,
+                timestamp
+            );
+        } catch (err) {
+            this.log(err);
+        }
+        return Promise.resolve(null);
     }
 
-    static makeNamespace(resourceType: string): string {
-        const suffix = resourceType.replace(/::/g, '/');
-        return `${METRIC_NAMESPACE_ROOT}/${suffix}`;
+    private log(message?: any, ...optionalParams: any[]): void {
+        if (this.logger) {
+            this.logger.log(message, ...optionalParams);
+        }
     }
 }
 

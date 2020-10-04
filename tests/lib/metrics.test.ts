@@ -18,7 +18,7 @@ const mockResult = (output: any): jest.Mock => {
 
 const MOCK_DATE = new Date('2020-01-01T23:05:38.964Z');
 const RESOURCE_TYPE = 'Aa::Bb::Cc';
-const NAMESPACE = MetricsPublisher.makeNamespace(RESOURCE_TYPE);
+const NAMESPACE = 'AWS/CloudFormation/Aa/Bb/Cc';
 
 jest.mock('aws-sdk/clients/cloudwatch');
 
@@ -51,6 +51,7 @@ describe('when getting metrics', () => {
         proxy = new MetricsPublisherProxy();
         publisher = new MetricsPublisher(session, console, RESOURCE_TYPE);
         proxy.addMetricsPublisher(publisher);
+        publisher.refreshClient();
     });
 
     afterEach(() => {
@@ -239,6 +240,22 @@ describe('when getting metrics', () => {
             ],
             Namespace: NAMESPACE,
         });
+    });
+
+    test('metrics publisher without refreshing client', async () => {
+        expect.assertions(1);
+        const metricsPublisher = new MetricsPublisher(session, console, RESOURCE_TYPE);
+        try {
+            await metricsPublisher.publishMetric(
+                MetricTypes.HandlerInvocationCount,
+                null,
+                StandardUnit.Count,
+                1.0,
+                MOCK_DATE
+            );
+        } catch (e) {
+            expect(e.message).toMatch(/CloudWatch client was not initialized/);
+        }
     });
 
     test('metrics publisher proxy add metrics publisher null safe', () => {

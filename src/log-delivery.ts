@@ -1,4 +1,5 @@
 import { format } from 'util';
+import { AWSError, Request } from 'aws-sdk';
 import CloudWatchLogs, {
     DescribeLogStreamsResponse,
     LogStream,
@@ -8,7 +9,6 @@ import CloudWatchLogs, {
 } from 'aws-sdk/clients/cloudwatchlogs';
 import { ServiceConfigurationOptions } from 'aws-sdk/lib/service';
 import S3, { PutObjectRequest } from 'aws-sdk/clients/s3';
-import promiseSequential from 'promise-sequential';
 import { v4 as uuidv4 } from 'uuid';
 
 import { SessionProxy } from './proxy';
@@ -40,7 +40,7 @@ export abstract class LogPublisher {
         this.logFilterList = Array.from(filters);
     }
 
-    protected abstract publishMessage(message: string): Promise<void>;
+    protected abstract publishMessage(message: string, eventTime?: Date): Promise<void>;
 
     /**
      * Redact or scrub loggers in someway to help prevent leaking of certain
@@ -54,8 +54,11 @@ export abstract class LogPublisher {
         return toReturn;
     }
 
-    public async publishLogEvent(message: string): Promise<void> {
-        await this.publishMessage(this.filterMessage(message));
+    public publishLogEvent(message: string, eventTime?: Date): Promise<void> {
+        if (!eventTime) {
+            eventTime = new Date(Date.now());
+        }
+        return this.publishMessage(this.filterMessage(message), eventTime);
     }
 }
 
@@ -96,7 +99,7 @@ export class CloudWatchLogPublisher extends LogPublisher {
         this.client = this.session.client('CloudWatchLogs', options) as CloudWatchLogs;
     }
 
-    protected async publishMessage(message: string): Promise<void> {
+    protected async publishMessage(message: string, eventTime: Date): Promise<void> {
         if (this.skipLogging()) {
             return;
         }
@@ -106,10 +109,11 @@ export class CloudWatchLogPublisher extends LogPublisher {
             );
         }
         try {
-            const currentTime = new Date(Date.now());
+            // Delay to avoid throttling
+            await delay(0.25);
             const record: InputLogEvent = {
                 message,
-                timestamp: Math.round(currentTime.getTime()),
+                timestamp: Math.round(eventTime.getTime()),
             };
             const logEventsParams: PutLogEventsRequest = {
                 logGroupName: this.logGroupName,
@@ -121,13 +125,19 @@ export class CloudWatchLogPublisher extends LogPublisher {
             }
 
             const putLogRequest = this.client.putLogEvents(logEventsParams);
-            if (putLogRequest.httpRequest?.headers) {
-                putLogRequest.httpRequest.headers['x-amzn-logs-format'] = 'json/emf';
-            }
+            putLogRequest.on(
+                'build',
+                (req: Request<PutLogEventsResponse, AWSError>) => {
+                    req.httpRequest.headers['X-Amzn-Logs-Format'] = 'json/emf';
+                }
+            );
 
             const response: PutLogEventsResponse = await putLogRequest.promise();
             this.platformLambdaLogger.log('Response from "putLogEvents"', response);
             this.nextSequenceToken = response?.nextSequenceToken || null;
+            if (response.rejectedLogEventsInfo) {
+                throw new Error(JSON.stringify(response.rejectedLogEventsInfo));
+            }
             return;
         } catch (err) {
             const errorCode = err.code || err.name;
@@ -141,7 +151,6 @@ export class CloudWatchLogPublisher extends LogPublisher {
                 errorCode === 'ThrottlingException'
             ) {
                 this.nextSequenceToken = null;
-                // Delay to avoid throttling
                 await delay(1);
                 try {
                     const response: DescribeLogStreamsResponse = await this.client
@@ -166,7 +175,7 @@ export class CloudWatchLogPublisher extends LogPublisher {
                     );
                     await this.emitMetricsForLoggingFailure(err);
                 }
-                return;
+                return Promise.reject('Publishing this log event should be retried.');
             } else {
                 this.platformLambdaLogger.log(
                     `An error occurred while putting log events [${message}] to resource owner account, with error: ${err.toString()}`
@@ -331,7 +340,7 @@ export class S3LogPublisher extends LogPublisher {
         this.client = this.session.client('S3', options) as S3;
     }
 
-    protected async publishMessage(message: string): Promise<void> {
+    protected async publishMessage(message: string, eventTime: Date): Promise<void> {
         if (this.skipLogging()) {
             return;
         }
@@ -341,8 +350,7 @@ export class S3LogPublisher extends LogPublisher {
             );
         }
         try {
-            const currentTime = new Date(Date.now());
-            const timestamp = currentTime.toISOString().replace(/[^a-z0-9]/gi, '');
+            const timestamp = eventTime.toISOString().replace(/[^a-z0-9]/gi, '');
             const putObjectParams: PutObjectRequest = {
                 Bucket: this.bucketName,
                 Key: `${this.folderName}/${timestamp}-${Math.floor(
@@ -523,20 +531,27 @@ export class LoggerProxy implements Logger {
     }
 
     public async processQueue(): Promise<void> {
-        await promiseSequential(this.queue);
+        for (const key in this.queue) {
+            try {
+                await this.queue[key]();
+            } catch (err) {
+                console.error(err);
+                try {
+                    await this.queue[key]();
+                } catch (err) {
+                    console.error(err);
+                }
+            }
+        }
         console.debug('Log delivery finalized.');
         this.queue.length = 0;
     }
 
     public log(message?: any, ...optionalParams: any[]): void {
         const formatted = format(message, ...optionalParams);
+        const eventTime = new Date(Date.now());
         this.logPublishers.forEach((logPublisher: LogPublisher) => {
-            this.queue.push(() => {
-                return logPublisher.publishLogEvent(formatted).catch((err: Error) => {
-                    console.log(err);
-                    return logPublisher.publishLogEvent(formatted).catch(console.log);
-                });
-            });
+            this.queue.push(() => logPublisher.publishLogEvent(formatted, eventTime));
         });
     }
 }

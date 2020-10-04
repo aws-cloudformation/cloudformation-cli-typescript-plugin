@@ -1,13 +1,9 @@
-import { v4 as uuidv4 } from 'uuid';
 import CloudWatchLogs, {
     DescribeLogGroupsResponse,
 } from 'aws-sdk/clients/cloudwatchlogs';
 import S3, { ListObjectsV2Output } from 'aws-sdk/clients/s3';
 import awsUtil from 'aws-sdk/lib/util';
-import { AWSError } from 'aws-sdk';
-import promiseSequential from 'promise-sequential';
 
-import { Action } from '../../src/interface';
 import { SessionProxy } from '../../src/proxy';
 import { MetricsPublisherProxy } from '../../src/metrics';
 import {
@@ -19,7 +15,6 @@ import {
     S3LogHelper,
     S3LogPublisher,
 } from '../../src/log-delivery';
-import { HandlerRequest, RequestData } from '../../src/interface';
 
 const mockResult = (output: any): jest.Mock => {
     return jest.fn().mockReturnValue({
@@ -27,6 +22,7 @@ const mockResult = (output: any): jest.Mock => {
         httpRequest: {
             headers: {},
         },
+        on: () => {},
     });
 };
 
@@ -52,7 +48,6 @@ jest.mock('uuid', () => {
 jest.mock('../../src/metrics');
 
 describe('when delivering logs', () => {
-    let payload: HandlerRequest;
     let session: SessionProxy;
     let cwLogs: jest.Mock;
     let s3: jest.Mock;
@@ -187,33 +182,6 @@ describe('when delivering logs', () => {
         );
         s3Logger.refreshClient({ region: AWS_CONFIG.region });
         loggerProxy.addLogPublisher(cloudWatchLogger);
-        const request = new HandlerRequest({
-            awsAccountId: AWS_ACCOUNT_ID,
-            resourceType: 'Foo::Bar::Baz',
-            requestData: new RequestData({
-                providerLogGroupName: 'test-group',
-                logicalResourceId: 'MyResourceId',
-                resourceProperties: {},
-                systemTags: {},
-            }),
-            stackId: 'arn:aws:cloudformation:us-east-1:123456789012:stack/baz/321',
-        });
-        payload = new HandlerRequest({
-            action: Action.Create,
-            awsAccountId: AWS_ACCOUNT_ID,
-            bearerToken: uuidv4(),
-            region: 'us-east-1',
-            responseEndpoint: '',
-            resourceType: 'Foo::Bar::Baz',
-            resourceTypeVersion: '4',
-            requestData: new RequestData({
-                providerLogGroupName: 'test_group',
-                logicalResourceId: 'MyResourceId',
-                resourceProperties: {},
-                systemTags: {},
-            }),
-            stackId: 'arn:aws:cloudformation:us-east-1:123456789012:stack/baz/321',
-        });
         jest.clearAllMocks();
     });
 
@@ -227,7 +195,7 @@ describe('when delivering logs', () => {
             const msgToLog = 'How is it going?';
             await lambdaLogger.publishLogEvent(msgToLog);
             expect(spyLambdaPublish).toHaveBeenCalledTimes(1);
-            expect(spyLambdaPublish).toHaveBeenCalledWith(msgToLog);
+            expect(spyLambdaPublish).toHaveBeenCalledWith(msgToLog, expect.any(Date));
         });
 
         test('publish lambda log with failure', async () => {
@@ -259,7 +227,8 @@ describe('when delivering logs', () => {
             );
             expect(spyLambdaPublish).toHaveBeenCalledTimes(1);
             expect(spyLambdaPublish).toHaveBeenCalledWith(
-                'This is log message for account <REDACTED>'
+                'This is log message for account <REDACTED>',
+                expect.any(Date)
             );
         });
     });
@@ -495,7 +464,10 @@ describe('when delivering logs', () => {
             const msgToLog = 'How is it going?';
             await cloudWatchLogger.publishLogEvent(msgToLog);
             expect(spyCloudWatchPublish).toHaveBeenCalledTimes(1);
-            expect(spyCloudWatchPublish).toHaveBeenCalledWith(msgToLog);
+            expect(spyCloudWatchPublish).toHaveBeenCalledWith(
+                msgToLog,
+                expect.any(Date)
+            );
             expect(putLogEvents).toHaveBeenCalledTimes(1);
             expect(putLogEvents).toHaveBeenCalledWith({
                 logGroupName: LOG_GROUP_NAME,
@@ -520,6 +492,7 @@ describe('when delivering logs', () => {
                         code: 'AccessDenied',
                     })
                 ),
+                on: () => {},
             });
             const msgToLog = 'How is it going?';
             try {
@@ -547,7 +520,7 @@ describe('when delivering logs', () => {
         });
 
         test('publish cloudwatch log with describe failure', async () => {
-            expect.assertions(7);
+            expect.assertions(8);
             const spyPlatformLambdaLogger = jest.spyOn<any, any>(
                 cloudWatchLogger['platformLambdaLogger'],
                 'log'
@@ -558,6 +531,7 @@ describe('when delivering logs', () => {
                         code: 'ThrottlingException',
                     })
                 ),
+                on: () => {},
             });
             describeLogStreams.mockReturnValue({
                 promise: jest.fn().mockRejectedValueOnce(
@@ -567,7 +541,11 @@ describe('when delivering logs', () => {
                 ),
             });
             const msgToLog = 'How is it going?';
-            await cloudWatchLogger.publishLogEvent(msgToLog);
+            try {
+                await cloudWatchLogger.publishLogEvent(msgToLog);
+            } catch (e) {
+                expect(e).toBe('Publishing this log event should be retried.');
+            }
             expect(putLogEvents).toHaveBeenCalledTimes(1);
             expect(putLogEvents).toHaveBeenCalledWith({
                 logGroupName: LOG_GROUP_NAME,
@@ -650,6 +628,7 @@ describe('when delivering logs', () => {
                         code: 'AccessDenied',
                     })
                 ),
+                on: () => {},
             });
             const cloudWatchLogger = new CloudWatchLogPublisher(
                 session,
@@ -709,21 +688,20 @@ describe('when delivering logs', () => {
                     .mockResolvedValueOnce({
                         nextSequenceToken: 'first-seq',
                     }),
+                on: () => {},
             });
 
-            await promiseSequential(
-                [null, 'some-seq'].map((sequenceToken: string) => {
-                    return async () => {
-                        cloudWatchLogger['nextSequenceToken'] = sequenceToken;
-                        await cloudWatchLogger['publishMessage']('msg');
-                    };
-                })
-            );
+            cloudWatchLogger['nextSequenceToken'] = null;
+            await cloudWatchLogger.publishLogEvent('msg');
+
+            cloudWatchLogger['nextSequenceToken'] = 'some-seq';
+            await cloudWatchLogger.publishLogEvent('msg');
+
             expect(putLogEvents).toHaveBeenCalledTimes(2);
         });
 
         test('publish cloudwatch log with invalid token', async () => {
-            expect.assertions(2);
+            expect.assertions(4);
             putLogEvents.mockReturnValue({
                 promise: jest
                     .fn()
@@ -738,6 +716,7 @@ describe('when delivering logs', () => {
                         })
                     )
                     .mockResolvedValue({ nextSequenceToken: 'some-other-seq' }),
+                on: () => {},
             });
             describeLogStreams.mockReturnValue({
                 promise: jest.fn().mockResolvedValue({
@@ -745,7 +724,11 @@ describe('when delivering logs', () => {
                 }),
             });
             for (let i = 1; i < 4; i++) {
-                await cloudWatchLogger.publishLogEvent('log-msg');
+                try {
+                    await cloudWatchLogger.publishLogEvent('log-msg');
+                } catch (e) {
+                    expect(e).toBe('Publishing this log event should be retried.');
+                }
             }
             expect(putLogEvents).toHaveBeenCalledTimes(3);
             expect(describeLogStreams).toHaveBeenCalledTimes(2);
@@ -1018,7 +1001,7 @@ describe('when delivering logs', () => {
             const msgToLog = 'How is it going?';
             await s3Logger.publishLogEvent(msgToLog);
             expect(spyS3Publish).toHaveBeenCalledTimes(1);
-            expect(spyS3Publish).toHaveBeenCalledWith(msgToLog);
+            expect(spyS3Publish).toHaveBeenCalledWith(msgToLog, expect.any(Date));
             expect(putObject).toHaveBeenCalledTimes(1);
             expect(putObject).toHaveBeenCalledWith(
                 expect.objectContaining({
@@ -1190,7 +1173,10 @@ describe('when delivering logs', () => {
             expect(loggerProxy['queue'].length).toBe(0);
             expect(mockToJson).toHaveBeenCalledTimes(1);
             expect(spyPublishLogEvent).toHaveBeenCalledTimes(2);
-            expect(spyPublishLogEvent).toHaveBeenCalledWith('undefined');
+            expect(spyPublishLogEvent).toHaveBeenCalledWith(
+                'undefined',
+                expect.any(Date)
+            );
         });
 
         test('logger proxy process with success', async () => {
@@ -1212,20 +1198,32 @@ describe('when delivering logs', () => {
             expect(s3Logger['folderName']).toBe(S3_FOLDER_NAME);
             expect(loggerProxy['queue'].length).toBe(0);
             expect(spyLambdaPublish).toHaveBeenCalledTimes(5);
-            expect(spyLambdaPublish).toHaveBeenCalledWith('count: [5.12]');
             expect(spyLambdaPublish).toHaveBeenCalledWith(
-                'timestamp: [2020-01-01T00:00:00.000Z]'
+                'count: [5.12]',
+                expect.any(Date)
+            );
+            expect(spyLambdaPublish).toHaveBeenCalledWith(
+                'timestamp: [2020-01-01T00:00:00.000Z]',
+                expect.any(Date)
             );
             expect(spyCloudWatchPublish).toHaveBeenCalledTimes(5);
-            expect(spyCloudWatchPublish).toHaveBeenCalledWith('count: [5.12]');
             expect(spyCloudWatchPublish).toHaveBeenCalledWith(
-                'timestamp: [2020-01-01T00:00:00.000Z]'
+                'count: [5.12]',
+                expect.any(Date)
+            );
+            expect(spyCloudWatchPublish).toHaveBeenCalledWith(
+                'timestamp: [2020-01-01T00:00:00.000Z]',
+                expect.any(Date)
             );
             expect(putLogEvents).toHaveBeenCalledTimes(5);
             expect(spyS3Publish).toHaveBeenCalledTimes(5);
-            expect(spyS3Publish).toHaveBeenCalledWith('count: [5.12]');
             expect(spyS3Publish).toHaveBeenCalledWith(
-                'timestamp: [2020-01-01T00:00:00.000Z]'
+                'count: [5.12]',
+                expect.any(Date)
+            );
+            expect(spyS3Publish).toHaveBeenCalledWith(
+                'timestamp: [2020-01-01T00:00:00.000Z]',
+                expect.any(Date)
             );
             expect(putObject).toHaveBeenCalledTimes(5);
         });

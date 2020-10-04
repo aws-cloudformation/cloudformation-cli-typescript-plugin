@@ -409,7 +409,6 @@ export abstract class BaseResource<T extends BaseModel = BaseModel> {
         eventData: Dict,
         context: LambdaContext
     ): Promise<ProgressEvent> {
-        // let isLogSetup = false;
         let progress: ProgressEvent;
 
         try {
@@ -433,13 +432,6 @@ export abstract class BaseResource<T extends BaseModel = BaseModel> {
                 streamName,
                 event.awsAccountId
             );
-
-            // if (event.requestData.providerLogGroupName && this.providerSession) {
-            //     isLogSetup = await ProviderLogHandler.setup(
-            //         event,
-            //         this.providerSession
-            //     );
-            // }
 
             const startTime = new Date(Date.now());
             await this.metricsPublisherProxy.publishInvocationMetric(startTime, action);
@@ -486,10 +478,6 @@ export abstract class BaseResource<T extends BaseModel = BaseModel> {
                 );
             }
         }
-        // if (isLogSetup) {
-        //     const providerLogHandler = ProviderLogHandler.getInstance();
-        //     await providerLogHandler.processLogs();
-        // }
         if (this.loggerProxy) {
             await this.loggerProxy.processQueue();
         }
