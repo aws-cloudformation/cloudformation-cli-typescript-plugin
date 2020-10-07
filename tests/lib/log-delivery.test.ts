@@ -205,7 +205,8 @@ describe('when delivering logs', () => {
                     throw new Error('Sorry');
                 },
             };
-            const lambdaLogger = new LambdaLogPublisher(console, filter);
+            const lambdaLogger = new LambdaLogPublisher(console);
+            lambdaLogger.addFilter(filter);
             const msgToLog = 'How is it going?';
             try {
                 await lambdaLogger.publishLogEvent(msgToLog);
@@ -1175,6 +1176,26 @@ describe('when delivering logs', () => {
             expect(spyPublishLogEvent).toHaveBeenCalledTimes(2);
             expect(spyPublishLogEvent).toHaveBeenCalledWith(
                 'undefined',
+                expect.any(Date)
+            );
+        });
+
+        test('logger proxy add filter', async () => {
+            const filter = {
+                applyFilter(message: string): string {
+                    return message.replace(AWS_ACCOUNT_ID, '<REDACTED>');
+                },
+            };
+            loggerProxy.addLogPublisher(lambdaLogger);
+            loggerProxy.addFilter(filter);
+            loggerProxy.log(`This is log message for account ${AWS_ACCOUNT_ID}`);
+            await loggerProxy.processQueue();
+            expect(spyLambdaPublish).toHaveBeenCalledWith(
+                'This is log message for account <REDACTED>',
+                expect.any(Date)
+            );
+            expect(spyCloudWatchPublish).toHaveBeenCalledWith(
+                'This is log message for account <REDACTED>',
                 expect.any(Date)
             );
         });

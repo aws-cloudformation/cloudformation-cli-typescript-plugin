@@ -72,9 +72,7 @@ describe('when getting metrics', () => {
     });
 
     test('put metric catches error', async () => {
-        const spyLogger: jest.SpyInstance = jest
-            .spyOn(publisher['logger'], 'log')
-            .mockImplementation(() => {});
+        const spyLogger: jest.SpyInstance = jest.spyOn(publisher['logger'], 'log');
         putMetricData.mockReturnValueOnce({
             promise: jest.fn().mockRejectedValueOnce(
                 awsUtil.error(new Error(), {
@@ -240,6 +238,33 @@ describe('when getting metrics', () => {
             ],
             Namespace: NAMESPACE,
         });
+    });
+
+    test('publish log delivery exception metric with error', async () => {
+        const spyLogger: jest.SpyInstance = jest.spyOn(publisher['logger'], 'log');
+        const spyPublishLog: jest.SpyInstance = jest.spyOn(
+            publisher,
+            'publishLogDeliveryExceptionMetric'
+        );
+        putMetricData.mockReturnValueOnce({
+            promise: jest.fn().mockRejectedValueOnce(
+                awsUtil.error(new Error(), {
+                    code: 'InternalServiceError',
+                    message: 'Sorry',
+                })
+            ),
+        });
+        await proxy.publishLogDeliveryExceptionMetric(MOCK_DATE, new TypeError('test'));
+        expect(putMetricData).toHaveBeenCalledTimes(1);
+        expect(putMetricData).toHaveBeenCalledWith({
+            MetricData: expect.any(Array),
+            Namespace: NAMESPACE,
+        });
+        expect(spyLogger).toHaveBeenCalledTimes(1);
+        expect(spyLogger).toHaveBeenCalledWith(
+            'An error occurred while publishing metrics: Sorry'
+        );
+        expect(spyPublishLog).toHaveReturnedWith(Promise.resolve(null));
     });
 
     test('metrics publisher without refreshing client', async () => {

@@ -29,15 +29,15 @@ export interface Logger {
     log(message?: any, ...optionalParams: any[]): void;
 }
 
-interface LogFilter {
+export interface LogFilter {
     applyFilter(rawInput: string): string;
 }
 
 export abstract class LogPublisher {
-    private logFilterList: LogFilter[];
+    private logFilters: LogFilter[];
 
     constructor(...filters: readonly LogFilter[]) {
-        this.logFilterList = Array.from(filters);
+        this.logFilters = Array.from(filters);
     }
 
     protected abstract publishMessage(message: string, eventTime?: Date): Promise<void>;
@@ -48,10 +48,16 @@ export abstract class LogPublisher {
      */
     private filterMessage(message: string): string {
         let toReturn: string = message;
-        this.logFilterList.forEach((filter: LogFilter) => {
+        this.logFilters.forEach((filter: LogFilter) => {
             toReturn = filter.applyFilter(toReturn);
         });
         return toReturn;
+    }
+
+    public addFilter(filter: LogFilter): void {
+        if (filter) {
+            this.logFilters.push(filter);
+        }
     }
 
     public publishLogEvent(message: string, eventTime?: Date): Promise<void> {
@@ -71,7 +77,7 @@ export class LambdaLogPublisher extends LogPublisher {
     }
 
     protected publishMessage(message: string): Promise<void> {
-        return Promise.resolve(this.logger.log(message));
+        return Promise.resolve(this.logger.log('%s\n', message));
     }
 }
 
@@ -355,7 +361,7 @@ export class S3LogPublisher extends LogPublisher {
                 Bucket: this.bucketName,
                 Key: `${this.folderName}/${timestamp}-${Math.floor(
                     Math.random() * 100
-                )}.json`,
+                )}.log`,
                 ContentType: 'application/json',
                 Body: message,
             };
@@ -528,6 +534,12 @@ export class LoggerProxy implements Logger {
 
     public addLogPublisher(logPublisher: LogPublisher): void {
         this.logPublishers.push(logPublisher);
+    }
+
+    public addFilter(filter: LogFilter): void {
+        this.logPublishers.forEach((logPublisher: LogPublisher) => {
+            logPublisher.addFilter(filter);
+        });
     }
 
     public async processQueue(): Promise<void> {
