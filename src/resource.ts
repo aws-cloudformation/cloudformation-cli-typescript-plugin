@@ -25,6 +25,7 @@ import {
     CloudWatchLogPublisher,
     LambdaLogger,
     LambdaLogPublisher,
+    LogFilter,
     LoggerProxy,
     LogPublisher,
     S3LogHelper,
@@ -32,6 +33,7 @@ import {
 } from './log-delivery';
 import { MetricsPublisher, MetricsPublisherProxy } from './metrics';
 import { deepFreeze } from './utils';
+import { exceptions } from '.';
 
 const MUTATING_ACTIONS: [Action, Action, Action] = [
     Action.Create,
@@ -203,6 +205,21 @@ export abstract class BaseResource<T extends BaseModel = BaseModel> {
         }
     }
 
+    private prepareCredentialsFilter(session: SessionProxy): LogFilter {
+        const credentials = session?.configuration?.credentials;
+        if (credentials) {
+            return {
+                applyFilter: (message: string): string => {
+                    for (const [key, value] of Object.entries(credentials)) {
+                        message = message.replace(value, '<REDACTED>');
+                    }
+                    return message;
+                },
+            };
+        }
+        return null;
+    }
+
     /*
      * null-safe exception metrics delivery
      */
@@ -289,11 +306,6 @@ export abstract class BaseResource<T extends BaseModel = BaseModel> {
                     'Event data is missing required property "credentials".'
                 );
             }
-            if (!this.modelCls) {
-                throw new Error(
-                    'Missing Model class to be used to deserialize JSON data.'
-                );
-            }
             request = UnmodeledRequest.deserialize(event.request).toModeled<T>(
                 this.modelCls
             );
@@ -320,6 +332,11 @@ export abstract class BaseResource<T extends BaseModel = BaseModel> {
         let msg = 'Uninitialized';
         let progress: ProgressEvent;
         try {
+            if (!this.modelCls) {
+                throw new exceptions.InternalFailure(
+                    'Missing Model class to be used to deserialize JSON data.'
+                );
+            }
             this.loggerProxy = new LoggerProxy();
             this.loggerProxy.addLogPublisher(new LambdaLogPublisher(console));
             const [request, action, callbackContext] = this.parseTestRequest(eventData);
@@ -410,13 +427,18 @@ export abstract class BaseResource<T extends BaseModel = BaseModel> {
         context: LambdaContext
     ): Promise<ProgressEvent> {
         let progress: ProgressEvent;
-
+        let bearerToken: string;
         try {
+            if (!this.modelCls) {
+                throw new exceptions.InternalFailure(
+                    'Missing Model class to be used to deserialize JSON data.'
+                );
+            }
             const [credentials, action, callback, event] = BaseResource.parseRequest(
                 eventData
             );
+            bearerToken = event.bearerToken;
             const [callerCredentials, providerCredentials] = credentials;
-            // this.log('entrypoint eventData', eventData);
             const request = this.castResourceRequest(event);
 
             let streamName = `${event.awsAccountId}-${event.region}`;
@@ -432,6 +454,7 @@ export abstract class BaseResource<T extends BaseModel = BaseModel> {
                 streamName,
                 event.awsAccountId
             );
+            this.log('entrypoint event data', eventData);
 
             const startTime = new Date(Date.now());
             await this.metricsPublisherProxy.publishInvocationMetric(startTime, action);
@@ -479,6 +502,18 @@ export abstract class BaseResource<T extends BaseModel = BaseModel> {
             }
         }
         if (this.loggerProxy) {
+            // Filters to scrub sensitive info from logs
+            this.loggerProxy.addFilter({
+                applyFilter: (message: string): string => {
+                    return message.replace(bearerToken, '<REDACTED>');
+                },
+            });
+            this.loggerProxy.addFilter(
+                this.prepareCredentialsFilter(this.providerSession)
+            );
+            this.loggerProxy.addFilter(
+                this.prepareCredentialsFilter(this.callerSession)
+            );
             await this.loggerProxy.processQueue();
         }
         return progress;

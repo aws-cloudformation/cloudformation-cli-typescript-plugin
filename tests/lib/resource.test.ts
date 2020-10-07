@@ -11,7 +11,10 @@ import {
 } from '../../src/interface';
 import {
     CloudWatchLogHelper,
+    CloudWatchLogPublisher,
+    LambdaLogPublisher,
     LoggerProxy,
+    LogPublisher,
     S3LogPublisher,
 } from '../../src/log-delivery';
 import { MetricsPublisherProxy } from '../../src/metrics';
@@ -24,14 +27,17 @@ const mockResult = (output: any): jest.Mock => {
     });
 };
 
+jest.mock('aws-sdk');
+jest.mock('aws-sdk/clients/all');
 jest.mock('aws-sdk/clients/cloudformation');
-jest.mock('../../src/log-delivery');
-jest.mock('../../src/metrics');
+jest.mock('aws-sdk/clients/cloudwatch');
+jest.mock('aws-sdk/clients/cloudwatchlogs');
+jest.mock('aws-sdk/clients/s3');
 
 describe('when getting resource', () => {
     let entrypointPayload: any;
     let testEntrypointPayload: any;
-    let mockSession: jest.SpyInstance;
+    let spySession: jest.SpyInstance;
     const TYPE_NAME = 'Test::Foo::Bar';
     class Resource extends BaseResource {}
     class MockModel extends SimpleStateModel {
@@ -54,7 +60,7 @@ describe('when getting resource', () => {
         });
         entrypointPayload = {
             awsAccountId: '123456789012',
-            bearerToken: '123456',
+            bearerToken: 'ecba020e-b2e6-4742-a7d0-8a06ae7c4b2b',
             region: 'us-east-1',
             action: 'CREATE',
             responseEndpoint: null,
@@ -98,9 +104,7 @@ describe('when getting resource', () => {
                 logicalResourceIdentifier: null,
             },
         };
-        mockSession = jest.spyOn(SessionProxy, 'getSession').mockImplementation(() => {
-            return new SessionProxy({});
-        });
+        spySession = jest.spyOn(SessionProxy, 'getSession');
     });
 
     afterEach(() => {
@@ -109,7 +113,7 @@ describe('when getting resource', () => {
     });
 
     const getResource = (handlers?: HandlerSignatures) => {
-        const instance = new Resource(TYPE_NAME, null, handlers);
+        const instance = new Resource(TYPE_NAME, MockModel, handlers);
         return instance;
     };
 
@@ -118,6 +122,16 @@ describe('when getting resource', () => {
         const event = await resource.entrypoint({}, null);
         expect(event.status).toBe(OperationStatus.Failed);
         expect(event.errorCode).toBe(HandlerErrorCode.InvalidRequest);
+    });
+
+    test('entrypoint missing model class', async () => {
+        const resource = new Resource(TYPE_NAME, null);
+        const event = await resource.entrypoint({}, null);
+        expect(event).toMatchObject({
+            message: 'Error: Missing Model class to be used to deserialize JSON data.',
+            status: OperationStatus.Failed,
+            errorCode: HandlerErrorCode.InternalFailure,
+        });
     });
 
     test('entrypoint success', async () => {
@@ -140,8 +154,10 @@ describe('when getting resource', () => {
 
     test('entrypoint handler raises', async () => {
         const resource = new Resource(TYPE_NAME, MockModel);
-        const mockPublishException = (MetricsPublisherProxy.prototype
-            .publishExceptionMetric as unknown) as jest.Mock;
+        const mockPublishException = jest.fn();
+        MetricsPublisherProxy.prototype[
+            'publishExceptionMetric'
+        ] = mockPublishException;
         const spyInvokeHandler = jest.spyOn<typeof resource, any>(
             resource,
             'invokeHandler'
@@ -166,6 +182,34 @@ describe('when getting resource', () => {
         const mockHandler: jest.Mock = jest.fn(() => ProgressEvent.success());
         resource.addHandler(Action.Create, mockHandler);
         await resource.entrypoint(entrypointPayload, null);
+    });
+
+    test('entrypoint redacting credentials', async () => {
+        const spyPublishLogEvent = jest.spyOn<any, any>(
+            LogPublisher.prototype,
+            'publishLogEvent'
+        );
+        const mockPublishMessage = jest.fn().mockResolvedValue({});
+        LambdaLogPublisher.prototype['publishMessage'] = mockPublishMessage;
+        CloudWatchLogPublisher.prototype['publishMessage'] = mockPublishMessage;
+        const resource = new Resource(TYPE_NAME, MockModel);
+        entrypointPayload['action'] = 'READ';
+        const mockHandler: jest.Mock = jest.fn(() => ProgressEvent.success());
+        resource.addHandler(Action.Create, mockHandler);
+        await resource.entrypoint(entrypointPayload, null);
+        expect(spySession).toHaveBeenCalled();
+        expect(spyPublishLogEvent).toHaveBeenCalledTimes(2);
+        expect(mockPublishMessage).toHaveBeenCalledTimes(2);
+        mockPublishMessage.mock.calls.forEach((value: any[]) => {
+            const message = value[0];
+            expect(message).toMatch(/bearerToken: '<REDACTED>'/);
+            expect(message).toMatch(
+                /providerCredentials: {\s+accessKeyId: '<REDACTED>',\s+secretAccessKey: '<REDACTED>',\s+sessionToken: '<REDACTED>'\s+}/
+            );
+            expect(message).toMatch(
+                /callerCredentials: {\s+accessKeyId: '<REDACTED>',\s+secretAccessKey: '<REDACTED>',\s+sessionToken: '<REDACTED>'\s+}/
+            );
+        });
     });
 
     test('entrypoint with callback context', async () => {
@@ -575,6 +619,16 @@ describe('when getting resource', () => {
         expect(event.status).toBe(OperationStatus.Failed);
         expect(event.errorCode).toBe(HandlerErrorCode.InternalFailure);
         expect(event.message).toBe('exception');
+    });
+
+    test('test entrypoint missing model class', async () => {
+        const resource = new Resource(TYPE_NAME, null);
+        const event = await resource.testEntrypoint({}, null);
+        expect(event).toMatchObject({
+            message: 'Error: Missing Model class to be used to deserialize JSON data.',
+            status: OperationStatus.Failed,
+            errorCode: HandlerErrorCode.InternalFailure,
+        });
     });
 
     test('test entrypoint success', async () => {

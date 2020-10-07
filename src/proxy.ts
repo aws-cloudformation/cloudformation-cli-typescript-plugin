@@ -35,6 +35,10 @@ export class SessionProxy implements Session {
         return service;
     }
 
+    get configuration(): ServiceConfigurationOptions {
+        return this.options;
+    }
+
     public static getSession(
         credentials?: CredentialsOptions,
         region?: string
