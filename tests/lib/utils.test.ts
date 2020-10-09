@@ -1,33 +1,132 @@
-import { deepFreeze } from '../../src/utils';
+import { deepFreeze, replaceAll } from '../../src/utils';
 
 describe('when getting utils', () => {
-    let obj;
-    let circ1;
-    let circ2;
-    let proto;
+    afterEach(() => {
+        jest.clearAllMocks();
+        jest.restoreAllMocks();
+    });
 
-    beforeEach(() => {
-        obj = {};
-        obj.first = {
-            second: { third: { num: 11, fun() {} } },
-        };
+    describe('replace all', () => {
+        test('should skip replace falsy', () => {
+            expect(replaceAll(null, null, null)).toBe(null);
+            expect(replaceAll(undefined, null, null)).toBe(undefined);
+            expect(replaceAll('', null, null)).toBe('');
+        });
 
-        circ1 = { first: { test: 1 } };
-        circ2 = { second: { test: 2 } };
-
-        // Create circular reference
-        circ2.circ1 = circ1;
-        circ1.circ2 = circ2;
-
-        const ob1 = { proto: { test: { is: 1 } } };
-        const ob2 = Object.create(ob1);
-        ob2.ob2Prop = { prop: 'prop' };
-        proto = Object.create(ob2);
-        proto.child = { test: 1 };
-        proto.fun = () => {};
+        test('should replace all occurrences', () => {
+            const BEARER_TOKEN = 'ce1919f7-8f9b-43fd-881e-c616ca74c4d3';
+            const SECRET_ACCESS_KEY = '66iOGPN5LnpZorcLr8Kh25u8AbjHVllv5/poh2O0';
+            const SESSION_TOKEN =
+                'lameHS2vQOknSHWhdFYTxm2eJc1JMn9YBNI4nV4mXue945KPL6DHfW8EsUQT5zwssYEC1NvYP9yD6Y5s5lKR3chflOHPFsIe6eqg\\.*+-?^${}()|[]';
+            const input = `
+            {
+                awsAccountId: '123456789012',
+                bearerToken: '${BEARER_TOKEN}',
+                region: 'eu-central-1',
+                action: 'CREATE',
+                responseEndpoint: null,
+                resourceType: 'Community::Monitoring::Website',
+                resourceTypeVersion: '000001',
+                callbackContext: null,
+                requestData: {
+                  callerCredentials: {
+                      accessKeyId: '',
+                      secretAccessKey: '${SECRET_ACCESS_KEY}',
+                      sessionToken: '${SESSION_TOKEN}'
+                  },
+                  providerCredentials: {
+                    accessKeyId: '',
+                    secretAccessKey: '${SECRET_ACCESS_KEY}',
+                    sessionToken: '${SESSION_TOKEN}'
+                  },
+                  providerLogGroupName: 'community-monitoring-website-logs',
+                  logicalResourceId: 'MyResource',
+                  resourceProperties: {
+                      Name: 'MyWebsiteMonitor',
+                      BerearToken: '${BEARER_TOKEN}'
+                    },
+                  previousResourceProperties: null,
+                  stackTags: {},
+                  previousStackTags: {}
+                },
+                stackId: 'arn:aws:cloudformation:us-east-1:123456789012:stack/SampleStack/e722ae60-fe62-11e8-9a0e-0ae8cc519968'
+            }
+            `;
+            const expected = `
+            {
+                awsAccountId: '123456789012',
+                bearerToken: '<REDACTED>',
+                region: 'eu-central-1',
+                action: 'CREATE',
+                responseEndpoint: null,
+                resourceType: 'Community::Monitoring::Website',
+                resourceTypeVersion: '000001',
+                callbackContext: null,
+                requestData: {
+                  callerCredentials: {
+                      accessKeyId: '',
+                      secretAccessKey: '<REDACTED>',
+                      sessionToken: '<REDACTED>'
+                  },
+                  providerCredentials: {
+                    accessKeyId: '',
+                    secretAccessKey: '<REDACTED>',
+                    sessionToken: '<REDACTED>'
+                  },
+                  providerLogGroupName: 'community-monitoring-website-logs',
+                  logicalResourceId: 'MyResource',
+                  resourceProperties: {
+                      Name: 'MyWebsiteMonitor',
+                      BerearToken: '<REDACTED>'
+                    },
+                  previousResourceProperties: null,
+                  stackTags: {},
+                  previousStackTags: {}
+                },
+                stackId: 'arn:aws:cloudformation:us-east-1:123456789012:stack/SampleStack/e722ae60-fe62-11e8-9a0e-0ae8cc519968'
+            }
+            `;
+            expect(
+                replaceAll(
+                    replaceAll(
+                        replaceAll(input, BEARER_TOKEN, '<REDACTED>'),
+                        SECRET_ACCESS_KEY,
+                        '<REDACTED>'
+                    ),
+                    SESSION_TOKEN,
+                    '<REDACTED>'
+                )
+            ).toBe(expected);
+        });
     });
 
     describe('deep freeze', () => {
+        let obj;
+        let circ1;
+        let circ2;
+        let proto;
+
+        beforeEach(() => {
+            obj = {};
+            obj.first = {
+                second: { third: { num: 11, fun() {} } },
+            };
+
+            circ1 = { first: { test: 1 } };
+            circ2 = { second: { test: 2 } };
+
+            // Create circular reference
+            circ2.circ1 = circ1;
+            circ1.circ2 = circ2;
+
+            const ob1 = { proto: { test: { is: 1 } } };
+            const ob2 = Object.create(ob1);
+            ob2.ob2Prop = { prop: 'prop' };
+            proto = Object.create(ob2);
+            proto.child = { test: 1 };
+            proto.fun = () => {};
+        });
+
         test('should deep freeze nested objects', () => {
             deepFreeze(obj);
             expect(Object.isFrozen(obj.first.second)).toBe(true);

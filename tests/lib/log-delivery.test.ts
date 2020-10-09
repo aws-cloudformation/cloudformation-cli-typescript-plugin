@@ -1008,7 +1008,7 @@ describe('when delivering logs', () => {
                 expect.objectContaining({
                     Bucket: S3_BUCKET_NAME,
                     Key: expect.stringContaining(`${S3_FOLDER_NAME}/`),
-                    ContentType: 'application/json',
+                    ContentType: 'text/plain',
                     Body: msgToLog,
                 })
             );
@@ -1038,7 +1038,7 @@ describe('when delivering logs', () => {
                 expect.objectContaining({
                     Bucket: S3_BUCKET_NAME,
                     Key: expect.stringContaining(`${S3_FOLDER_NAME}/`),
-                    ContentType: 'application/json',
+                    ContentType: 'text/plain',
                     Body: msgToLog,
                 })
             );
@@ -1088,7 +1088,7 @@ describe('when delivering logs', () => {
                 expect.objectContaining({
                     Bucket: S3_BUCKET_NAME,
                     Key: expect.stringContaining(`${S3_FOLDER_NAME}/`),
-                    ContentType: 'application/json',
+                    ContentType: 'text/plain',
                     Body: 'This is log message for account <REDACTED>',
                 })
             );
@@ -1126,7 +1126,7 @@ describe('when delivering logs', () => {
                 expect.objectContaining({
                     Bucket: S3_BUCKET_NAME,
                     Key: expect.stringContaining(`${S3_FOLDER_NAME}/`),
-                    ContentType: 'application/json',
+                    ContentType: 'text/plain',
                     Body: msgToLog,
                 })
             );

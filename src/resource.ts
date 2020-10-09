@@ -32,7 +32,7 @@ import {
     S3LogPublisher,
 } from './log-delivery';
 import { MetricsPublisher, MetricsPublisherProxy } from './metrics';
-import { deepFreeze } from './utils';
+import { deepFreeze, replaceAll } from './utils';
 import { exceptions } from '.';
 
 const MUTATING_ACTIONS: [Action, Action, Action] = [
@@ -211,7 +211,7 @@ export abstract class BaseResource<T extends BaseModel = BaseModel> {
             return {
                 applyFilter: (message: string): string => {
                     for (const [key, value] of Object.entries(credentials)) {
-                        message = message.replace(value, '<REDACTED>');
+                        message = replaceAll(message, value, '<REDACTED>');
                     }
                     return message;
                 },
@@ -505,7 +505,7 @@ export abstract class BaseResource<T extends BaseModel = BaseModel> {
             // Filters to scrub sensitive info from logs
             this.loggerProxy.addFilter({
                 applyFilter: (message: string): string => {
-                    return message.replace(bearerToken, '<REDACTED>');
+                    return replaceAll(message, bearerToken, '<REDACTED>');
                 },
             });
             this.loggerProxy.addFilter(

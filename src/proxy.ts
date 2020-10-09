@@ -2,7 +2,7 @@ import { CredentialsOptions } from 'aws-sdk/lib/credentials';
 import { ServiceConfigurationOptions } from 'aws-sdk/lib/service';
 import * as Aws from 'aws-sdk/clients/all';
 import { NextToken } from 'aws-sdk/clients/cloudformation';
-import { builder, IBuilder } from 'tombok';
+import { builder, IBuilder } from '@org-formation/tombok';
 
 import {
     BaseDto,
@@ -116,6 +116,7 @@ export class ProgressEvent<
     // TODO: remove workaround when decorator mutation implemented: https://github.com/microsoft/TypeScript/issues/4881
     @Exclude()
     public static builder<T extends ProgressEvent>(template?: Partial<T>): IBuilder<T> {
+        /* istanbul ignore next */
         return null;
     }
 

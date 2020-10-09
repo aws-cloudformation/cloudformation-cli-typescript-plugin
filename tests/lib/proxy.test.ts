@@ -76,14 +76,11 @@ describe('when getting session proxy', () => {
             someotherkey: 'b',
             somenullkey: null,
         });
-        const event = new ProgressEvent({
-            status: OperationStatus.Success,
-            message: message,
-            resourceModel: model,
-        });
+        const event = ProgressEvent.progress(model, null);
+        event.message = message;
         const serialized = event.serialize();
         expect(serialized).toMatchObject({
-            status: OperationStatus.Success,
+            status: OperationStatus.InProgress,
             message,
             resourceModel: {
                 somekey: 'a',

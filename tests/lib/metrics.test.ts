@@ -80,6 +80,7 @@ describe('when getting metrics', () => {
                     message:
                         'An error occurred (InternalServiceError) when ' +
                         'calling the PutMetricData operation: ',
+                    retryable: false,
                 })
             ),
         });
@@ -246,13 +247,15 @@ describe('when getting metrics', () => {
             publisher,
             'publishLogDeliveryExceptionMetric'
         );
+        const errorObject = {
+            code: 'InternalServiceError',
+            message: 'Sorry',
+            retryable: true,
+        };
         putMetricData.mockReturnValueOnce({
-            promise: jest.fn().mockRejectedValueOnce(
-                awsUtil.error(new Error(), {
-                    code: 'InternalServiceError',
-                    message: 'Sorry',
-                })
-            ),
+            promise: jest
+                .fn()
+                .mockRejectedValueOnce(awsUtil.error(new Error(), errorObject)),
         });
         await proxy.publishLogDeliveryExceptionMetric(MOCK_DATE, new TypeError('test'));
         expect(putMetricData).toHaveBeenCalledTimes(1);
@@ -261,9 +264,7 @@ describe('when getting metrics', () => {
             Namespace: NAMESPACE,
         });
         expect(spyLogger).toHaveBeenCalledTimes(1);
-        expect(spyLogger).toHaveBeenCalledWith(
-            'An error occurred while publishing metrics: Sorry'
-        );
+        expect(spyLogger).toHaveBeenCalledWith(expect.objectContaining(errorObject));
         expect(spyPublishLog).toHaveReturnedWith(Promise.resolve(null));
     });
 

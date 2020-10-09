@@ -74,7 +74,11 @@ export class MetricsPublisher {
                 .promise();
             this.log('Response from "putMetricData"', metric);
         } catch (err) {
-            this.log(`An error occurred while publishing metrics: ${err.message}`);
+            if (err.retryable) {
+                throw err;
+            } else {
+                this.log(`An error occurred while publishing metrics: ${err.message}`);
+            }
         }
     }
 

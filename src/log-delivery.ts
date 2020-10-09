@@ -362,7 +362,7 @@ export class S3LogPublisher extends LogPublisher {
                 Key: `${this.folderName}/${timestamp}-${Math.floor(
                     Math.random() * 100
                 )}.log`,
-                ContentType: 'application/json',
+                ContentType: 'text/plain',
                 Body: message,
             };
 

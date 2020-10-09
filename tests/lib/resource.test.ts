@@ -60,7 +60,7 @@ describe('when getting resource', () => {
         });
         entrypointPayload = {
             awsAccountId: '123456789012',
-            bearerToken: 'ecba020e-b2e6-4742-a7d0-8a06ae7c4b2b',
+            bearerToken: 'e722ae60-fe62-11e8-9a0e-0ae8cc519968',
             region: 'us-east-1',
             action: 'CREATE',
             responseEndpoint: null,
@@ -88,7 +88,7 @@ describe('when getting resource', () => {
                 previousStackTags: { tag1: 'def' },
             },
             stackId:
-                'arn:aws:cloudformation:us-east-1:123456789012:stack/SampleStack/e722ae60-fe62-11e8-9a0e-0ae8cc519968',
+                'arn:aws:cloudformation:us-east-1:123456789012:stack/sample-stack/e722ae60-fe62-11e8-9a0e-0ae8cc519968',
         };
         testEntrypointPayload = {
             credentials: {
@@ -152,6 +152,21 @@ describe('when getting resource', () => {
         expect(mockHandler).toBeCalledTimes(1);
     });
 
+    test('publish exception metric without proxy', async () => {
+        const resource = new Resource(TYPE_NAME, MockModel);
+        resource.addHandler(Action.Create, jest.fn());
+        const mockPublishException = jest.fn();
+        MetricsPublisherProxy.prototype[
+            'publishExceptionMetric'
+        ] = mockPublishException;
+        const mockLog = jest.fn();
+        resource['lambdaLogger']['log'] = mockLog;
+        await resource['publishExceptionMetric'](Action.Create, Error('Sorry'));
+        expect(mockPublishException).toBeCalledTimes(0);
+        expect(mockLog).toBeCalledTimes(1);
+        expect(mockLog).toBeCalledWith('Error: Sorry');
+    });
+
     test('entrypoint handler raises', async () => {
         const resource = new Resource(TYPE_NAME, MockModel);
         const mockPublishException = jest.fn();
@@ -209,6 +224,7 @@ describe('when getting resource', () => {
             expect(message).toMatch(
                 /callerCredentials: {\s+accessKeyId: '<REDACTED>',\s+secretAccessKey: '<REDACTED>',\s+sessionToken: '<REDACTED>'\s+}/
             );
+            expect(message).toMatch(/stack\/sample-stack\/<REDACTED>/);
         });
     });
 
