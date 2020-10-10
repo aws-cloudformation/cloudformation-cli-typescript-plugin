@@ -1,8 +1,12 @@
 import logging
 import shutil
-import zipfile
+import sys
 from subprocess import PIPE, CalledProcessError, run as subprocess_run  # nosec
 from tempfile import TemporaryFile
+if sys.version_info >= (3, 8):
+    from zipfile import ZipFile
+else:
+    from zipfile38 import ZipFile
 
 from rpdk.core.data_loaders import resource_stream
 from rpdk.core.exceptions import DownstreamError
@@ -173,7 +177,7 @@ class TypescriptLanguagePlugin(LanguagePlugin):
     def _pre_package(self, build_path):
         f = TemporaryFile("w+b")
 
-        with zipfile.ZipFile(f, mode="w") as zip_file:
+        with zipfile.ZipFile(f, mode="w", strict_timestamps=False) as zip_file:
             self._recursive_relative_write(build_path, build_path, zip_file)
         f.seek(0)
 
