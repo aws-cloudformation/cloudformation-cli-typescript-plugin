@@ -4,9 +4,9 @@ import sys
 from subprocess import PIPE, CalledProcessError, run as subprocess_run  # nosec
 from tempfile import TemporaryFile
 if sys.version_info >= (3, 8):
-    from zipfile import ZipFile
+    import zipfile
 else:
-    from zipfile38 import ZipFile
+    import zipfile38 as zipfile
 
 from rpdk.core.data_loaders import resource_stream
 from rpdk.core.exceptions import DownstreamError
