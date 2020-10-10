@@ -1,9 +1,14 @@
 # pylint: disable=redefined-outer-name,protected-access
 import os
+import sys
 from subprocess import CalledProcessError
+from tempfile import TemporaryFile
 from unittest.mock import patch, sentinel
 from uuid import uuid4
-from zipfile import ZipFile
+if sys.version_info >= (3, 8):
+    from zipfile import ZipFile
+else:
+    from zipfile38 import ZipFile
 
 import pytest
 from rpdk.core.exceptions import DownstreamError
@@ -94,6 +99,10 @@ def test_initialize(project: Project):
         ".npmrc",
         ".rpdk-config",
         "foo-bar-baz.json",
+        "example_inputs",
+        "example_inputs/inputs_1_create.json",
+        "example_inputs/inputs_1_invalid.json",
+        "example_inputs/inputs_1_update.json",
         "package.json",
         "README.md",
         "sam-tests",
@@ -132,12 +141,12 @@ def test_package_local(project: Project):
     project.load_schema()
     project.generate()
 
-    zip_path = project.root / "foo-bar-baz.zip"
+    f = TemporaryFile("w+b")
 
-    with zip_path.open("wb") as f, ZipFile(f, mode="w") as zip_file:
+    with ZipFile(f, mode="w", strict_timestamps=False) as zip_file:
         project._plugin.package(project, zip_file)
 
-    with zip_path.open("rb") as f, ZipFile(f, mode="r") as zip_file:
+    with ZipFile(f, mode="r") as zip_file:
         assert sorted(zip_file.namelist()) == [
             "ResourceProvider.zip",
             "src/handlers.ts",
