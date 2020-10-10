@@ -146,7 +146,7 @@ def test_package_local(project: Project):
     with ZipFile(f, mode="w", strict_timestamps=False) as zip_file:
         project._plugin.package(project, zip_file)
 
-    with ZipFile(f, mode="r") as zip_file:
+    with ZipFile(f, mode="r", strict_timestamps=False) as zip_file:
         assert sorted(zip_file.namelist()) == [
             "ResourceProvider.zip",
             "src/handlers.ts",
