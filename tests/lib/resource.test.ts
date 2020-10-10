@@ -15,6 +15,7 @@ import {
     LambdaLogPublisher,
     LoggerProxy,
     LogPublisher,
+    S3LogHelper,
     S3LogPublisher,
 } from '../../src/log-delivery';
 import { MetricsPublisherProxy } from '../../src/metrics';
@@ -38,6 +39,8 @@ describe('when getting resource', () => {
     let entrypointPayload: any;
     let testEntrypointPayload: any;
     let spySession: jest.SpyInstance;
+    let spySessionClient: jest.SpyInstance;
+    let spyInitializeRuntime: jest.SpyInstance;
     const TYPE_NAME = 'Test::Foo::Bar';
     class Resource extends BaseResource {}
     class MockModel extends SimpleStateModel {
@@ -80,7 +83,7 @@ describe('when getting resource', () => {
                     sessionToken:
                         '842HYOFIQAEUDF78R8T7IU43HSADYGIFHBJSDHFA87SDF9PYvN1CEYASDUYFT5TQ97YASIHUDFAIUEYRISDKJHFAYSUDTFSDFADS',
                 },
-                providerLogGroupName: 'providerLoggingGroupName',
+                providerLogGroupName: 'provider-logging-group-name',
                 logicalResourceId: 'myBucket',
                 resourceProperties: { state: 'state1' },
                 previousResourceProperties: { state: 'state2' },
@@ -105,6 +108,11 @@ describe('when getting resource', () => {
             },
         };
         spySession = jest.spyOn(SessionProxy, 'getSession');
+        spySessionClient = jest.spyOn<any, any>(SessionProxy.prototype, 'client');
+        spyInitializeRuntime = jest.spyOn<any, any>(
+            Resource.prototype,
+            'initializeRuntime'
+        );
     });
 
     afterEach(() => {
@@ -137,10 +145,6 @@ describe('when getting resource', () => {
     test('entrypoint success', async () => {
         const mockHandler: jest.Mock = jest.fn(() => ProgressEvent.success());
         const resource = new Resource(TYPE_NAME, MockModel);
-        const spyInitializeRuntime = jest.spyOn<typeof resource, any>(
-            resource,
-            'initializeRuntime'
-        );
         resource.addHandler(Action.Create, mockHandler);
         const event = await resource.entrypoint(entrypointPayload, null);
         expect(spyInitializeRuntime).toBeCalledTimes(1);
@@ -205,6 +209,9 @@ describe('when getting resource', () => {
             'publishLogEvent'
         );
         const mockPublishMessage = jest.fn().mockResolvedValue({});
+        const spyPrepareLogStream = jest
+            .spyOn<any, any>(CloudWatchLogHelper.prototype, 'prepareLogStream')
+            .mockResolvedValue('log-stream-name');
         LambdaLogPublisher.prototype['publishMessage'] = mockPublishMessage;
         CloudWatchLogPublisher.prototype['publishMessage'] = mockPublishMessage;
         const resource = new Resource(TYPE_NAME, MockModel);
@@ -213,6 +220,8 @@ describe('when getting resource', () => {
         resource.addHandler(Action.Create, mockHandler);
         await resource.entrypoint(entrypointPayload, null);
         expect(spySession).toHaveBeenCalled();
+        expect(spySessionClient).toBeCalledTimes(3);
+        expect(spyPrepareLogStream).toBeCalledTimes(1);
         expect(spyPublishLogEvent).toHaveBeenCalledTimes(2);
         expect(mockPublishMessage).toHaveBeenCalledTimes(2);
         mockPublishMessage.mock.calls.forEach((value: any[]) => {
@@ -256,10 +265,6 @@ describe('when getting resource', () => {
         const mockHandler: jest.Mock = jest.fn(() => event);
         const resource = new Resource(TYPE_NAME, MockModel);
         resource.addHandler(Action.Create, mockHandler);
-        const spyInitializeRuntime = jest.spyOn<typeof resource, any>(
-            resource,
-            'initializeRuntime'
-        );
         const response = await resource.entrypoint(entrypointPayload, null);
         expect(spyInitializeRuntime).toBeCalledTimes(1);
         expect(response).toMatchObject({
@@ -303,21 +308,29 @@ describe('when getting resource', () => {
         const mockHandler: jest.Mock = jest.fn(() => ProgressEvent.success());
         const resource = new Resource(TYPE_NAME, MockModel);
         resource.addHandler(Action.Create, mockHandler);
-        const spyInitializeRuntime = jest.spyOn<typeof resource, any>(
-            resource,
-            'initializeRuntime'
+        const spyPrepareLogStream = jest
+            .spyOn<any, any>(CloudWatchLogHelper.prototype, 'prepareLogStream')
+            .mockResolvedValue(null);
+        const spyPrepareFolder = jest.spyOn<any, any>(
+            S3LogHelper.prototype,
+            'prepareFolder'
         );
-        const spyPrepareLogStream = jest.spyOn<any, any>(
-            CloudWatchLogHelper.prototype,
-            'prepareLogStream'
-        );
-        spyPrepareLogStream.mockRejectedValue(() => {
-            throw new Error();
-        });
         const response = await resource.entrypoint(entrypointPayload, null);
         expect(spyInitializeRuntime).toBeCalledTimes(1);
+        expect(spySessionClient).toBeCalledTimes(4);
         expect(spyPrepareLogStream).toBeCalledTimes(1);
+        expect(spyPrepareLogStream).toReturnWith(Promise.resolve(null));
+        expect(spyPrepareFolder).toBeCalledTimes(1);
+        expect(spyPrepareFolder).toReturnWith(
+            Promise.resolve(
+                'arn__aws__cloudformation__us-east-1__123456789012__stack/sample-stack/e722ae60-fe62-11e8-9a0e-0ae8cc519968'
+            )
+        );
         expect(resource['providerEventsLogger']).toBeInstanceOf(S3LogPublisher);
+        expect(resource['s3LogHelper']).toBeDefined();
+        expect(resource['s3LogHelper']['bucketName']).toBe(
+            'provider-logging-group-name-123456789012'
+        );
         expect(response).toMatchObject({
             message: '',
             status: OperationStatus.Success,

@@ -139,11 +139,9 @@ export abstract class BaseResource<T extends BaseModel = BaseModel> {
         this.platformLambdaLogger = new LambdaLogPublisher(console);
         this.loggerProxy.addLogPublisher(this.platformLambdaLogger);
 
-        // Initialization skipped if dependencies were set during injection (in unit
-        // tests).
+        // Initialization skipped if dependencies were set during injection (in unit tests).
 
-        // NOTE: providerCredentials and providerLogGroupName are null/not null in
-        // sync.
+        // NOTE: providerCredentials and providerLogGroupName are null/not null in sync.
         // Both are required parameters when LoggingConfig (optional) is provided when
         // 'RegisterType'.
         if (providerCredentials) {
@@ -171,29 +169,34 @@ export abstract class BaseResource<T extends BaseModel = BaseModel> {
                         this.metricsPublisherProxy
                     );
                     this.cloudWatchLogHelper.refreshClient();
+                    const logStreamName = await this.cloudWatchLogHelper.prepareLogStream();
+                    if (!logStreamName) {
+                        throw new Error('Unable to setup CloudWatch logs.');
+                    }
                     this.providerEventsLogger = new CloudWatchLogPublisher(
                         this.providerSession,
                         providerLogGroupName,
-                        await this.cloudWatchLogHelper.prepareLogStream(),
+                        logStreamName,
                         this.lambdaLogger,
                         this.metricsPublisherProxy
                     );
                 } catch (err) {
                     this.log(err);
                     // We will fallback to S3 log publisher.
-                    // This will not be work in Production,
-                    // because there is no permission to create S3 bucket
+                    // This will not work in Production, because
+                    // there is no permission to create S3 bucket.
+                    const logGroupName = `${providerLogGroupName}-${awsAccountId}`;
                     this.s3LogHelper = new S3LogHelper(
                         this.providerSession,
-                        providerLogGroupName,
-                        `${providerLogStreamName}-${awsAccountId}`,
+                        logGroupName,
+                        providerLogStreamName,
                         this.lambdaLogger,
                         this.metricsPublisherProxy
                     );
                     this.s3LogHelper.refreshClient();
                     this.providerEventsLogger = new S3LogPublisher(
                         this.providerSession,
-                        providerLogGroupName,
+                        logGroupName,
                         await this.s3LogHelper.prepareFolder(),
                         this.lambdaLogger,
                         this.metricsPublisherProxy

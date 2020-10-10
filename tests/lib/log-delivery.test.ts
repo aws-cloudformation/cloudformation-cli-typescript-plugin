@@ -358,7 +358,7 @@ describe('when delivering logs', () => {
             createLogGroup.mockReturnValue({
                 promise: jest.fn().mockRejectedValueOnce(
                     awsUtil.error(new Error(), {
-                        code: 'AccessDenied',
+                        code: 'AccessDeniedException',
                     })
                 ),
             });
@@ -388,7 +388,7 @@ describe('when delivering logs', () => {
             createLogStream.mockReturnValue({
                 promise: jest.fn().mockRejectedValueOnce(
                     awsUtil.error(new Error(), {
-                        code: 'AccessDenied',
+                        code: 'AccessDeniedException',
                     })
                 ),
             });
@@ -490,7 +490,7 @@ describe('when delivering logs', () => {
             putLogEvents.mockReturnValue({
                 promise: jest.fn().mockRejectedValueOnce(
                     awsUtil.error(new Error(), {
-                        code: 'AccessDenied',
+                        code: 'AccessDeniedException',
                     })
                 ),
                 on: () => {},
@@ -499,7 +499,7 @@ describe('when delivering logs', () => {
             try {
                 await cloudWatchLogger.publishLogEvent(msgToLog);
             } catch (e) {
-                expect(e.name).toBe('AccessDenied');
+                expect(e.name).toBe('AccessDeniedException');
             }
             expect(putLogEvents).toHaveBeenCalledTimes(1);
             expect(putLogEvents).toHaveBeenCalledWith({
@@ -537,7 +537,7 @@ describe('when delivering logs', () => {
             describeLogStreams.mockReturnValue({
                 promise: jest.fn().mockRejectedValueOnce(
                     awsUtil.error(new Error(), {
-                        code: 'AccessDenied',
+                        code: 'AccessDeniedException',
                     })
                 ),
             });
@@ -626,7 +626,7 @@ describe('when delivering logs', () => {
             putLogEvents.mockReturnValue({
                 promise: jest.fn().mockRejectedValueOnce(
                     awsUtil.error(new Error(), {
-                        code: 'AccessDenied',
+                        code: 'AccessDeniedException',
                     })
                 ),
                 on: () => {},
@@ -643,7 +643,7 @@ describe('when delivering logs', () => {
             try {
                 await cloudWatchLogger.publishLogEvent(msgToLog);
             } catch (e) {
-                expect(e.code).toBe('AccessDenied');
+                expect(e.code).toBe('AccessDeniedException');
             }
             expect(putLogEvents).toHaveBeenCalledTimes(1);
             expect(putLogEvents).toHaveBeenCalledWith({
@@ -901,7 +901,7 @@ describe('when delivering logs', () => {
             createBucket.mockReturnValue({
                 promise: jest.fn().mockRejectedValueOnce(
                     awsUtil.error(new Error(), {
-                        code: 'AccessDenied',
+                        code: 'AccessDeniedException',
                     })
                 ),
             });
@@ -934,7 +934,7 @@ describe('when delivering logs', () => {
             putObject.mockReturnValue({
                 promise: jest.fn().mockRejectedValueOnce(
                     awsUtil.error(new Error(), {
-                        code: 'AccessDenied',
+                        code: 'AccessDeniedException',
                     })
                 ),
             });
@@ -1023,7 +1023,7 @@ describe('when delivering logs', () => {
             putObject.mockReturnValue({
                 promise: jest.fn().mockRejectedValueOnce(
                     awsUtil.error(new Error(), {
-                        code: 'AccessDenied',
+                        code: 'AccessDeniedException',
                     })
                 ),
             });
@@ -1031,7 +1031,7 @@ describe('when delivering logs', () => {
             try {
                 await s3Logger.publishLogEvent(msgToLog);
             } catch (e) {
-                expect(e.name).toBe('AccessDenied');
+                expect(e.name).toBe('AccessDeniedException');
             }
             expect(putObject).toHaveBeenCalledTimes(1);
             expect(putObject).toHaveBeenCalledWith(
@@ -1103,7 +1103,7 @@ describe('when delivering logs', () => {
             putObject.mockReturnValue({
                 promise: jest.fn().mockRejectedValueOnce(
                     awsUtil.error(new Error(), {
-                        code: 'AccessDenied',
+                        code: 'AccessDeniedException',
                     })
                 ),
             });
@@ -1119,7 +1119,7 @@ describe('when delivering logs', () => {
             try {
                 await s3Logger.publishLogEvent(msgToLog);
             } catch (e) {
-                expect(e.code).toBe('AccessDenied');
+                expect(e.code).toBe('AccessDeniedException');
             }
             expect(putObject).toHaveBeenCalledTimes(1);
             expect(putObject).toHaveBeenCalledWith(

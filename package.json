@@ -7,8 +7,7 @@
         "test": "tests"
     },
     "files": [
-        "dist",
-        "global.d.ts"
+        "dist"
     ],
     "publishConfig": {
         "access": "public"

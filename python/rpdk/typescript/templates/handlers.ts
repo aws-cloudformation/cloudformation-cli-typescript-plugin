@@ -31,7 +31,7 @@ class Resource extends BaseResource<ResourceModel> {
         session: Optional<SessionProxy>,
         request: ResourceHandlerRequest<ResourceModel>,
         callbackContext: CallbackContext,
-        logger: Optional<LoggerProxy>
+        logger: LoggerProxy
     ): Promise<ProgressEvent> {
         const model: ResourceModel = new ResourceModel(request.desiredResourceState);
         const progress = ProgressEvent.progress<ProgressEvent<ResourceModel, CallbackContext>>(model);
@@ -68,7 +68,7 @@ class Resource extends BaseResource<ResourceModel> {
         session: Optional<SessionProxy>,
         request: ResourceHandlerRequest<ResourceModel>,
         callbackContext: CallbackContext,
-        logger: Optional<LoggerProxy>
+        logger: LoggerProxy
     ): Promise<ProgressEvent> {
         const model: ResourceModel = new ResourceModel(request.desiredResourceState);
         const progress = ProgressEvent.progress<ProgressEvent<ResourceModel, CallbackContext>>(model);
@@ -92,7 +92,7 @@ class Resource extends BaseResource<ResourceModel> {
         session: Optional<SessionProxy>,
         request: ResourceHandlerRequest<ResourceModel>,
         callbackContext: CallbackContext,
-        logger: Optional<LoggerProxy>
+        logger: LoggerProxy
     ): Promise<ProgressEvent> {
         const model: ResourceModel = new ResourceModel(request.desiredResourceState);
         const progress = ProgressEvent.progress<ProgressEvent<ResourceModel, CallbackContext>>();
@@ -115,7 +115,7 @@ class Resource extends BaseResource<ResourceModel> {
         session: Optional<SessionProxy>,
         request: ResourceHandlerRequest<ResourceModel>,
         callbackContext: CallbackContext,
-        logger: Optional<LoggerProxy>
+        logger: LoggerProxy
     ): Promise<ProgressEvent> {
         const model: ResourceModel = new ResourceModel(request.desiredResourceState);
         // TODO: put code here
@@ -137,7 +137,7 @@ class Resource extends BaseResource<ResourceModel> {
         session: Optional<SessionProxy>,
         request: ResourceHandlerRequest<ResourceModel>,
         callbackContext: CallbackContext,
-        logger: Optional<LoggerProxy>
+        logger: LoggerProxy
     ): Promise<ProgressEvent> {
         const model: ResourceModel = new ResourceModel(request.desiredResourceState);
         // TODO: put code here

@@ -68,6 +68,10 @@ export abstract class LogPublisher {
     }
 }
 
+/**
+ * Publisher that will send the logs to stdout through Console instance,
+ * as that is the default behavior for Node.js Lambda
+ */
 export class LambdaLogPublisher extends LogPublisher {
     constructor(
         private readonly logger: LambdaLogger,
@@ -81,6 +85,12 @@ export class LambdaLogPublisher extends LogPublisher {
     }
 }
 
+/**
+ * Publisher that will send the logs to CloudWatch.
+ * It requires the following IAM permissions:
+ *   * logs:DescribeLogStreams
+ *   * logs:PutLogEvents
+ */
 export class CloudWatchLogPublisher extends LogPublisher {
     private client: CloudWatchLogs;
 
@@ -206,6 +216,14 @@ export class CloudWatchLogPublisher extends LogPublisher {
     }
 }
 
+/**
+ * Class to help setup a CloudWatch log group and stream.
+ * It requires the following IAM permissions:
+ *   * logs:CreateLogGroup
+ *   * logs:CreateLogStream
+ *   * logs:DescribeLogGroups
+ *   * logs:DescribeLogStreams
+ */
 export class CloudWatchLogHelper {
     private client: CloudWatchLogs;
 
@@ -328,6 +346,11 @@ export class CloudWatchLogHelper {
     }
 }
 
+/**
+ * Publisher that will send the logs to a S3 bucket.
+ * It requires the following IAM permissions:
+ *   * s3:PutObject
+ */
 export class S3LogPublisher extends LogPublisher {
     private client: S3;
 
@@ -392,6 +415,13 @@ export class S3LogPublisher extends LogPublisher {
     }
 }
 
+/**
+ * Class to help setup a S3 bucket with a default folder inside.
+ * It requires the following IAM permissions:
+ *   * s3:CreateBucket
+ *   * s3:GetObject
+ *   * s3:ListBucket
+ */
 export class S3LogHelper {
     private client: S3;
 
@@ -526,7 +556,8 @@ export class S3LogHelper {
 }
 
 /**
- * Proxies logging requests to the default LambdaLogger (CloudWatch Logs)
+ * Proxies logging requests to the publisher that have been added.
+ * By default LambdaLogger.
  */
 export class LoggerProxy implements Logger {
     private readonly logPublishers = new Array<LogPublisher>();
