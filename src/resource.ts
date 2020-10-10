@@ -42,7 +42,7 @@ const MUTATING_ACTIONS: [Action, Action, Action] = [
 ];
 
 export type HandlerSignature = Callable<
-    [Optional<SessionProxy>, any, Dict, Optional<LoggerProxy>],
+    [Optional<SessionProxy>, any, Dict, LoggerProxy],
     Promise<ProgressEvent>
 >;
 export class HandlerSignatures extends Map<Action, HandlerSignature> {}
