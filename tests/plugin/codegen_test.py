@@ -145,10 +145,14 @@ def test_package_local(project: Project):
     zip_path = project.root / "foo-bar-baz.zip"
 
     # pylint: disable=unexpected-keyword-arg
-    with zip_path.open("wb") as f, ZipFile(f, mode="w", strict_timestamps=False) as zip_file:
+    with zip_path.open("wb") as f, ZipFile(
+        f, mode="w", strict_timestamps=False
+    ) as zip_file:
         project._plugin.package(project, zip_file)
 
-    with zip_path.open("rb") as f, ZipFile(f, mode="r", strict_timestamps=False) as zip_file:
+    with zip_path.open("rb") as f, ZipFile(
+        f, mode="r", strict_timestamps=False
+    ) as zip_file:
         assert sorted(zip_file.namelist()) == [
             "ResourceProvider.zip",
             "src/handlers.ts",
