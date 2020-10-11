@@ -2,7 +2,6 @@
 import os
 import sys
 from subprocess import CalledProcessError
-from tempfile import TemporaryFile
 from unittest.mock import patch, sentinel
 from uuid import uuid4
 
@@ -140,16 +139,16 @@ def test_generate(project: Project):
 
 
 def test_package_local(project: Project):
-    # pylint: disable=unexpected-keyword-arg
     project.load_schema()
     project.generate()
 
-    f = TemporaryFile("w+b")
+    zip_path = project.root / "foo-bar-baz.zip"
 
-    with ZipFile(f, mode="w", strict_timestamps=False) as zip_file:
+    # pylint: disable=unexpected-keyword-arg
+    with zip_path.open("wb") as f, ZipFile(f, mode="w", strict_timestamps=False) as zip_file:
         project._plugin.package(project, zip_file)
 
-    with ZipFile(f, mode="r", strict_timestamps=False) as zip_file:
+    with zip_path.open("rb") as f, ZipFile(f, mode="r", strict_timestamps=False) as zip_file:
         assert sorted(zip_file.namelist()) == [
             "ResourceProvider.zip",
             "src/handlers.ts",

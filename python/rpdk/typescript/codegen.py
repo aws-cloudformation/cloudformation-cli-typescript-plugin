@@ -177,9 +177,9 @@ class TypescriptLanguagePlugin(LanguagePlugin):
         LOG.debug("Generate complete")
 
     def _pre_package(self, build_path):
-        # pylint: disable=unexpected-keyword-arg
         f = TemporaryFile("w+b")
 
+        # pylint: disable=unexpected-keyword-arg
         with ZipFile(f, mode="w", strict_timestamps=False) as zip_file:
             self._recursive_relative_write(build_path, build_path, zip_file)
         f.seek(0)
