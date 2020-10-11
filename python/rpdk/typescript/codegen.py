@@ -23,7 +23,7 @@ LOG = logging.getLogger(__name__)
 
 EXECUTABLE = "cfn"
 SUPPORT_LIB_NAME = "cfn-rpdk"
-SUPPORT_LIB_VERSION = "0.3.3"
+SUPPORT_LIB_VERSION = "0.4.0"
 MAIN_HANDLER_FUNCTION = "TypeFunction"
 REPO_URL = "https://github.com/eduardomourar/cloudformation-cli-typescript-plugin"
 REPO_RELEASE_SUFFIX = f"v{SUPPORT_LIB_VERSION}/cfn-rpdk-{SUPPORT_LIB_VERSION}.tgz"
