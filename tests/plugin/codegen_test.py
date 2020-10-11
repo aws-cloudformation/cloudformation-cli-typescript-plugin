@@ -5,10 +5,6 @@ from subprocess import CalledProcessError
 from tempfile import TemporaryFile
 from unittest.mock import patch, sentinel
 from uuid import uuid4
-if sys.version_info >= (3, 8):
-    from zipfile import ZipFile
-else:
-    from zipfile38 import ZipFile
 
 import pytest
 from rpdk.core.exceptions import DownstreamError
@@ -18,6 +14,12 @@ from rpdk.typescript.codegen import (
     TypescriptLanguagePlugin,
     validate_no,
 )
+
+if sys.version_info >= (3, 8):
+    from zipfile import ZipFile
+else:
+    from zipfile38 import ZipFile
+
 
 TYPE_NAME = "foo::bar::baz"
 
@@ -138,6 +140,7 @@ def test_generate(project: Project):
 
 
 def test_package_local(project: Project):
+    # pylint: disable=unexpected-keyword-arg
     project.load_schema()
     project.generate()
 
