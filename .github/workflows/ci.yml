@@ -38,7 +38,9 @@ jobs:
       - name: Install Dependencies Node.js
         id: install_nodejs
         run: |
-          npm ci --optional && npm run build
+          npm ci --optional
+          find ./node_modules/* -mtime +10950 -exec touch {} \;
+          npm run build
       - name: Run Unit Tests
         id: unit_testing
         run: |
