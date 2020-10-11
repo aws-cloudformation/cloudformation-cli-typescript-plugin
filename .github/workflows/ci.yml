@@ -37,6 +37,7 @@ jobs:
           node-version: 12
       - name: Install Dependencies Node.js
         id: install_nodejs
+        # Touch needed because of https://github.com/aws/aws-cli/issues/2639
         run: |
           npm ci --optional
           find ./node_modules/* -mtime +10950 -exec touch {} \;

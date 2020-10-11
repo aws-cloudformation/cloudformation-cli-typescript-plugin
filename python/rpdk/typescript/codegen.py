@@ -13,9 +13,9 @@ from rpdk.core.plugin_base import LanguagePlugin
 from .resolver import contains_model, get_inner_type, translate_type
 from .utils import safe_reserved
 
-if sys.version_info >= (3, 8):
+if sys.version_info >= (3, 8):  # pragma: no cover
     from zipfile import ZipFile
-else:
+else:  # pragma: no cover
     from zipfile38 import ZipFile
 
 

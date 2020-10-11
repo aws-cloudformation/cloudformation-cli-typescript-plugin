@@ -15,9 +15,9 @@ from rpdk.typescript.codegen import (
     validate_no,
 )
 
-if sys.version_info >= (3, 8):
+if sys.version_info >= (3, 8):  # pragma: no cover
     from zipfile import ZipFile
-else:
+else:  # pragma: no cover
     from zipfile38 import ZipFile
 
 
