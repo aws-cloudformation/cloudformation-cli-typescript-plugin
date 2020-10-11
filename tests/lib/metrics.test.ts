@@ -18,12 +18,14 @@ const mockResult = (output: any): jest.Mock => {
 
 const MOCK_DATE = new Date('2020-01-01T23:05:38.964Z');
 const RESOURCE_TYPE = 'Aa::Bb::Cc';
-const NAMESPACE = MetricsPublisher.makeNamespace(RESOURCE_TYPE);
+const NAMESPACE = 'AWS/CloudFormation/Aa/Bb/Cc';
 
 jest.mock('aws-sdk/clients/cloudwatch');
 
 describe('when getting metrics', () => {
     let session: SessionProxy;
+    let proxy: MetricsPublisherProxy;
+    let publisher: MetricsPublisher;
     let cloudwatch: jest.Mock;
     let putMetricData: jest.Mock;
 
@@ -45,6 +47,13 @@ describe('when getting metrics', () => {
         session['client'] = cloudwatch;
     });
 
+    beforeEach(() => {
+        proxy = new MetricsPublisherProxy();
+        publisher = new MetricsPublisher(session, console, RESOURCE_TYPE);
+        proxy.addMetricsPublisher(publisher);
+        publisher.refreshClient();
+    });
+
     afterEach(() => {
         jest.clearAllMocks();
         jest.restoreAllMocks();
@@ -63,9 +72,7 @@ describe('when getting metrics', () => {
     });
 
     test('put metric catches error', async () => {
-        const spyConsoleError: jest.SpyInstance = jest
-            .spyOn(global.console, 'error')
-            .mockImplementation(() => {});
+        const spyLogger: jest.SpyInstance = jest.spyOn(publisher['logger'], 'log');
         putMetricData.mockReturnValueOnce({
             promise: jest.fn().mockRejectedValueOnce(
                 awsUtil.error(new Error(), {
@@ -73,10 +80,10 @@ describe('when getting metrics', () => {
                     message:
                         'An error occurred (InternalServiceError) when ' +
                         'calling the PutMetricData operation: ',
+                    retryable: false,
                 })
             ),
         });
-        const publisher = new MetricsPublisher(session, RESOURCE_TYPE);
         const dimensions: DimensionRecord = {
             DimensionKeyActionType: Action.Create,
             DimensionKeyResourceType: RESOURCE_TYPE,
@@ -110,8 +117,8 @@ describe('when getting metrics', () => {
             ],
             Namespace: NAMESPACE,
         });
-        expect(spyConsoleError).toHaveBeenCalledTimes(1);
-        expect(spyConsoleError).toHaveBeenCalledWith(
+        expect(spyLogger).toHaveBeenCalledTimes(1);
+        expect(spyLogger).toHaveBeenCalledWith(
             'An error occurred while ' +
                 'publishing metrics: An error occurred (InternalServiceError) ' +
                 'when calling the PutMetricData operation: '
@@ -119,8 +126,6 @@ describe('when getting metrics', () => {
     });
 
     test('publish exception metric', async () => {
-        const proxy = new MetricsPublisherProxy();
-        proxy.addMetricsPublisher(session, RESOURCE_TYPE);
         await proxy.publishExceptionMetric(
             MOCK_DATE,
             Action.Create,
@@ -155,8 +160,6 @@ describe('when getting metrics', () => {
     });
 
     test('publish invocation metric', async () => {
-        const proxy = new MetricsPublisherProxy();
-        proxy.addMetricsPublisher(session, RESOURCE_TYPE);
         await proxy.publishInvocationMetric(MOCK_DATE, Action.Create);
         expect(putMetricData).toHaveBeenCalledTimes(1);
         expect(putMetricData).toHaveBeenCalledWith({
@@ -183,8 +186,6 @@ describe('when getting metrics', () => {
     });
 
     test('publish duration metric', async () => {
-        const proxy = new MetricsPublisherProxy();
-        proxy.addMetricsPublisher(session, RESOURCE_TYPE);
         await proxy.publishDurationMetric(MOCK_DATE, Action.Create, 100);
         expect(putMetricData).toHaveBeenCalledTimes(1);
         expect(putMetricData).toHaveBeenCalledWith({
@@ -211,8 +212,6 @@ describe('when getting metrics', () => {
     });
 
     test('publish log delivery exception metric', async () => {
-        const proxy = new MetricsPublisherProxy();
-        proxy.addMetricsPublisher(session, RESOURCE_TYPE);
         await proxy.publishLogDeliveryExceptionMetric(MOCK_DATE, new TypeError('test'));
         expect(putMetricData).toHaveBeenCalledTimes(1);
         expect(putMetricData).toHaveBeenCalledWith({
@@ -242,9 +241,53 @@ describe('when getting metrics', () => {
         });
     });
 
+    test('publish log delivery exception metric with error', async () => {
+        const spyLogger: jest.SpyInstance = jest.spyOn(publisher['logger'], 'log');
+        const spyPublishLog: jest.SpyInstance = jest.spyOn(
+            publisher,
+            'publishLogDeliveryExceptionMetric'
+        );
+        const errorObject = {
+            code: 'InternalServiceError',
+            message: 'Sorry',
+            retryable: true,
+        };
+        putMetricData.mockReturnValueOnce({
+            promise: jest
+                .fn()
+                .mockRejectedValueOnce(awsUtil.error(new Error(), errorObject)),
+        });
+        await proxy.publishLogDeliveryExceptionMetric(MOCK_DATE, new TypeError('test'));
+        expect(putMetricData).toHaveBeenCalledTimes(1);
+        expect(putMetricData).toHaveBeenCalledWith({
+            MetricData: expect.any(Array),
+            Namespace: NAMESPACE,
+        });
+        expect(spyLogger).toHaveBeenCalledTimes(1);
+        expect(spyLogger).toHaveBeenCalledWith(expect.objectContaining(errorObject));
+        expect(spyPublishLog).toHaveReturnedWith(Promise.resolve(null));
+    });
+
+    test('metrics publisher without refreshing client', async () => {
+        expect.assertions(1);
+        const metricsPublisher = new MetricsPublisher(session, console, RESOURCE_TYPE);
+        try {
+            await metricsPublisher.publishMetric(
+                MetricTypes.HandlerInvocationCount,
+                null,
+                StandardUnit.Count,
+                1.0,
+                MOCK_DATE
+            );
+        } catch (e) {
+            expect(e.message).toMatch(/CloudWatch client was not initialized/);
+        }
+    });
+
     test('metrics publisher proxy add metrics publisher null safe', () => {
         const proxy = new MetricsPublisherProxy();
-        proxy.addMetricsPublisher(null, null);
+        proxy.addMetricsPublisher(null);
+        proxy.addMetricsPublisher(undefined);
         expect(proxy['publishers']).toMatchObject([]);
     });
 });

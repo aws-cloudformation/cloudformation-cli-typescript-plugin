@@ -4,6 +4,7 @@ import {
     exceptions,
     handlerEvent,
     HandlerErrorCode,
+    LoggerProxy,
     OperationStatus,
     Optional,
     ProgressEvent,
@@ -11,9 +12,6 @@ import {
     SessionProxy,
 } from '{{lib_name}}';
 import { ResourceModel } from './models';
-
-// Use this logger to forward messages to CloudWatch Logs.
-const LOGGER = console;
 
 interface CallbackContext extends Record<string, any> {}
 
@@ -33,8 +31,9 @@ class Resource extends BaseResource<ResourceModel> {
         session: Optional<SessionProxy>,
         request: ResourceHandlerRequest<ResourceModel>,
         callbackContext: CallbackContext,
+        logger: LoggerProxy
     ): Promise<ProgressEvent> {
-        const model: ResourceModel = request.desiredResourceState;
+        const model: ResourceModel = new ResourceModel(request.desiredResourceState);
         const progress = ProgressEvent.progress<ProgressEvent<ResourceModel, CallbackContext>>(model);
         // TODO: put code here
 
@@ -46,7 +45,7 @@ class Resource extends BaseResource<ResourceModel> {
             // Setting Status to success will signal to CloudFormation that the operation is complete
             progress.status = OperationStatus.Success;
         } catch(err) {
-            LOGGER.log(err);
+            logger.log(err);
             // exceptions module lets CloudFormation know the type of failure that occurred
             throw new exceptions.InternalFailure(err.message);
             // this can also be done by returning a failed progress event
@@ -69,8 +68,9 @@ class Resource extends BaseResource<ResourceModel> {
         session: Optional<SessionProxy>,
         request: ResourceHandlerRequest<ResourceModel>,
         callbackContext: CallbackContext,
+        logger: LoggerProxy
     ): Promise<ProgressEvent> {
-        const model: ResourceModel = request.desiredResourceState;
+        const model: ResourceModel = new ResourceModel(request.desiredResourceState);
         const progress = ProgressEvent.progress<ProgressEvent<ResourceModel, CallbackContext>>(model);
         // TODO: put code here
         progress.status = OperationStatus.Success;
@@ -92,8 +92,9 @@ class Resource extends BaseResource<ResourceModel> {
         session: Optional<SessionProxy>,
         request: ResourceHandlerRequest<ResourceModel>,
         callbackContext: CallbackContext,
+        logger: LoggerProxy
     ): Promise<ProgressEvent> {
-        const model: ResourceModel = request.desiredResourceState;
+        const model: ResourceModel = new ResourceModel(request.desiredResourceState);
         const progress = ProgressEvent.progress<ProgressEvent<ResourceModel, CallbackContext>>();
         // TODO: put code here
         progress.status = OperationStatus.Success;
@@ -114,8 +115,9 @@ class Resource extends BaseResource<ResourceModel> {
         session: Optional<SessionProxy>,
         request: ResourceHandlerRequest<ResourceModel>,
         callbackContext: CallbackContext,
+        logger: LoggerProxy
     ): Promise<ProgressEvent> {
-        const model: ResourceModel = request.desiredResourceState;
+        const model: ResourceModel = new ResourceModel(request.desiredResourceState);
         // TODO: put code here
         const progress = ProgressEvent.success<ProgressEvent<ResourceModel, CallbackContext>>(model);
         return progress;
@@ -135,8 +137,9 @@ class Resource extends BaseResource<ResourceModel> {
         session: Optional<SessionProxy>,
         request: ResourceHandlerRequest<ResourceModel>,
         callbackContext: CallbackContext,
+        logger: LoggerProxy
     ): Promise<ProgressEvent> {
-        const model: ResourceModel = request.desiredResourceState;
+        const model: ResourceModel = new ResourceModel(request.desiredResourceState);
         // TODO: put code here
         const progress = ProgressEvent.builder<ProgressEvent<ResourceModel, CallbackContext>>()
             .status(OperationStatus.Success)

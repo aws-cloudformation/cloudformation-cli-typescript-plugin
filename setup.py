@@ -40,6 +40,7 @@ setup(
     install_requires=[
         "cloudformation-cli>=0.1.10,<0.2",
         "aws-lambda-builders>=0.8,<0.9",
+        "zipfile38>=0.0.2,<0.2",
     ],
     entry_points={
         "rpdk.v1.languages": [

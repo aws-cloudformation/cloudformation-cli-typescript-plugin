@@ -10,7 +10,7 @@ Congratulations on starting development! Next steps:
 Implement CloudFormation resource here. Each function must always return a ProgressEvent.
 
 ```typescript
-const progress: ProgressEvent = ProgressEvent.builder()
+const progress: ProgressEvent = ProgressEvent.builder<ProgressEvent<ResourceModel>>()
 
     // Required
     // Must be one of OperationStatus.InProgress, OperationStatus.Failed, OperationStatus.Success
@@ -36,4 +36,4 @@ const progress: ProgressEvent = ProgressEvent.builder()
 
 While importing the [{{ lib_name }}](https://github.com/eduardomourar/cloudformation-cli-typescript-plugin) library, failures can be passed back to CloudFormation by either raising an exception from `exceptions`, or setting the ProgressEvent's `status` to `OperationStatus.Failed` and `errorCode` to one of `HandlerErrorCode`. There is a static helper function, `ProgressEvent.failed`, for this common case.
 
-Keep in mind, during runtime all logs will be delivered to CloudWatch except those used with `debug` method.
+Keep in mind, during runtime all logs will be delivered to CloudWatch if you use the `LoggerProxy.log` method.

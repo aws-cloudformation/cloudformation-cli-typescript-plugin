@@ -1,9 +1,9 @@
 # pylint: disable=redefined-outer-name,protected-access
 import os
+import sys
 from subprocess import CalledProcessError
 from unittest.mock import patch, sentinel
 from uuid import uuid4
-from zipfile import ZipFile
 
 import pytest
 from rpdk.core.exceptions import DownstreamError
@@ -13,6 +13,12 @@ from rpdk.typescript.codegen import (
     TypescriptLanguagePlugin,
     validate_no,
 )
+
+if sys.version_info >= (3, 8):  # pragma: no cover
+    from zipfile import ZipFile
+else:  # pragma: no cover
+    from zipfile38 import ZipFile
+
 
 TYPE_NAME = "foo::bar::baz"
 
@@ -94,10 +100,10 @@ def test_initialize(project: Project):
         ".npmrc",
         ".rpdk-config",
         "foo-bar-baz.json",
-        "inputs",
-        "inputs/inputs_1_create.json",
-        "inputs/inputs_1_invalid.json",
-        "inputs/inputs_1_update.json",
+        "example_inputs",
+        "example_inputs/inputs_1_create.json",
+        "example_inputs/inputs_1_invalid.json",
+        "example_inputs/inputs_1_update.json",
         "package.json",
         "README.md",
         "sam-tests",
@@ -138,10 +144,15 @@ def test_package_local(project: Project):
 
     zip_path = project.root / "foo-bar-baz.zip"
 
-    with zip_path.open("wb") as f, ZipFile(f, mode="w") as zip_file:
+    # pylint: disable=unexpected-keyword-arg
+    with zip_path.open("wb") as f, ZipFile(
+        f, mode="w", strict_timestamps=False
+    ) as zip_file:
         project._plugin.package(project, zip_file)
 
-    with zip_path.open("rb") as f, ZipFile(f, mode="r") as zip_file:
+    with zip_path.open("rb") as f, ZipFile(
+        f, mode="r", strict_timestamps=False
+    ) as zip_file:
         assert sorted(zip_file.namelist()) == [
             "ResourceProvider.zip",
             "src/handlers.ts",

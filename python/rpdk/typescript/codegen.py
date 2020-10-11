@@ -1,6 +1,6 @@
 import logging
 import shutil
-import zipfile
+import sys
 from subprocess import PIPE, CalledProcessError, run as subprocess_run  # nosec
 from tempfile import TemporaryFile
 
@@ -12,6 +12,12 @@ from rpdk.core.plugin_base import LanguagePlugin
 
 from .resolver import contains_model, get_inner_type, translate_type
 from .utils import safe_reserved
+
+if sys.version_info >= (3, 8):  # pragma: no cover
+    from zipfile import ZipFile
+else:  # pragma: no cover
+    from zipfile38 import ZipFile
+
 
 LOG = logging.getLogger(__name__)
 
@@ -173,7 +179,8 @@ class TypescriptLanguagePlugin(LanguagePlugin):
     def _pre_package(self, build_path):
         f = TemporaryFile("w+b")
 
-        with zipfile.ZipFile(f, mode="w") as zip_file:
+        # pylint: disable=unexpected-keyword-arg
+        with ZipFile(f, mode="w", strict_timestamps=False) as zip_file:
             self._recursive_relative_write(build_path, build_path, zip_file)
         f.seek(0)
 
