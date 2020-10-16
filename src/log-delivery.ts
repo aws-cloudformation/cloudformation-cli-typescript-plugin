@@ -1,4 +1,4 @@
-import { format } from 'util';
+import { format, inspect, InspectOptions } from 'util';
 import { AWSError, Request } from 'aws-sdk';
 import CloudWatchLogs, {
     DescribeLogStreamsResponse,
@@ -562,6 +562,14 @@ export class S3LogHelper {
 export class LoggerProxy implements Logger {
     private readonly logPublishers = new Array<LogPublisher>();
     private readonly queue = new Array<PromiseFunction>();
+
+    constructor(defaultOptions: InspectOptions = {}) {
+        inspect.defaultOptions = {
+            ...inspect.defaultOptions,
+            depth: 10,
+            ...defaultOptions,
+        };
+    }
 
     public addLogPublisher(logPublisher: LogPublisher): void {
         this.logPublishers.push(logPublisher);

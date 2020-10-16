@@ -129,7 +129,7 @@ describe('when delivering logs', () => {
             if (name === 'CloudWatchLogs') return cwLogs(options);
             if (name === 'S3') return s3(options);
         };
-        loggerProxy = new LoggerProxy();
+        loggerProxy = new LoggerProxy({ depth: 8 });
         metricsPublisherProxy = new MetricsPublisherProxy();
         publishExceptionMetric = mockResult({
             ResponseMetadata: { RequestId: 'mock-request' },
