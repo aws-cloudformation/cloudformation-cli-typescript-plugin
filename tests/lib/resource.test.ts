@@ -204,6 +204,7 @@ describe('when getting resource', () => {
     });
 
     test('entrypoint redacting credentials', async () => {
+        expect.assertions(13);
         const spyPublishLogEvent = jest.spyOn<any, any>(
             LogPublisher.prototype,
             'publishLogEvent'
@@ -217,23 +218,25 @@ describe('when getting resource', () => {
         const resource = new Resource(TYPE_NAME, MockModel);
         entrypointPayload['action'] = 'READ';
         const mockHandler: jest.Mock = jest.fn(() => ProgressEvent.success());
-        resource.addHandler(Action.Create, mockHandler);
+        resource.addHandler(Action.Read, mockHandler);
         await resource.entrypoint(entrypointPayload, null);
         expect(spySession).toHaveBeenCalled();
         expect(spySessionClient).toBeCalledTimes(3);
         expect(spyPrepareLogStream).toBeCalledTimes(1);
-        expect(spyPublishLogEvent).toHaveBeenCalledTimes(2);
-        expect(mockPublishMessage).toHaveBeenCalledTimes(2);
+        expect(spyPublishLogEvent).toHaveBeenCalled();
+        expect(mockPublishMessage).toHaveBeenCalled();
         mockPublishMessage.mock.calls.forEach((value: any[]) => {
-            const message = value[0];
-            expect(message).toMatch(/bearerToken: '<REDACTED>'/);
-            expect(message).toMatch(
-                /providerCredentials: {\s+accessKeyId: '<REDACTED>',\s+secretAccessKey: '<REDACTED>',\s+sessionToken: '<REDACTED>'\s+}/
-            );
-            expect(message).toMatch(
-                /callerCredentials: {\s+accessKeyId: '<REDACTED>',\s+secretAccessKey: '<REDACTED>',\s+sessionToken: '<REDACTED>'\s+}/
-            );
-            expect(message).toMatch(/stack\/sample-stack\/<REDACTED>/);
+            const message = value[0] as string;
+            if (message && message.startsWith('entrypoint event data')) {
+                expect(message).toMatch(/bearerToken: '<REDACTED>'/);
+                expect(message).toMatch(
+                    /providerCredentials: {\s+accessKeyId: '<REDACTED>',\s+secretAccessKey: '<REDACTED>',\s+sessionToken: '<REDACTED>'\s+}/
+                );
+                expect(message).toMatch(
+                    /callerCredentials: {\s+accessKeyId: '<REDACTED>',\s+secretAccessKey: '<REDACTED>',\s+sessionToken: '<REDACTED>'\s+}/
+                );
+                expect(message).toMatch(/stack\/sample-stack\/<REDACTED>/);
+            }
         });
     });
 
@@ -475,19 +478,16 @@ describe('when getting resource', () => {
     });
 
     test('invoke handler not found', async () => {
+        expect.assertions(1);
         const resource = getResource();
         const callbackContext = {};
-        const actual = await resource['invokeHandler'](
-            null,
-            null,
-            Action.Create,
-            callbackContext
-        );
-        const expected = ProgressEvent.failed(
-            HandlerErrorCode.InternalFailure,
-            'No handler for CREATE'
-        );
-        expect(actual).toStrictEqual(expected);
+        try {
+            await resource['invokeHandler'](null, null, Action.Create, callbackContext);
+        } catch (e) {
+            expect(e).toMatchObject({
+                message: 'Unknown action CREATE',
+            });
+        }
     });
 
     test('invoke handler was found', async () => {

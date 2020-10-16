@@ -106,8 +106,8 @@ export abstract class BaseResource<T extends BaseModel = BaseModel> {
     private providerEventsLogger: CloudWatchLogPublisher | S3LogPublisher;
 
     constructor(
-        public typeName: string,
-        private modelCls: Constructor<T>,
+        public readonly typeName: string,
+        public readonly modelTypeReference: Constructor<T>,
         private handlers?: HandlerSignatures
     ) {
         this.typeName = typeName || '';
@@ -267,23 +267,23 @@ export abstract class BaseResource<T extends BaseModel = BaseModel> {
         action: Action,
         callbackContext: Dict
     ): Promise<ProgressEvent> => {
-        const handle: HandlerSignature = this.handlers.get(action);
-        if (!handle) {
-            return ProgressEvent.failed(
-                HandlerErrorCode.InternalFailure,
-                `No handler for ${action}`
-            );
+        const actionName = action == null ? '<null>' : action.toString();
+        if (!this.handlers.has(action)) {
+            throw new Error(`Unknown action ${actionName}`);
         }
+        const handle: HandlerSignature = this.handlers.get(action);
         // We will make the callback context and resource states readonly
         // to avoid modification at a later time
         deepFreeze(callbackContext);
         deepFreeze(request);
+        this.log(`[${action}] invoking handler...`);
         const progress = await handle(
             session,
             request,
             callbackContext,
             this.loggerProxy
         );
+        this.log(`[${action}] handler invoked`);
         const isInProgress = progress.status === OperationStatus.InProgress;
         const isMutable = MUTATING_ACTIONS.some((x) => x === action);
         if (isInProgress && !isMutable) {
@@ -310,7 +310,7 @@ export abstract class BaseResource<T extends BaseModel = BaseModel> {
                 );
             }
             request = UnmodeledRequest.deserialize(event.request).toModeled<T>(
-                this.modelCls
+                this.modelTypeReference
             );
 
             this.callerSession = SessionProxy.getSession(creds, event.region);
@@ -327,15 +327,18 @@ export abstract class BaseResource<T extends BaseModel = BaseModel> {
     // @ts-ignore
     public async testEntrypoint(
         eventData: any | Dict,
-        context: any
+        context?: any
     ): Promise<ProgressEvent>;
     @boundMethod
     @ensureSerialize<T>()
-    public async testEntrypoint(eventData: Dict, context: any): Promise<ProgressEvent> {
+    public async testEntrypoint(
+        eventData: Dict,
+        context?: any
+    ): Promise<ProgressEvent> {
         let msg = 'Uninitialized';
         let progress: ProgressEvent;
         try {
-            if (!this.modelCls) {
+            if (!this.modelTypeReference) {
                 throw new exceptions.InternalFailure(
                     'Missing Model class to be used to deserialize JSON data.'
                 );
@@ -411,7 +414,7 @@ export abstract class BaseResource<T extends BaseModel = BaseModel> {
                 logicalResourceIdentifier: request.requestData.logicalResourceId,
                 region: request.region,
             });
-            return unmodeled.toModeled<T>(this.modelCls);
+            return unmodeled.toModeled<T>(this.modelTypeReference);
         } catch (err) {
             this.log('Invalid request');
             throw new InvalidRequest(`${err} (${err.name})`);
@@ -432,7 +435,7 @@ export abstract class BaseResource<T extends BaseModel = BaseModel> {
         let progress: ProgressEvent;
         let bearerToken: string;
         try {
-            if (!this.modelCls) {
+            if (!this.modelTypeReference) {
                 throw new exceptions.InternalFailure(
                     'Missing Model class to be used to deserialize JSON data.'
                 );
