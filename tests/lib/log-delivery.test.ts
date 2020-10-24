@@ -494,7 +494,9 @@ describe('when delivering logs', () => {
                         code: 'AccessDeniedException',
                     })
                 ),
-                on: () => {},
+                on: (_event: string, callback: Function) => {
+                    callback({ httpRequest: { headers: [] } });
+                },
             });
             const msgToLog = 'How is it going?';
             try {

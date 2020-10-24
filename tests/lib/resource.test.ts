@@ -424,7 +424,7 @@ describe('when getting resource', () => {
     test('entrypoint uncaught exception', async () => {
         const mockParseRequest = jest.spyOn<any, any>(BaseResource, 'parseRequest');
         mockParseRequest.mockImplementationOnce(() => {
-            throw new Error('exception');
+            throw { message: 'exception' };
         });
         const resource = getResource();
         const event = await resource.entrypoint({}, null);
@@ -642,7 +642,7 @@ describe('when getting resource', () => {
         const resource = getResource();
         const mockParseRequest = jest.spyOn<any, any>(resource, 'parseTestRequest');
         mockParseRequest.mockImplementationOnce(() => {
-            throw new Error('exception');
+            throw { message: 'exception' };
         });
         const event: ProgressEvent = await resource.testEntrypoint({}, null);
         expect(event.status).toBe(OperationStatus.Failed);
