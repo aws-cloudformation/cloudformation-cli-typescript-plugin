@@ -236,6 +236,7 @@ export class SerializableModel extends BaseModel {
     public static readonly TYPE_NAME: string = 'Organization::Service::Serializable';
 
     @Expose() somekey?: Optional<string>;
+    @Expose() somestring?: Optional<string>;
     @Expose() someotherkey?: Optional<string>;
     @Expose({ name: 'SomeInt' })
     @Transform((value, obj) => transformValue(Integer, 'someint', value, obj), {

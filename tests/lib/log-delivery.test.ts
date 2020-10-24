@@ -3,6 +3,7 @@ import CloudWatchLogs, {
 } from 'aws-sdk/clients/cloudwatchlogs';
 import S3, { ListObjectsV2Output } from 'aws-sdk/clients/s3';
 import awsUtil from 'aws-sdk/lib/util';
+import { inspect } from 'util';
 
 import { SessionProxy } from '../../src/proxy';
 import { MetricsPublisherProxy } from '../../src/metrics';
@@ -1213,6 +1214,7 @@ describe('when delivering logs', () => {
             loggerProxy.log('timestamp: [%s]', new Date('2020-01-03'));
             loggerProxy.log('timestamp: [%s]', new Date('2020-01-04'));
             expect(loggerProxy['queue'].length).toBe(9);
+            expect(inspect.defaultOptions.depth).toBe(8);
             await loggerProxy.processQueue();
 
             expect(cloudWatchLogger['logStreamName']).toBe(LOG_STREAM_NAME);

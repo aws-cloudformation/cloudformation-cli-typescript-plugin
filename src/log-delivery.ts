@@ -564,6 +564,8 @@ export class LoggerProxy implements Logger {
     private readonly queue = new Array<PromiseFunction>();
 
     constructor(defaultOptions: InspectOptions = {}) {
+        // Allow passing Node.js inspect options,
+        // and change default depth from 4 to 10
         inspect.defaultOptions = {
             ...inspect.defaultOptions,
             depth: 10,
