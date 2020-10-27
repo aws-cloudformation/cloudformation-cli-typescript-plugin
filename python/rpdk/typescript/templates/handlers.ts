@@ -32,8 +32,8 @@ class Resource extends BaseResource<ResourceModel> {
         request: ResourceHandlerRequest<ResourceModel>,
         callbackContext: CallbackContext,
         logger: LoggerProxy
-    ): Promise<ProgressEvent> {
-        const model: ResourceModel = new ResourceModel(request.desiredResourceState);
+    ): Promise<ProgressEvent<ResourceModel, CallbackContext>> {
+        const model = new ResourceModel(request.desiredResourceState);
         const progress = ProgressEvent.progress<ProgressEvent<ResourceModel, CallbackContext>>(model);
         // TODO: put code here
 
@@ -69,8 +69,8 @@ class Resource extends BaseResource<ResourceModel> {
         request: ResourceHandlerRequest<ResourceModel>,
         callbackContext: CallbackContext,
         logger: LoggerProxy
-    ): Promise<ProgressEvent> {
-        const model: ResourceModel = new ResourceModel(request.desiredResourceState);
+    ): Promise<ProgressEvent<ResourceModel, CallbackContext>> {
+        const model = new ResourceModel(request.desiredResourceState);
         const progress = ProgressEvent.progress<ProgressEvent<ResourceModel, CallbackContext>>(model);
         // TODO: put code here
         progress.status = OperationStatus.Success;
@@ -93,8 +93,8 @@ class Resource extends BaseResource<ResourceModel> {
         request: ResourceHandlerRequest<ResourceModel>,
         callbackContext: CallbackContext,
         logger: LoggerProxy
-    ): Promise<ProgressEvent> {
-        const model: ResourceModel = new ResourceModel(request.desiredResourceState);
+    ): Promise<ProgressEvent<ResourceModel, CallbackContext>> {
+        const model = new ResourceModel(request.desiredResourceState);
         const progress = ProgressEvent.progress<ProgressEvent<ResourceModel, CallbackContext>>();
         // TODO: put code here
         progress.status = OperationStatus.Success;
@@ -116,8 +116,8 @@ class Resource extends BaseResource<ResourceModel> {
         request: ResourceHandlerRequest<ResourceModel>,
         callbackContext: CallbackContext,
         logger: LoggerProxy
-    ): Promise<ProgressEvent> {
-        const model: ResourceModel = new ResourceModel(request.desiredResourceState);
+    ): Promise<ProgressEvent<ResourceModel, CallbackContext>> {
+        const model = new ResourceModel(request.desiredResourceState);
         // TODO: put code here
         const progress = ProgressEvent.success<ProgressEvent<ResourceModel, CallbackContext>>(model);
         return progress;
@@ -138,8 +138,8 @@ class Resource extends BaseResource<ResourceModel> {
         request: ResourceHandlerRequest<ResourceModel>,
         callbackContext: CallbackContext,
         logger: LoggerProxy
-    ): Promise<ProgressEvent> {
-        const model: ResourceModel = new ResourceModel(request.desiredResourceState);
+    ): Promise<ProgressEvent<ResourceModel, CallbackContext>> {
+        const model = new ResourceModel(request.desiredResourceState);
         // TODO: put code here
         const progress = ProgressEvent.builder<ProgressEvent<ResourceModel, CallbackContext>>()
             .status(OperationStatus.Success)
@@ -149,7 +149,7 @@ class Resource extends BaseResource<ResourceModel> {
     }
 }
 
-const resource = new Resource(ResourceModel.TYPE_NAME, ResourceModel);
+export const resource = new Resource(ResourceModel.TYPE_NAME, ResourceModel);
 
 export const entrypoint = resource.entrypoint;
 

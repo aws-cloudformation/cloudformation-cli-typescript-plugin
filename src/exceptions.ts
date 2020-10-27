@@ -1,4 +1,4 @@
-import { HandlerErrorCode } from './interface';
+import { BaseModel, HandlerErrorCode } from './interface';
 import { ProgressEvent } from './proxy';
 
 export abstract class BaseHandlerException extends Error {
@@ -13,8 +13,8 @@ export abstract class BaseHandlerException extends Error {
         Object.setPrototypeOf(this, new.target.prototype); // restore prototype chain
     }
 
-    public toProgressEvent(): ProgressEvent {
-        return ProgressEvent.failed(this.errorCode, this.toString());
+    public toProgressEvent<T extends BaseModel = BaseModel>(): ProgressEvent<T> {
+        return ProgressEvent.failed<ProgressEvent<T>>(this.errorCode, this.toString());
     }
 }
 

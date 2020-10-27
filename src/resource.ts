@@ -41,11 +41,14 @@ const MUTATING_ACTIONS: [Action, Action, Action] = [
     Action.Delete,
 ];
 
-export type HandlerSignature = Callable<
+export type HandlerSignature<T extends BaseModel> = Callable<
     [Optional<SessionProxy>, any, Dict, LoggerProxy],
-    Promise<ProgressEvent>
+    Promise<ProgressEvent<T>>
 >;
-export class HandlerSignatures extends Map<Action, HandlerSignature> {}
+export class HandlerSignatures<T extends BaseModel> extends Map<
+    Action,
+    HandlerSignature<T>
+> {}
 class HandlerEvents extends Map<Action, string | symbol> {}
 
 /**
@@ -69,8 +72,8 @@ function ensureSerialize<T extends BaseModel>(toResponse = false): MethodDecorat
         descriptor.value = async function (
             event: any | Dict,
             context: any
-        ): Promise<ProgressEvent | CfnResponse<T>> {
-            const progress: ProgressEvent = await originalMethod.apply(this, [
+        ): Promise<ProgressEvent<T> | CfnResponse<T>> {
+            const progress: ProgressEvent<T> = await originalMethod.apply(this, [
                 event,
                 context,
             ]);
@@ -108,10 +111,10 @@ export abstract class BaseResource<T extends BaseModel = BaseModel> {
     constructor(
         public readonly typeName: string,
         public readonly modelTypeReference: Constructor<T>,
-        private handlers?: HandlerSignatures
+        private handlers?: HandlerSignatures<T>
     ) {
         this.typeName = typeName || '';
-        this.handlers = handlers || new HandlerSignatures();
+        this.handlers = handlers || new HandlerSignatures<T>();
 
         this.lambdaLogger = console;
 
@@ -256,7 +259,10 @@ export abstract class BaseResource<T extends BaseModel = BaseModel> {
         }
     }
 
-    public addHandler = (action: Action, f: HandlerSignature): HandlerSignature => {
+    public addHandler = (
+        action: Action,
+        f: HandlerSignature<T>
+    ): HandlerSignature<T> => {
         this.handlers.set(action, f);
         return f;
     };
@@ -266,12 +272,12 @@ export abstract class BaseResource<T extends BaseModel = BaseModel> {
         request: BaseResourceHandlerRequest<T>,
         action: Action,
         callbackContext: Dict
-    ): Promise<ProgressEvent> => {
+    ): Promise<ProgressEvent<T>> => {
         const actionName = action == null ? '<null>' : action.toString();
         if (!this.handlers.has(action)) {
             throw new Error(`Unknown action ${actionName}`);
         }
-        const handle: HandlerSignature = this.handlers.get(action);
+        const handle: HandlerSignature<T> = this.handlers.get(action);
         // We will make the callback context and resource states readonly
         // to avoid modification at a later time
         deepFreeze(callbackContext);
@@ -328,15 +334,15 @@ export abstract class BaseResource<T extends BaseModel = BaseModel> {
     public async testEntrypoint(
         eventData: any | Dict,
         context?: any
-    ): Promise<ProgressEvent>;
+    ): Promise<ProgressEvent<T>>;
     @boundMethod
     @ensureSerialize<T>()
     public async testEntrypoint(
         eventData: Dict,
         context?: any
-    ): Promise<ProgressEvent> {
+    ): Promise<ProgressEvent<T>> {
         let msg = 'Uninitialized';
-        let progress: ProgressEvent;
+        let progress: ProgressEvent<T>;
         try {
             if (!this.modelTypeReference) {
                 throw new exceptions.InternalFailure(
@@ -359,11 +365,14 @@ export abstract class BaseResource<T extends BaseModel = BaseModel> {
             err.stack = `${new Error().stack}\n${err.stack}`;
             if (err instanceof BaseHandlerException) {
                 this.log(`Handler error: ${err.message}`, err);
-                progress = err.toProgressEvent();
+                progress = err.toProgressEvent<T>();
             } else {
                 this.log(`Exception caught: ${err.message}`, err);
                 msg = err.message || msg;
-                progress = ProgressEvent.failed(HandlerErrorCode.InternalFailure, msg);
+                progress = ProgressEvent.failed<ProgressEvent<T>>(
+                    HandlerErrorCode.InternalFailure,
+                    msg
+                );
             }
         }
         return Promise.resolve(progress);
@@ -431,8 +440,8 @@ export abstract class BaseResource<T extends BaseModel = BaseModel> {
     public async entrypoint(
         eventData: Dict,
         context: LambdaContext
-    ): Promise<ProgressEvent> {
-        let progress: ProgressEvent;
+    ): Promise<ProgressEvent<T>> {
+        let progress: ProgressEvent<T>;
         let bearerToken: string;
         try {
             if (!this.modelTypeReference) {
@@ -498,10 +507,10 @@ export abstract class BaseResource<T extends BaseModel = BaseModel> {
             err.stack = `${new Error().stack}\n${err.stack}`;
             if (err instanceof BaseHandlerException) {
                 this.log(`Handler error: ${err.message}`, err);
-                progress = err.toProgressEvent();
+                progress = err.toProgressEvent<T>();
             } else {
                 this.log(`Exception caught: ${err.message}`, err);
-                progress = ProgressEvent.failed(
+                progress = ProgressEvent.failed<ProgressEvent<T>>(
                     HandlerErrorCode.InternalFailure,
                     err.message
                 );
