@@ -1,5 +1,5 @@
 import { CredentialsOptions } from 'aws-sdk/lib/credentials';
-import { ServiceConfigurationOptions } from 'aws-sdk/lib/service';
+import { Service, ServiceConfigurationOptions } from 'aws-sdk/lib/service';
 import * as Aws from 'aws-sdk/clients/all';
 import { NextToken } from 'aws-sdk/clients/cloudformation';
 import { builder, IBuilder } from '@org-formation/tombok';
@@ -8,6 +8,7 @@ import {
     BaseDto,
     BaseResourceHandlerRequest,
     BaseModel,
+    Constructor,
     Dict,
     HandlerErrorCode,
     OperationStatus,
@@ -15,24 +16,56 @@ import {
 import { Exclude, Expose } from 'class-transformer';
 
 type ClientMap = typeof Aws;
-type Client = InstanceType<ClientMap[keyof ClientMap]>;
+export type ClientName = keyof ClientMap;
+export type Client = InstanceType<ClientMap[ClientName]>;
+
 export interface Session {
-    client: (name: keyof ClientMap, options?: ServiceConfigurationOptions) => Client;
+    client: <S extends Service>(
+        service: ClientName | S | Constructor<S>,
+        options?: ServiceConfigurationOptions
+    ) => S;
 }
 
 export class SessionProxy implements Session {
-    constructor(private options: ServiceConfigurationOptions) {}
+    private serviceMap = new Map<string, ClientName>();
+    constructor(private options: ServiceConfigurationOptions) {
+        Object.keys(Aws).forEach((name: ClientName) => {
+            const serviceIdentifier = this.getServiceIdentifier(name);
+            if (serviceIdentifier) {
+                this.serviceMap.set(serviceIdentifier, name);
+            }
+        });
+    }
 
-    public client(
-        name: keyof ClientMap,
+    public getServiceName(serviceIdentifier: string): ClientName {
+        return this.serviceMap.get(serviceIdentifier);
+    }
+
+    public getServiceIdentifier(name: ClientName): string {
+        const clients: {
+            [K in ClientName]: ClientMap[K] & { serviceIdentifier?: string };
+        } = Aws;
+        return clients[name].serviceIdentifier;
+    }
+
+    public client<S extends Service = Service>(
+        service: ClientName | S | Constructor<S>,
         options?: ServiceConfigurationOptions
-    ): Client {
-        const clients: { [K in keyof ClientMap]: ClientMap[K] } = Aws;
-        const service: Client = new clients[name]({
+    ): S {
+        let ctor: Constructor<S>;
+        if (typeof service === 'string') {
+            const clients: { [K in ClientName]: ClientMap[K] } = Aws;
+            ctor = (clients[service] as unknown) as Constructor<S>;
+        } else if (typeof service === 'object' && service instanceof Service) {
+            ctor = service.constructor as Constructor<S>;
+        } else {
+            ctor = service;
+        }
+        const client = new ctor({
             ...this.options,
             ...options,
         });
-        return service;
+        return client;
     }
 
     get configuration(): ServiceConfigurationOptions {
