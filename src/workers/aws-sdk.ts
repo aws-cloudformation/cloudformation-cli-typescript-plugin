@@ -92,7 +92,7 @@ function getClient<S extends Service = Service>(
     const clients: { [K in ClientName]: ClientWithIdentifier<K> } = Aws;
     let clientName;
     try {
-        clientName = Object.keys(Aws).find((service: ClientName) => {
+        clientName = Object.keys(Aws).find((service: string) => {
             return name === service || name === clients[service].serviceIdentifier;
         }) as ClientName;
         if (clientName) {

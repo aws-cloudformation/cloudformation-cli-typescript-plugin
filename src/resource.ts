@@ -58,8 +58,8 @@ class HandlerEvents extends Map<Action, string | symbol> {}
  */
 function ensureSerialize<T extends BaseModel>(toResponse = false): MethodDecorator {
     return function (
-        target: BaseResource<T>,
-        propertyKey: string,
+        target: Object,
+        propertyKey: string | symbol,
         descriptor: PropertyDescriptor
     ): PropertyDescriptor {
         // Save a reference to the original method this way we keep the values currently in the
