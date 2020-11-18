@@ -1,11 +1,11 @@
-import { ProgressEvent, SessionProxy } from '../../src/proxy';
+import { ProgressEvent, SessionProxy } from '~/proxy';
 import {
     BaseModel,
     Credentials,
     HandlerErrorCode,
     OperationStatus,
     Optional,
-} from '../../src/interface';
+} from '~/interface';
 
 describe('when getting session proxy', () => {
     class ResourceModel extends BaseModel {

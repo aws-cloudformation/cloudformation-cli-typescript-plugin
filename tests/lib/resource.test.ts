@@ -1,12 +1,12 @@
-import * as exceptions from '../../src/exceptions';
-import { ProgressEvent, SessionProxy } from '../../src/proxy';
+import * as exceptions from '~/exceptions';
+import { ProgressEvent, SessionProxy } from '~/proxy';
 import {
     Action,
     BaseResourceHandlerRequest,
     HandlerErrorCode,
     HandlerRequest,
     OperationStatus,
-} from '../../src/interface';
+} from '~/interface';
 import {
     CloudWatchLogHelper,
     CloudWatchLogPublisher,
@@ -15,10 +15,10 @@ import {
     LogPublisher,
     S3LogHelper,
     S3LogPublisher,
-} from '../../src/log-delivery';
-import { MetricsPublisherProxy } from '../../src/metrics';
-import { handlerEvent, HandlerSignatures, BaseResource } from '../../src/resource';
-import { AwsSdkThreadPool } from '../../src/utils';
+} from '~/log-delivery';
+import { MetricsPublisherProxy } from '~/metrics';
+import { handlerEvent, HandlerSignatures, BaseResource } from '~/resource';
+import { AwsSdkThreadPool } from '~/utils';
 import { SimpleStateModel } from '../data/sample-model';
 
 jest.mock('aws-sdk');

@@ -1,5 +1,5 @@
-import * as exceptions from '../../src/exceptions';
-import { transformValue, recastPrimitive } from '../../src/recast';
+import * as exceptions from '~/exceptions';
+import { transformValue, recastPrimitive } from '~/recast';
 import {
     ResourceModel as ComplexResourceModel,
     SimpleResourceModel,

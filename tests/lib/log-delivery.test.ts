@@ -5,9 +5,9 @@ import S3, { ListObjectsV2Output } from 'aws-sdk/clients/s3';
 import awsUtil from 'aws-sdk/lib/util';
 import { inspect } from 'util';
 
-import { SessionProxy } from '../../src/proxy';
-import { MetricsPublisherProxy } from '../../src/metrics';
-import { AwsSdkThreadPool } from '../../src/utils';
+import { SessionProxy } from '~/proxy';
+import { MetricsPublisherProxy } from '~/metrics';
+import { AwsSdkThreadPool } from '~/utils';
 import {
     CloudWatchLogHelper,
     CloudWatchLogPublisher,
@@ -16,7 +16,7 @@ import {
     LogPublisher,
     S3LogHelper,
     S3LogPublisher,
-} from '../../src/log-delivery';
+} from '~/log-delivery';
 
 const mockResult = (output: any): jest.Mock => {
     return jest.fn().mockReturnValue({

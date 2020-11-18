@@ -1,15 +1,15 @@
 import CloudWatch from 'aws-sdk/clients/cloudwatch';
 import awsUtil from 'aws-sdk/lib/util';
 
-import { Action, MetricTypes, StandardUnit } from '../../src/interface';
-import { SessionProxy } from '../../src/proxy';
-import { AwsSdkThreadPool } from '../../src/utils';
+import { Action, MetricTypes, StandardUnit } from '~/interface';
+import { SessionProxy } from '~/proxy';
+import { AwsSdkThreadPool } from '~/utils';
 import {
     DimensionRecord,
     MetricsPublisher,
     MetricsPublisherProxy,
     formatDimensions,
-} from '../../src/metrics';
+} from '~/metrics';
 
 const mockResult = (output: any): jest.Mock => {
     return jest.fn().mockReturnValue({

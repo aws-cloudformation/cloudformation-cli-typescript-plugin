@@ -11,7 +11,11 @@
         "sourceMap": false,
         "experimentalDecorators": true,
         "emitDecoratorMetadata": true,
-        "outDir": "dist"
+        "outDir": "dist",
+        "baseUrl": ".",
+        "paths": {
+          "~/*": ["src/*"]
+        }
     },
     "include": [
         "src/**/*.ts"

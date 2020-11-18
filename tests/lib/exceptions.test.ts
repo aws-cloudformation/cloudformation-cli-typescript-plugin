@@ -1,5 +1,5 @@
-import * as exceptions from '../../src/exceptions';
-import { HandlerErrorCode, OperationStatus } from '../../src/interface';
+import * as exceptions from '~/exceptions';
+import { HandlerErrorCode, OperationStatus } from '~/interface';
 
 type Exceptions = keyof typeof exceptions;
 

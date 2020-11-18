@@ -19,4 +19,7 @@ module.exports = {
     coverageReporters: ['json', 'lcov', 'text'],
     coveragePathIgnorePatterns: ['/node_modules/', '/tests/data/'],
     testTimeout: 60000,
+    moduleNameMapper: {
+        '^~/(.*)$': '<rootDir>/dist/$1',
+    },
 };
