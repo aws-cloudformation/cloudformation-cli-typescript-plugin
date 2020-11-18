@@ -3,6 +3,7 @@ import awsUtil from 'aws-sdk/lib/util';
 
 import { Action, MetricTypes, StandardUnit } from '../../src/interface';
 import { SessionProxy } from '../../src/proxy';
+import { AwsSdkThreadPool } from '../../src/utils';
 import {
     DimensionRecord,
     MetricsPublisher,
@@ -16,40 +17,69 @@ const mockResult = (output: any): jest.Mock => {
     });
 };
 
-const MOCK_DATE = new Date('2020-01-01T23:05:38.964Z');
-const RESOURCE_TYPE = 'Aa::Bb::Cc';
-const NAMESPACE = 'AWS/CloudFormation/Aa/Bb/Cc';
-
 jest.mock('aws-sdk/clients/cloudwatch');
 
 describe('when getting metrics', () => {
+    const MOCK_DATE = new Date('2020-01-01T23:05:38.964Z');
+    const RESOURCE_TYPE = 'Aa::Bb::Cc';
+    const NAMESPACE = 'AWS/CloudFormation/Aa/Bb/Cc';
+    const AWS_CONFIG = {
+        region: 'us-east-1',
+        credentials: {
+            accessKeyId: 'AAAAA',
+            secretAccessKey: '11111',
+        },
+    };
+
     let session: SessionProxy;
+    let workerPool: AwsSdkThreadPool;
     let proxy: MetricsPublisherProxy;
     let publisher: MetricsPublisher;
     let cloudwatch: jest.Mock;
     let putMetricData: jest.Mock;
 
     beforeAll(() => {
-        session = new SessionProxy({});
+        session = new SessionProxy(AWS_CONFIG);
+        jest.spyOn<any, any>(AwsSdkThreadPool.prototype, 'runTask').mockRejectedValue(
+            'Method runTask should not be called.'
+        );
+        workerPool = new AwsSdkThreadPool({ minThreads: 1, maxThreads: 1 });
+    });
+
+    beforeEach(() => {
         putMetricData = mockResult({ ResponseMetadata: { RequestId: 'mock-request' } });
         cloudwatch = (CloudWatch as unknown) as jest.Mock;
-        cloudwatch.mockImplementation(() => {
+        cloudwatch.mockImplementation((config) => {
             const returnValue = {
                 putMetricData,
             };
             return {
                 ...returnValue,
-                makeRequest: (operation: string, params?: { [key: string]: any }) => {
+                config,
+                serviceIdentifier: 'cloudwatchlogs',
+                makeRequest: (
+                    operation: keyof typeof returnValue,
+                    params?: Record<string, any>
+                ): Promise<any> => {
                     return returnValue[operation](params);
+                },
+                makeRequestPromise: async (
+                    operation: keyof typeof returnValue,
+                    input?: Record<string, any>,
+                    _headers?: any
+                ): Promise<any> => {
+                    return await returnValue[operation](input).promise();
                 },
             };
         });
-        session['client'] = cloudwatch;
-    });
-
-    beforeEach(() => {
+        workerPool['client'] = session['client'] = (
+            _service: any,
+            options?: any
+        ): any => {
+            return cloudwatch(options);
+        };
         proxy = new MetricsPublisherProxy();
-        publisher = new MetricsPublisher(session, console, RESOURCE_TYPE);
+        publisher = new MetricsPublisher(session, console, RESOURCE_TYPE, workerPool);
         proxy.addMetricsPublisher(publisher);
         publisher.refreshClient();
     });
@@ -270,7 +300,12 @@ describe('when getting metrics', () => {
 
     test('metrics publisher without refreshing client', async () => {
         expect.assertions(1);
-        const metricsPublisher = new MetricsPublisher(session, console, RESOURCE_TYPE);
+        const metricsPublisher = new MetricsPublisher(
+            session,
+            console,
+            RESOURCE_TYPE,
+            workerPool
+        );
         try {
             await metricsPublisher.publishMetric(
                 MetricTypes.HandlerInvocationCount,

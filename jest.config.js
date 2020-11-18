@@ -7,6 +7,7 @@ module.exports = {
         },
     },
     testRegex: '\\.test.ts$',
+    testRunner: 'jest-circus/runner',
     coverageThreshold: {
         global: {
             branches: 70,
@@ -17,4 +18,5 @@ module.exports = {
     collectCoverage: true,
     coverageReporters: ['json', 'lcov', 'text'],
     coveragePathIgnorePatterns: ['/node_modules/', '/tests/data/'],
+    testTimeout: 60000,
 };

@@ -128,6 +128,8 @@ dmypy.json
 .vscode/
 *.tar.gz
 *.tgz
+src/**/*.js
+src/**/*.d.ts
 
 # We want to allow the tests/lib folder
 !tests/lib

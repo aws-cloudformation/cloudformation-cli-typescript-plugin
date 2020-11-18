@@ -1,11 +1,7 @@
 import { format, inspect, InspectOptions } from 'util';
-import { AWSError, Request } from 'aws-sdk';
 import CloudWatchLogs, {
-    DescribeLogStreamsResponse,
     LogStream,
     InputLogEvent,
-    PutLogEventsRequest,
-    PutLogEventsResponse,
 } from 'aws-sdk/clients/cloudwatchlogs';
 import { ServiceConfigurationOptions } from 'aws-sdk/lib/service';
 import S3, { PutObjectRequest } from 'aws-sdk/clients/s3';
@@ -13,11 +9,10 @@ import { v4 as uuidv4 } from 'uuid';
 
 import { SessionProxy } from './proxy';
 import { MetricsPublisherProxy } from './metrics';
-import { delay } from './utils';
+import { AwsSdkThreadPool, delay, ExtendedClient, Queue } from './utils';
 
 type Console = globalThis.Console;
 export type LambdaLogger = Partial<Console>;
-type PromiseFunction = () => Promise<any>;
 
 export interface Logger {
     /**
@@ -36,7 +31,10 @@ export interface LogFilter {
 export abstract class LogPublisher {
     private logFilters: LogFilter[];
 
-    constructor(...filters: readonly LogFilter[]) {
+    constructor(
+        protected readonly workerPool?: AwsSdkThreadPool,
+        ...filters: readonly LogFilter[]
+    ) {
         this.logFilters = Array.from(filters);
     }
 
@@ -60,11 +58,11 @@ export abstract class LogPublisher {
         }
     }
 
-    public publishLogEvent(message: string, eventTime?: Date): Promise<void> {
+    public async publishLogEvent(message: string, eventTime?: Date): Promise<void> {
         if (!eventTime) {
             eventTime = new Date(Date.now());
         }
-        return this.publishMessage(this.filterMessage(message), eventTime);
+        await this.publishMessage(this.filterMessage(message), eventTime);
     }
 }
 
@@ -77,10 +75,10 @@ export class LambdaLogPublisher extends LogPublisher {
         private readonly logger: LambdaLogger,
         ...logFilters: readonly LogFilter[]
     ) {
-        super(...logFilters);
+        super(null, ...logFilters);
     }
 
-    protected publishMessage(message: string): Promise<void> {
+    protected async publishMessage(message: string): Promise<void> {
         return Promise.resolve(this.logger.log('%s\n', message));
     }
 }
@@ -92,7 +90,8 @@ export class LambdaLogPublisher extends LogPublisher {
  *   * logs:PutLogEvents
  */
 export class CloudWatchLogPublisher extends LogPublisher {
-    private client: CloudWatchLogs;
+    private client: ExtendedClient<CloudWatchLogs>;
+    private queue = new Queue();
 
     // Note: PutLogEvents returns a result that includes a sequence number.
     // That same sequence number must be used in the subsequent put for the same
@@ -104,15 +103,17 @@ export class CloudWatchLogPublisher extends LogPublisher {
         private readonly session: SessionProxy,
         private readonly logGroupName: string,
         private readonly logStreamName: string,
-        private readonly platformLambdaLogger: LambdaLogger,
+        private readonly platformLogger: Logger,
         private readonly metricsPublisherProxy: MetricsPublisherProxy,
+        protected readonly workerPool?: AwsSdkThreadPool,
         ...logFilters: readonly LogFilter[]
     ) {
-        super(...logFilters);
+        super(new AwsSdkThreadPool(), ...logFilters);
     }
 
     public refreshClient(options?: ServiceConfigurationOptions): void {
-        this.client = this.session.client('CloudWatchLogs', options) as CloudWatchLogs;
+        const cwLogs = this.session.client(CloudWatchLogs);
+        this.client = this.workerPool.client(cwLogs, options);
     }
 
     protected async publishMessage(message: string, eventTime: Date): Promise<void> {
@@ -124,82 +125,108 @@ export class CloudWatchLogPublisher extends LogPublisher {
                 'CloudWatchLogs client was not initialized. You must call refreshClient() first.'
             );
         }
-        try {
-            // Delay to avoid throttling
-            await delay(0.1);
+        return await this.queue.enqueue(async () => {
             const record: InputLogEvent = {
                 message,
                 timestamp: Math.round(eventTime.getTime()),
             };
-            const logEventsParams: PutLogEventsRequest = {
-                logGroupName: this.logGroupName,
-                logStreamName: this.logStreamName,
-                logEvents: [record],
-            };
-            if (this.nextSequenceToken) {
-                logEventsParams.sequenceToken = this.nextSequenceToken;
-            }
-
-            const putLogRequest = this.client.putLogEvents(logEventsParams);
-            putLogRequest.on(
-                'build',
-                (req: Request<PutLogEventsResponse, AWSError>) => {
-                    req.httpRequest.headers['X-Amzn-Logs-Format'] = 'json/emf';
-                }
-            );
-
-            const response: PutLogEventsResponse = await putLogRequest.promise();
-            this.platformLambdaLogger.log('Response from "putLogEvents"', response);
-            this.nextSequenceToken = response?.nextSequenceToken || null;
-            if (response.rejectedLogEventsInfo) {
-                throw new Error(JSON.stringify(response.rejectedLogEventsInfo));
-            }
-            return;
-        } catch (err) {
-            const errorCode = err.code || err.name;
-            this.platformLambdaLogger.log(
-                `Error from "putLogEvents" with sequence token ${this.nextSequenceToken}`,
-                err
-            );
-            if (
-                errorCode === 'DataAlreadyAcceptedException' ||
-                errorCode === 'InvalidSequenceTokenException' ||
-                errorCode === 'ThrottlingException'
-            ) {
-                this.nextSequenceToken = null;
-                await delay(1);
-                try {
-                    const response: DescribeLogStreamsResponse = await this.client
-                        .describeLogStreams({
-                            logGroupName: this.logGroupName,
-                            logStreamNamePrefix: this.logStreamName,
-                            limit: 1,
-                        })
-                        .promise();
-                    this.platformLambdaLogger.log(
-                        'Response from "describeLogStreams"',
-                        response
-                    );
-                    if (response.logStreams?.length) {
-                        const logStream = response.logStreams[0] as LogStream;
-                        this.nextSequenceToken = logStream.uploadSequenceToken;
-                    }
-                } catch (err) {
-                    this.platformLambdaLogger.log(
-                        'Error from "describeLogStreams"',
-                        err
-                    );
-                    await this.emitMetricsForLoggingFailure(err);
-                }
-                return Promise.reject('Publishing this log event should be retried.');
-            } else {
-                this.platformLambdaLogger.log(
-                    `An error occurred while putting log events [${message}] to resource owner account, with error: ${err.toString()}`
+            try {
+                this.nextSequenceToken = await this.putLogEvents(
+                    record,
+                    this.nextSequenceToken
                 );
+                return;
+            } catch (err) {
+                const errorCode = err.code || err.name;
+                this.platformLogger.log(
+                    `Error from "putLogEvents" with sequence token ${this.nextSequenceToken}`,
+                    JSON.stringify(err)
+                );
+                if (
+                    errorCode === 'DataAlreadyAcceptedException' ||
+                    errorCode === 'InvalidSequenceTokenException' ||
+                    errorCode === 'ThrottlingException'
+                ) {
+                    await delay(0.25);
+                    const result = (err.message || '').match(
+                        /sequencetoken( is)?: (.+)/i
+                    );
+                    if (result?.length === 3 && result[2]) {
+                        this.nextSequenceToken = result[2];
+                    } else {
+                        await this.populateSequenceToken();
+                    }
+                    await this.emitMetricsForLoggingFailure(err);
+                    err.retryable = true;
+                    err.message = `Publishing this log event should be retried. ${err.message}`;
+                    // try {
+                    //     this.nextSequenceToken = await this.putLogEvents(
+                    //         record,
+                    //         this.nextSequenceToken
+                    //     );
+                    // } catch (err) {
+                    //     this.platformLogger.log(
+                    //         `Error from "putLogEvents" with sequence token ${this.nextSequenceToken}`,
+                    //         JSON.stringify(err)
+                    //     );
+                    // }
+                    // if (this.nextSequenceToken) {
+                    //     return;
+                    // }
+                } else {
+                    this.platformLogger.log(
+                        `An error occurred while putting log events [${message}] to resource owner account, with error: ${err.toString()}`
+                    );
+                }
                 await this.emitMetricsForLoggingFailure(err);
                 throw err;
             }
+        });
+    }
+
+    private async putLogEvents(
+        record: InputLogEvent,
+        sequenceToken: string = undefined
+    ): Promise<string> {
+        // Delay to avoid throttling
+        await delay(0.25);
+        const response = await this.client.makeRequestPromise(
+            'putLogEvents',
+            {
+                logGroupName: this.logGroupName,
+                logStreamName: this.logStreamName,
+                logEvents: [record],
+                sequenceToken,
+            },
+            { 'X-Amzn-Logs-Format': 'json/emf' }
+        );
+        this.platformLogger.log('Response from "putLogEvents"', response);
+        if (response?.rejectedLogEventsInfo) {
+            throw new Error(JSON.stringify(response.rejectedLogEventsInfo));
         }
+        return response?.nextSequenceToken || null;
+    }
+
+    async populateSequenceToken(): Promise<string> {
+        this.nextSequenceToken = null;
+        try {
+            const response = await this.client.makeRequestPromise(
+                'describeLogStreams',
+                {
+                    logGroupName: this.logGroupName,
+                    logStreamNamePrefix: this.logStreamName,
+                    limit: 1,
+                }
+            );
+            this.platformLogger.log('Response from "describeLogStreams"', response);
+            if (response.logStreams?.length) {
+                const logStream = response.logStreams[0] as LogStream;
+                this.nextSequenceToken = logStream.uploadSequenceToken;
+            }
+        } catch (err) {
+            this.platformLogger.log('Error from "describeLogStreams"', err);
+        }
+        return this.nextSequenceToken;
     }
 
     private skipLogging(): boolean {
@@ -224,24 +251,29 @@ export class CloudWatchLogPublisher extends LogPublisher {
  *   * logs:DescribeLogGroups
  */
 export class CloudWatchLogHelper {
-    private client: CloudWatchLogs;
+    private client: ExtendedClient<CloudWatchLogs>;
 
     constructor(
         private readonly session: SessionProxy,
         private logGroupName: string,
         private logStreamName: string,
-        private readonly platformLambdaLogger: LambdaLogger,
-        private readonly metricsPublisherProxy: MetricsPublisherProxy
+        private readonly platformLogger: Logger,
+        private readonly metricsPublisherProxy: MetricsPublisherProxy,
+        protected readonly workerPool?: AwsSdkThreadPool
     ) {
         if (!this.logStreamName) {
             this.logStreamName = uuidv4();
         } else {
             this.logStreamName = logStreamName.replace(/:/g, '__');
         }
+        if (!workerPool) {
+            this.workerPool = new AwsSdkThreadPool();
+        }
     }
 
     public refreshClient(options?: ServiceConfigurationOptions): void {
-        this.client = this.session.client('CloudWatchLogs', options) as CloudWatchLogs;
+        const cwLogs = this.session.client(CloudWatchLogs);
+        this.client = this.workerPool.client(cwLogs, options);
     }
 
     public async prepareLogStream(): Promise<string | null> {
@@ -267,11 +299,9 @@ export class CloudWatchLogHelper {
     private async doesLogGroupExist(): Promise<boolean> {
         let logGroupExists = false;
         try {
-            const response = await this.client
-                .describeLogGroups({
-                    logGroupNamePrefix: this.logGroupName,
-                })
-                .promise();
+            const response = await this.client.makeRequestPromise('describeLogGroups', {
+                logGroupNamePrefix: this.logGroupName,
+            });
             this.log('Response from "describeLogGroups"', response);
             if (response.logGroups?.length) {
                 logGroupExists = response.logGroups.some((logGroup) => {
@@ -293,11 +323,9 @@ export class CloudWatchLogHelper {
     private async createLogGroup(): Promise<string> {
         try {
             this.log(`Creating Log group with name ${this.logGroupName}.`);
-            const response = await this.client
-                .createLogGroup({
-                    logGroupName: this.logGroupName,
-                })
-                .promise();
+            const response = await this.client.makeRequestPromise('createLogGroup', {
+                logGroupName: this.logGroupName,
+            });
             this.log('Response from "createLogGroup"', response);
         } catch (err) {
             const errorCode = err.code || err.name;
@@ -313,12 +341,10 @@ export class CloudWatchLogHelper {
             this.log(
                 `Creating Log stream with name ${this.logStreamName} for log group ${this.logGroupName}.`
             );
-            const response = await this.client
-                .createLogStream({
-                    logGroupName: this.logGroupName,
-                    logStreamName: this.logStreamName,
-                })
-                .promise();
+            const response = await this.client.makeRequestPromise('createLogStream', {
+                logGroupName: this.logGroupName,
+                logStreamName: this.logStreamName,
+            });
             this.log('Response from "createLogStream"', response);
         } catch (err) {
             const errorCode = err.code || err.name;
@@ -330,8 +356,8 @@ export class CloudWatchLogHelper {
     }
 
     private log(message?: any, ...optionalParams: any[]): void {
-        if (this.platformLambdaLogger) {
-            this.platformLambdaLogger.log(message, ...optionalParams);
+        if (this.platformLogger) {
+            this.platformLogger.log(message, ...optionalParams);
         }
     }
 
@@ -351,21 +377,23 @@ export class CloudWatchLogHelper {
  *   * s3:PutObject
  */
 export class S3LogPublisher extends LogPublisher {
-    private client: S3;
+    private client: ExtendedClient<S3>;
 
     constructor(
         private readonly session: SessionProxy,
         private readonly bucketName: string,
         private readonly folderName: string,
-        private readonly platformLambdaLogger: LambdaLogger,
+        private readonly platformLogger: Logger,
         private readonly metricsPublisherProxy: MetricsPublisherProxy,
+        protected readonly workerPool?: AwsSdkThreadPool,
         ...logFilters: readonly LogFilter[]
     ) {
-        super(...logFilters);
+        super(workerPool || new AwsSdkThreadPool(), ...logFilters);
     }
 
     public refreshClient(options?: ServiceConfigurationOptions): void {
-        this.client = this.session.client('S3', options) as S3;
+        const s3 = this.session.client(S3);
+        this.client = this.workerPool.client(s3, options);
     }
 
     protected async publishMessage(message: string, eventTime: Date): Promise<void> {
@@ -387,12 +415,14 @@ export class S3LogPublisher extends LogPublisher {
                 ContentType: 'text/plain',
                 Body: message,
             };
-
-            const response = await this.client.putObject(putObjectParams).promise();
-            this.platformLambdaLogger.log('Response from "putObject"', response);
+            const response = await this.client.makeRequestPromise(
+                'putObject',
+                putObjectParams
+            );
+            this.platformLogger.log('Response from "putObject"', response);
             return;
         } catch (err) {
-            this.platformLambdaLogger.log(
+            this.platformLogger.log(
                 `An error occurred while putting log events [${message}] to resource owner account, with error: ${err.toString()}`
             );
             await this.emitMetricsForLoggingFailure(err);
@@ -422,23 +452,28 @@ export class S3LogPublisher extends LogPublisher {
  *   * s3:ListBucket
  */
 export class S3LogHelper {
-    private client: S3;
+    private client: ExtendedClient<S3>;
 
     constructor(
         private readonly session: SessionProxy,
         private bucketName: string,
         private folderName: string,
-        private readonly platformLambdaLogger: LambdaLogger,
-        private readonly metricsPublisherProxy: MetricsPublisherProxy
+        private readonly platformLogger: Logger,
+        private readonly metricsPublisherProxy: MetricsPublisherProxy,
+        protected readonly workerPool?: AwsSdkThreadPool
     ) {
         if (!this.folderName) {
             this.folderName = uuidv4();
         }
         this.folderName = this.folderName.replace(/[^a-z0-9!_'.*()/-]/gi, '_');
+        if (!workerPool) {
+            this.workerPool = new AwsSdkThreadPool();
+        }
     }
 
     public refreshClient(options?: ServiceConfigurationOptions): void {
-        this.client = this.session.client('S3', options) as S3;
+        const s3 = this.session.client(S3);
+        this.client = this.workerPool.client(s3, options);
     }
 
     public async prepareFolder(): Promise<string | null> {
@@ -469,12 +504,10 @@ export class S3LogHelper {
     private async doesFolderExist(): Promise<boolean | null> {
         let folderExists = false;
         try {
-            const response = await this.client
-                .listObjectsV2({
-                    Bucket: this.bucketName,
-                    Prefix: `${this.folderName}/`,
-                })
-                .promise();
+            const response = await this.client.makeRequestPromise('listObjectsV2', {
+                Bucket: this.bucketName,
+                Prefix: `${this.folderName}/`,
+            });
             this.log('Response from "listObjects"', response);
             if (response.Contents?.length) {
                 folderExists = true;
@@ -501,11 +534,9 @@ export class S3LogHelper {
     private async createBucket(): Promise<string> {
         try {
             this.log(`Creating S3 bucket with name ${this.bucketName}.`);
-            const response = await this.client
-                .createBucket({
-                    Bucket: this.bucketName,
-                })
-                .promise();
+            const response = await this.client.makeRequestPromise('createBucket', {
+                Bucket: this.bucketName,
+            });
             this.log('Response from "createBucket"', response);
         } catch (err) {
             const errorCode = err.code || err.name;
@@ -524,13 +555,11 @@ export class S3LogHelper {
             this.log(
                 `Creating folder with name ${this.folderName} for bucket ${this.bucketName}.`
             );
-            const response = await this.client
-                .putObject({
-                    Bucket: this.bucketName,
-                    Key: `${this.folderName}/`,
-                    ContentLength: 0,
-                })
-                .promise();
+            const response = await this.client.makeRequestPromise('putObject', {
+                Bucket: this.bucketName,
+                Key: `${this.folderName}/`,
+                ContentLength: 0,
+            });
             this.log('Response from "putObject"', response);
         } catch (err) {
             throw err;
@@ -539,8 +568,8 @@ export class S3LogHelper {
     }
 
     private log(message?: any, ...optionalParams: any[]): void {
-        if (this.platformLambdaLogger) {
-            this.platformLambdaLogger.log(message, ...optionalParams);
+        if (this.platformLogger) {
+            this.platformLogger.log(message, ...optionalParams);
         }
     }
 
@@ -560,9 +589,11 @@ export class S3LogHelper {
  */
 export class LoggerProxy implements Logger {
     private readonly logPublishers = new Array<LogPublisher>();
-    private readonly queue = new Array<PromiseFunction>();
 
-    constructor(defaultOptions: InspectOptions = {}) {
+    constructor(
+        protected readonly workerPool?: AwsSdkThreadPool,
+        defaultOptions: InspectOptions = {}
+    ) {
         // Allow passing Node.js inspect options,
         // and change default depth from 4 to 10
         inspect.defaultOptions = {
@@ -570,40 +601,139 @@ export class LoggerProxy implements Logger {
             depth: 10,
             ...defaultOptions,
         };
+        // this.workerPool.progress.on('finished', () => {
+        //     console.debug('finished', this.workerPool.progress.message);
+        // });
     }
 
-    public addLogPublisher(logPublisher: LogPublisher): void {
+    addSubmitted(): void {
+        if (this.workerPool && this.workerPool.progress) {
+            // console.debug('addSubmitted');
+            this.workerPool.progress.addSubmitted();
+        }
+    }
+
+    addCompleted(): void {
+        if (this.workerPool && this.workerPool.progress) {
+            // console.debug('addCompleted');
+            this.workerPool.progress.addCompleted();
+        }
+    }
+
+    addFailed(): void {
+        if (this.workerPool && this.workerPool.progress) {
+            // console.debug('addFailed');
+            this.workerPool.progress.addFailed();
+        }
+    }
+
+    addLogPublisher(logPublisher: LogPublisher): void {
         this.logPublishers.push(logPublisher);
     }
 
-    public addFilter(filter: LogFilter): void {
+    addFilter(filter: LogFilter): void {
         this.logPublishers.forEach((logPublisher: LogPublisher) => {
             logPublisher.addFilter(filter);
         });
     }
 
-    public async processQueue(): Promise<void> {
-        for (const key in this.queue) {
-            try {
-                await this.queue[key]();
-            } catch (err) {
-                console.error(err);
-                try {
-                    await this.queue[key]();
-                } catch (err) {
-                    console.error(err);
-                }
-            }
+    async waitQueue(): Promise<boolean> {
+        // console.debug('start waitQueue');
+        if (this.workerPool && this.workerPool.progress) {
+            // await delay(2);
+            this.workerPool.done();
+            await this.workerPool.progress.waitToFinish();
+            await this.workerPool.shutdown();
+            // for (const logPublisher of this.logPublishers) {
+            //     try {
+            //         await this.workerPool.progress.();
+            //     } catch (err) {
+            //         console.error(err);
+            //     }
+            // }
         }
-        console.debug('Log delivery finalized.');
-        this.queue.length = 0;
+        console.debug('Log delivery queue finalized.');
+        return Promise.resolve(true);
     }
 
-    public log(message?: any, ...optionalParams: any[]): void {
+    // public async processQueue(): Promise<void> {
+    //     console.debug('Processing log delivery queue...');
+    //     for (const key in this.queue) {
+    //         try {
+    //             await this.queue[key]();
+    //         } catch (err) {
+    //             console.error(err);
+    //             if (err.retryable === true) {
+    //                 try {
+    //                     await this.queue[key]();
+    //                 } catch (err) {
+    //                     console.error(err);
+    //                 }
+    //             }
+    //         }
+    //     }
+    //     console.debug('Log delivery queue finalized.');
+    //     this.queue.length = 0;
+    // }
+
+    // private *publishLogsSync(
+    //     logPublishers: LogPublisher[],
+    //     message: string,
+    //     timestamp: Date
+    // ): Generator<Promise<boolean[]>> {
+    //     const responses = yield Promise.all(
+    //         logPublishers.map((logPublisher: LogPublisher) =>
+    //             logPublisher.publishLogEvent(message, timestamp)
+    //         )
+    //     );
+    //     return responses;
+    // }
+
+    log(message?: any, ...optionalParams: any[]): void {
         const formatted = format(message, ...optionalParams);
         const eventTime = new Date(Date.now());
-        this.logPublishers.forEach((logPublisher: LogPublisher) => {
-            this.queue.push(() => logPublisher.publishLogEvent(formatted, eventTime));
-        });
+        // console.debug('start log');
+        for (const logPublisher of this.logPublishers) {
+            this.addSubmitted();
+            (async () => {
+                try {
+                    await logPublisher.publishLogEvent(formatted, eventTime);
+                    this.addCompleted();
+                } catch (err) {
+                    console.error(err);
+                    this.addFailed();
+                    // if (err?.retryable === true) {
+                    //     this.progress.addSubmitted();
+                    //     try {
+                    //         await logPublisher.publishLogEvent(formatted, eventTime);
+                    //         this.progress.addCompleted();
+                    //     } catch (err) {
+                    //         console.error(err);
+                    //         this.progress.addFailed();
+                    //     }
+                    // }
+                }
+            })();
+        }
+        // for (const logPublisher of this.logPublishers) {
+        //     const thread = (function* () {
+        //         yield logPublisher
+        //             .publishLogEvent(formatted, eventTime)
+        //             .catch(console.error);
+        //     })();
+        //     thread.next();
+        //     // publishLogSync({
+        //     //     logPublisher: logPublisher,
+        //     //     message: formatted,
+        //     //     timestamp: eventTime,
+        //     // } as LogInput);
+        // }
+        // const generator = asyncIterator(
+        //     this.publishLogsSync(logPublishers, formatted, eventTime)
+        // );
+        // for (const result of generator) {
+        //     console.log(result);
+        // }
+        // console.debug('end log');
     }
 }

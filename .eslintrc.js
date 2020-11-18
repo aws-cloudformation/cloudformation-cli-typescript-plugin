@@ -38,4 +38,15 @@ module.exports = {
         'import/no-extraneous-dependencies': ['error'],
         'import/no-unresolved': ['error'],
     },
+    overrides: [
+        {
+            files: ['*.js', '*.jsx'],
+            rules: {
+                '@typescript-eslint/explicit-function-return-type': 'off',
+                '@typescript-eslint/no-unused-vars': 'off',
+                '@typescript-eslint/no-var-requires': 'off',
+                '@typescript-eslint/no-require-imports': 'off',
+            }
+        }
+    ],
 };
