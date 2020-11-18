@@ -27,26 +27,7 @@ export interface Session {
 }
 
 export class SessionProxy implements Session {
-    private serviceMap = new Map<string, ClientName>();
-    constructor(private options: ServiceConfigurationOptions) {
-        Object.keys(Aws).forEach((name: ClientName) => {
-            const serviceIdentifier = this.getServiceIdentifier(name);
-            if (serviceIdentifier) {
-                this.serviceMap.set(serviceIdentifier, name);
-            }
-        });
-    }
-
-    public getServiceName(serviceIdentifier: string): ClientName {
-        return this.serviceMap.get(serviceIdentifier);
-    }
-
-    public getServiceIdentifier(name: ClientName): string {
-        const clients: {
-            [K in ClientName]: ClientMap[K] & { serviceIdentifier?: string };
-        } = Aws;
-        return clients[name].serviceIdentifier;
-    }
+    constructor(private options: ServiceConfigurationOptions) {}
 
     public client<S extends Service = Service>(
         service: ClientName | S | Constructor<S>,
