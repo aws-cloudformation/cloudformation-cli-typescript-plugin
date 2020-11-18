@@ -1,20 +1,15 @@
 {
+    "extends": "@tsconfig/node12/tsconfig.json",
     "compilerOptions": {
-        "target": "es2017",
-        "module": "commonjs",
         "noImplicitAny": false,
         "allowJs": true,
         "alwaysStrict": true,
         "declaration": true,
-        "esModuleInterop": true,
         "removeComments": true,
         "sourceMap": false,
         "experimentalDecorators": true,
         "emitDecoratorMetadata": true,
-        "noFallthroughCasesInSwitch": true,
-        "forceConsistentCasingInFileNames": true,
-        "allowSyntheticDefaultImports": true,
-        "skipLibCheck": true
+        "outDir": "dist"
     },
     "include": [
         "src/**/*.ts"

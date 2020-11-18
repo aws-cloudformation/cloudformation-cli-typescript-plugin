@@ -22,7 +22,7 @@
         "test:debug": "npx --node-arg=--inspect jest --runInBand"
     },
     "engines": {
-        "node": ">=10.4.0",
+        "node": ">=12.13.0",
         "npm": ">=5.6.0"
     },
     "repository": {
@@ -46,6 +46,7 @@
         "uuid": "^7.0.2"
     },
     "devDependencies": {
+        "@tsconfig/node12": "^1.0.7",
         "@types/jest": "^26.0.15",
         "@types/node": "^12.0.0",
         "@types/uuid": "^7.0.0",
