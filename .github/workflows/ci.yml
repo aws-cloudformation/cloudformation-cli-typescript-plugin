@@ -66,9 +66,9 @@ jobs:
           RPDK_PATH=$PWD/$RPDK_PACKAGE
           DIR=$(mktemp -d)
           cd "$DIR"
-          echo ::set-env name=PROJECT_DIR::$DIR
+          echo "PROJECT_DIR=$DIR" >> $GITHUB_ENV
           ls -la
-          printf "AWS::Foo::Bar\n1\nn" | cfn init -vv
+          printf "n" | cfn init -vv -t AWS::Foo::Bar
           ls -la
           mkdir ./dist
           cp "$RPDK_PATH" ./dist
