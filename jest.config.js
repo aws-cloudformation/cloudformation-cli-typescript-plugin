@@ -20,6 +20,6 @@ module.exports = {
     coveragePathIgnorePatterns: ['/node_modules/', '/tests/data/'],
     testTimeout: 60000,
     moduleNameMapper: {
-        '^~/(.*)$': '<rootDir>/dist/$1',
+        '^~/(.*)$': '<rootDir>/src/$1',
     },
 };

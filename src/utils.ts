@@ -142,7 +142,7 @@ export class AwsSdkThreadPool extends Piscina {
 
     constructor(poolOptions?: PoolOptions) {
         super({
-            filename: path.resolve(__dirname, 'workers/aws-sdk.js'),
+            filename: path.resolve(__dirname, '../dist/workers/aws-sdk.js'),
             // minThreads: 1,
             // maxThreads: 1,
             idleTimeout: Number.MAX_SAFE_INTEGER,
