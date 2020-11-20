@@ -1,7 +1,6 @@
-import { EventEmitter } from 'events';
 import { AWSError } from 'aws-sdk';
 import { Service, ServiceConfigurationOptions } from 'aws-sdk/lib/service';
-
+import { EventEmitter } from 'events';
 import path from 'path';
 import Piscina from 'piscina';
 import { deserializeError } from 'serialize-error';
@@ -67,24 +66,22 @@ export async function delay(seconds: number): Promise<void> {
 /**
  * Class to track progress of worker threads,
  * so that we know when it is finished.
- *
- * @param {number} seconds Seconds that we will wait
  */
 export class Progress extends EventEmitter {
-    #tasksSubmitted = 0;
-    #tasksCompleted = 0;
-    #tasksFailed = 0;
-    #done = false;
+    #tasksSubmitted: number;
+    #tasksCompleted: number;
+    #tasksFailed: number;
+    #done: boolean;
 
     constructor() {
         super();
-        this.on('include', (kind) => {
+        this.restart();
+        this.on('include', (kind: string) => {
             // console.debug(`Progress type being included [${kind}]`, this.message);
             if (kind !== 'submitted' && this.isFinished) {
                 process.nextTick(() => this.emit('finished'));
             }
         });
-        this.setMaxListeners(30);
     }
 
     get done(): boolean {
@@ -95,7 +92,17 @@ export class Progress extends EventEmitter {
         this.#done = value;
     }
 
+    restart(): void {
+        this.#tasksSubmitted = 0;
+        this.#tasksCompleted = 0;
+        this.#tasksFailed = 0;
+        this.#done = false;
+    }
+
     addSubmitted(): void {
+        if (this.isFinished) {
+            throw Error('Not allowed to submit a new task after it has been finished.');
+        }
         this.#tasksSubmitted++;
         process.nextTick(() => this.emit('include', 'submitted'));
     }
@@ -115,11 +122,12 @@ export class Progress extends EventEmitter {
     }
 
     async waitToFinish(): Promise<void> {
-        if (this.isFinished) {
-            return Promise.resolve();
-        }
-        return new Promise((resolve) => {
-            this.once('finished', resolve);
+        return await new Promise((resolve) => {
+            if (this.isFinished) {
+                resolve();
+            } else {
+                this.once('finished', resolve);
+            }
         });
     }
 
@@ -136,35 +144,41 @@ export class Progress extends EventEmitter {
     }
 }
 
+/**
+ * Class to manage the pool of threads where we will have multiple workers
+ * to interact with the AWS APIs by using its SDK.
+ */
 export class AwsSdkThreadPool extends Piscina {
-    readonly progress = new Progress();
-    #done = false;
+    #drained: boolean;
+    #done: boolean;
 
     constructor(poolOptions?: PoolOptions) {
         super({
             filename: path.resolve(__dirname, '../dist/workers/aws-sdk.js'),
-            // minThreads: 1,
-            // maxThreads: 1,
-            idleTimeout: Number.MAX_SAFE_INTEGER,
+            idleTimeout: 25000, // Little less than the minimum 30 seconds from lambda handlers
             ...poolOptions,
         });
-        this.setMaxListeners(this.getMaxListeners() * 2);
-        this.progress.on('finished', () => {
-            // console.debug('finished', this.progress.message);
-            if (this.isFinished) {
-                this.#done = true;
-            }
+        this.restart();
+        this.on('drain', () => {
+            this.#drained = true;
         });
     }
 
     done(): void {
-        // console.debug('done');
-        this.progress.done = true;
-        // this.#done = true;
+        this.#done = true;
+    }
+
+    updateProgress(): void {
+        this.#drained = false;
+    }
+
+    restart(): void {
+        this.#drained = true;
+        this.#done = false;
     }
 
     get isFinished(): boolean {
-        return !this.queueSize && this.progress.isFinished;
+        return !this.queueSize && this.#drained && this.#done; //&& this.progress.isFinished;
     }
 
     client<
@@ -181,16 +195,13 @@ export class AwsSdkThreadPool extends Piscina {
                 input: OverloadedArguments<N>,
                 headers?: { [key: string]: string }
             ): Promise<InferredResult<S, C, O, E, N>> => {
-                const params = JSON.parse(
-                    JSON.stringify({
-                        name: client.serviceIdentifier,
-                        options: { ...client.config, options },
-                        operation,
-                        input,
-                        headers,
-                    })
-                );
-                return await this.makeRequest<S, C, O, E, N>(params);
+                return await this.makeRequest<S, C, O, E, N>({
+                    name: client.serviceIdentifier,
+                    options: { ...client.config, options },
+                    operation,
+                    input,
+                    headers,
+                });
             },
         });
         return client;
@@ -208,8 +219,11 @@ export class AwsSdkThreadPool extends Piscina {
                 'Not allowed to make an API call after the worker pool has been flagged as Done.'
             );
         }
+        this.updateProgress();
         try {
-            return await this.runTask(params);
+            const taskInput = JSON.parse(JSON.stringify(params));
+            const result = await this.runTask(taskInput);
+            return result;
         } catch (err) {
             if (typeof err === 'string') {
                 throw deserializeError(err);
@@ -218,28 +232,19 @@ export class AwsSdkThreadPool extends Piscina {
         }
     }
 
-    async shutdown(): Promise<boolean> {
-        // if (!this.progress.done) {
-        //     this.done();
-        // }
-        await Promise.all([
-            new Promise((resolve, reject) => {
-                if (this.#done) {
-                    resolve(null);
-                }
-                this.once('error', (err) => {
-                    reject(err);
-                });
-                this.on('drain', () => {
-                    // console.debug('drain', this.isFinished)
-                    if (this.#done) {
-                        resolve(null);
-                    }
-                });
-            }),
-            // this.progress.waitToFinish(),
-        ]);
-        await this.destroy();
+    async shutdown(doDestroy = true): Promise<boolean> {
+        this.done();
+        await new Promise((resolve, reject) => {
+            if (this.isFinished) {
+                resolve(null);
+            } else {
+                this.once('error', reject);
+                this.once('drain', resolve);
+            }
+        });
+        if (doDestroy) {
+            await this.destroy();
+        }
         return true;
     }
 }
@@ -317,7 +322,7 @@ export function replaceAll(
 export function deepFreeze(
     obj: Record<string, any> | Array<any> | Function,
     processed = new Set()
-) {
+): Record<string, any> {
     if (
         // Prevent circular reference
         processed.has(obj) ||

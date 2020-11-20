@@ -122,7 +122,7 @@ export abstract class BaseResource<T extends BaseModel = BaseModel> {
             this.workerPool = new AwsSdkThreadPool();
         }
         this.lambdaLogger = console;
-        this.platformLoggerProxy = new LoggerProxy(this.workerPool);
+        this.platformLoggerProxy = new LoggerProxy();
         this.platformLambdaLogger = new LambdaLogPublisher(this.lambdaLogger);
         this.platformLoggerProxy.addLogPublisher(this.platformLambdaLogger);
 
@@ -144,7 +144,7 @@ export abstract class BaseResource<T extends BaseModel = BaseModel> {
         providerLogStreamName?: string,
         awsAccountId?: string
     ): Promise<void> {
-        this.loggerProxy = new LoggerProxy(this.workerPool);
+        this.loggerProxy = new LoggerProxy();
         this.metricsPublisherProxy = new MetricsPublisherProxy();
         this.loggerProxy.addLogPublisher(this.platformLambdaLogger);
 
@@ -364,8 +364,6 @@ export abstract class BaseResource<T extends BaseModel = BaseModel> {
         let msg = 'Uninitialized';
         let progress: ProgressEvent<T>;
         try {
-            this.loggerProxy = new LoggerProxy(this.workerPool);
-            this.loggerProxy.addLogPublisher(new LambdaLogPublisher(console));
             if (!this.modelTypeReference) {
                 throw new exceptions.InternalFailure(
                     'Missing Model class to be used to deserialize JSON data.'
@@ -400,9 +398,8 @@ export abstract class BaseResource<T extends BaseModel = BaseModel> {
             }
         }
         this.log(`END RequestId: ${context?.awsRequestId}`);
-        if (this.loggerProxy) {
-            await this.loggerProxy.waitQueue();
-        }
+        await this.platformLoggerProxy.waitQueue();
+        await this.workerPool.shutdown();
         return Promise.resolve(progress);
     }
 
@@ -570,6 +567,8 @@ export abstract class BaseResource<T extends BaseModel = BaseModel> {
         if (this.loggerProxy) {
             await this.loggerProxy.waitQueue();
         }
+        await this.platformLoggerProxy.waitQueue();
+        await this.workerPool.shutdown();
         return progress;
     }
 }

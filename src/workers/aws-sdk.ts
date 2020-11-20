@@ -6,8 +6,6 @@ import { serializeError } from 'serialize-error';
 
 import { Constructor, OverloadedArguments, ServiceProperties } from '../interface';
 
-// Error.stackTraceLimit = Infinity;
-
 type ClientMap = typeof Aws;
 type ClientName = keyof ClientMap;
 type ClientWithIdentifier<T extends ClientName> = ClientMap[T] & {
@@ -115,11 +113,10 @@ export default async function clientApi<
     E extends Error = AWSError,
     N extends ServiceOperation<S, C, O, E> = ServiceOperation<S, C, O, E>
 >(params: ClientApiOptions<S, C, O, E, N>): Promise<InferredResult<S, C, O, E, N>> {
-    // console.debug(params);
-    const { name, options, operation, input, headers } = params;
-    const client = getClient<S>(name, options);
-    // console.debug(client, { showHidden: false, depth: 10 });
     try {
+        // console.debug(params);
+        const { name, options, operation, input, headers } = params;
+        const client = getClient<S>(name, options);
         const request = client.makeRequest(operation as string, input);
         if (headers?.length) {
             request.on('build', () => {

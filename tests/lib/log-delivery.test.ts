@@ -39,7 +39,7 @@ jest.mock('uuid', () => {
         v4: () => IDENTIFIER,
     };
 });
-jest.mock('../../src/metrics');
+jest.mock('~/metrics');
 
 describe('when delivering logs', () => {
     const AWS_ACCOUNT_ID = '123456789012';
@@ -80,7 +80,7 @@ describe('when delivering logs', () => {
     let s3Logger: S3LogPublisher;
     let spyS3Publish: jest.SpyInstance;
 
-    beforeAll(() => {
+    beforeAll(async () => {
         session = new SessionProxy(AWS_CONFIG);
         jest.spyOn<any, any>(AwsSdkThreadPool.prototype, 'runTask').mockRejectedValue(
             'Method runTask should not be called.'
@@ -166,7 +166,7 @@ describe('when delivering logs', () => {
             if (service.serviceIdentifier === 's3') return s3(options);
             return cwLogs(options);
         };
-        loggerProxy = new LoggerProxy(workerPool, { depth: 8 });
+        loggerProxy = new LoggerProxy({ depth: 8 });
         metricsPublisherProxy = new MetricsPublisherProxy();
         publishExceptionMetric = mockResult({
             ResponseMetadata: { RequestId: 'mock-request' },
@@ -203,6 +203,7 @@ describe('when delivering logs', () => {
             workerPool
         );
         cloudWatchLogger.refreshClient();
+        await cloudWatchLogger.populateSequenceToken();
         s3LogHelper = new S3LogHelper(
             session,
             S3_BUCKET_NAME,
@@ -223,12 +224,19 @@ describe('when delivering logs', () => {
         );
         s3Logger.refreshClient();
         loggerProxy.addLogPublisher(cloudWatchLogger);
+        workerPool.restart();
+        loggerProxy.progress.restart();
         jest.clearAllMocks();
     });
 
-    afterEach(() => {
+    afterEach(async () => {
+        await loggerProxy.waitQueue();
         jest.clearAllMocks();
         jest.restoreAllMocks();
+    });
+
+    afterAll(async () => {
+        await workerPool.shutdown();
     });
 
     describe('lambda log publisher', () => {
@@ -321,9 +329,7 @@ describe('when delivering logs', () => {
                 session,
                 LOG_GROUP_NAME,
                 LOG_STREAM_NAME,
-                console,
-                null,
-                workerPool
+                console
             );
             try {
                 await cloudWatchLogHelper.prepareLogStream();
@@ -626,9 +632,7 @@ describe('when delivering logs', () => {
                 session,
                 LOG_GROUP_NAME,
                 LOG_STREAM_NAME,
-                console,
-                null,
-                workerPool
+                console
             );
             try {
                 await cloudWatchLogger.publishLogEvent('How is it going?');
@@ -858,9 +862,7 @@ describe('when delivering logs', () => {
                 session,
                 LOG_GROUP_NAME,
                 LOG_STREAM_NAME,
-                console,
-                null,
-                workerPool
+                console
             );
             try {
                 await s3LogHelper.prepareFolder();
@@ -1112,9 +1114,7 @@ describe('when delivering logs', () => {
                 session,
                 S3_BUCKET_NAME,
                 S3_FOLDER_NAME,
-                console,
-                null,
-                workerPool
+                console
             );
             try {
                 await s3Logger.publishLogEvent('How is it going?');
@@ -1216,8 +1216,8 @@ describe('when delivering logs', () => {
     });
 
     describe('logger proxy', () => {
-        test('process log with deserialize error', async () => {
-            spyPublishLogEvent.mockRejectedValue(() => {
+        test('should process log with deserialize error', async () => {
+            spyPublishLogEvent.mockRejectedValueOnce(() => {
                 throw new Error();
             });
             const mockToJson: jest.Mock = jest.fn().mockReturnValue(() => {
@@ -1238,7 +1238,7 @@ describe('when delivering logs', () => {
             );
         });
 
-        test('logger proxy add filter', async () => {
+        test('should add filter', async () => {
             const filter = {
                 applyFilter(message: string): string {
                     return message.replace(AWS_ACCOUNT_ID, '<REDACTED>');
@@ -1258,7 +1258,7 @@ describe('when delivering logs', () => {
             );
         });
 
-        test('logger proxy process with success', async () => {
+        test('should process with success', async () => {
             loggerProxy.addLogPublisher(lambdaLogger);
             loggerProxy.addLogPublisher(s3Logger);
 
@@ -1302,6 +1302,52 @@ describe('when delivering logs', () => {
                 expect.any(Date)
             );
             expect(putObject).toHaveBeenCalledTimes(5);
+        });
+
+        test('should process log again with retryable error', async () => {
+            expect.assertions(4);
+            const returnedValue = { nextSequenceToken: 'some-other-seq' };
+            putLogEvents.mockReturnValue({
+                promise: jest
+                    .fn()
+                    .mockRejectedValueOnce(
+                        awsUtil.error(new Error(), {
+                            code: 'InvalidSequenceTokenException',
+                            message:
+                                'The given sequenceToken is invalid. The next expected sequenceToken is: 495579999999900356407851919528174642',
+                        })
+                    )
+                    .mockResolvedValue(returnedValue),
+                on: () => {},
+            });
+            const msgToLog = 'How is it going?';
+            loggerProxy.log(msgToLog);
+            await loggerProxy.waitQueue();
+            expect(spyPublishLogEvent).toHaveBeenCalledTimes(2);
+            expect(spyPublishLogEvent).toHaveBeenCalledWith(msgToLog, expect.any(Date));
+            expect(spyPublishLogEvent).toHaveNthReturnedWith(
+                1,
+                Promise.resolve(
+                    expect.objectContaining({
+                        retryable: true,
+                    })
+                )
+            );
+            expect(spyPublishLogEvent).toHaveNthReturnedWith(
+                2,
+                Promise.resolve(returnedValue)
+            );
+        });
+
+        test('should swallow error on wait progress failure', async () => {
+            const spyWaitToFinish = jest
+                .spyOn<any, any>(loggerProxy['progress'], 'waitToFinish')
+                .mockRejectedValueOnce('some random error');
+            loggerProxy.log('How is it going?');
+            const result = await loggerProxy.waitQueue();
+            expect(result).toBe(true);
+            expect(spyWaitToFinish).toHaveBeenCalledTimes(1);
+            expect(spyPublishLogEvent).toHaveBeenCalledTimes(1);
         });
     });
 });

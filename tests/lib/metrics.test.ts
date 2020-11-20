@@ -82,11 +82,16 @@ describe('when getting metrics', () => {
         publisher = new MetricsPublisher(session, console, RESOURCE_TYPE, workerPool);
         proxy.addMetricsPublisher(publisher);
         publisher.refreshClient();
+        workerPool.restart();
     });
 
     afterEach(() => {
         jest.clearAllMocks();
         jest.restoreAllMocks();
+    });
+
+    afterAll(async () => {
+        await workerPool.shutdown();
     });
 
     test('format dimensions', () => {

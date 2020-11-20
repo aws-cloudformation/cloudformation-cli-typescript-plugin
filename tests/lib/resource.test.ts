@@ -47,23 +47,7 @@ describe('when getting resource', () => {
         jest.spyOn<any, any>(AwsSdkThreadPool.prototype, 'runTask').mockRejectedValue(
             'Method runTask should not be called.'
         );
-        // const WorkerPool = jest.fn().mockImplementation(() => {
-        //     return {
-        //         client: jest.fn().mockReturnValue({
-        //             makeRequestPromise: jest.fn().mockResolvedValue(true),
-        //         }),
-        //         shutdown: jest.fn().mockResolvedValue(true),
-        //         done: jest.fn(),
-        //         addSubmitted: jest.fn(),
-        //         addCompleted: jest.fn(),
-        //         addFailed: jest.fn(),
-        //         runTask: jest
-        //             .fn()
-        //             .mockRejectedValue('Method runTask should not be called.'),
-        //     };
-        // });
         workerPool = new AwsSdkThreadPool({ minThreads: 1, maxThreads: 1 });
-        workerPool['shutdown'] = jest.fn().mockResolvedValue(true);
         workerPool['client'] = jest.fn().mockReturnValue({
             makeRequestPromise: jest.fn().mockResolvedValue(true),
         });

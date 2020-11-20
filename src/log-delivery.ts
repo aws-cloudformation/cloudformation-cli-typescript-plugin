@@ -9,7 +9,7 @@ import { v4 as uuidv4 } from 'uuid';
 
 import { SessionProxy } from './proxy';
 import { MetricsPublisherProxy } from './metrics';
-import { AwsSdkThreadPool, delay, ExtendedClient, Queue } from './utils';
+import { AwsSdkThreadPool, delay, ExtendedClient, Progress, Queue } from './utils';
 
 type Console = globalThis.Console;
 export type LambdaLogger = Partial<Console>;
@@ -104,7 +104,7 @@ export class CloudWatchLogPublisher extends LogPublisher {
         private readonly logGroupName: string,
         private readonly logStreamName: string,
         private readonly platformLogger: Logger,
-        private readonly metricsPublisherProxy: MetricsPublisherProxy,
+        private readonly metricsPublisherProxy?: MetricsPublisherProxy,
         protected readonly workerPool?: AwsSdkThreadPool,
         ...logFilters: readonly LogFilter[]
     ) {
@@ -159,20 +159,6 @@ export class CloudWatchLogPublisher extends LogPublisher {
                     await this.emitMetricsForLoggingFailure(err);
                     err.retryable = true;
                     err.message = `Publishing this log event should be retried. ${err.message}`;
-                    // try {
-                    //     this.nextSequenceToken = await this.putLogEvents(
-                    //         record,
-                    //         this.nextSequenceToken
-                    //     );
-                    // } catch (err) {
-                    //     this.platformLogger.log(
-                    //         `Error from "putLogEvents" with sequence token ${this.nextSequenceToken}`,
-                    //         JSON.stringify(err)
-                    //     );
-                    // }
-                    // if (this.nextSequenceToken) {
-                    //     return;
-                    // }
                 } else {
                     this.platformLogger.log(
                         `An error occurred while putting log events [${message}] to resource owner account, with error: ${err.toString()}`
@@ -258,7 +244,7 @@ export class CloudWatchLogHelper {
         private logGroupName: string,
         private logStreamName: string,
         private readonly platformLogger: Logger,
-        private readonly metricsPublisherProxy: MetricsPublisherProxy,
+        private readonly metricsPublisherProxy?: MetricsPublisherProxy,
         protected readonly workerPool?: AwsSdkThreadPool
     ) {
         if (!this.logStreamName) {
@@ -384,7 +370,7 @@ export class S3LogPublisher extends LogPublisher {
         private readonly bucketName: string,
         private readonly folderName: string,
         private readonly platformLogger: Logger,
-        private readonly metricsPublisherProxy: MetricsPublisherProxy,
+        private readonly metricsPublisherProxy?: MetricsPublisherProxy,
         protected readonly workerPool?: AwsSdkThreadPool,
         ...logFilters: readonly LogFilter[]
     ) {
@@ -459,7 +445,7 @@ export class S3LogHelper {
         private bucketName: string,
         private folderName: string,
         private readonly platformLogger: Logger,
-        private readonly metricsPublisherProxy: MetricsPublisherProxy,
+        private readonly metricsPublisherProxy?: MetricsPublisherProxy,
         protected readonly workerPool?: AwsSdkThreadPool
     ) {
         if (!this.folderName) {
@@ -589,11 +575,9 @@ export class S3LogHelper {
  */
 export class LoggerProxy implements Logger {
     private readonly logPublishers = new Array<LogPublisher>();
+    readonly progress = new Progress();
 
-    constructor(
-        protected readonly workerPool?: AwsSdkThreadPool,
-        defaultOptions: InspectOptions = {}
-    ) {
+    constructor(defaultOptions: InspectOptions = {}) {
         // Allow passing Node.js inspect options,
         // and change default depth from 4 to 10
         inspect.defaultOptions = {
@@ -601,30 +585,10 @@ export class LoggerProxy implements Logger {
             depth: 10,
             ...defaultOptions,
         };
-        // this.workerPool.progress.on('finished', () => {
-        //     console.debug('finished', this.workerPool.progress.message);
-        // });
     }
 
-    addSubmitted(): void {
-        if (this.workerPool && this.workerPool.progress) {
-            // console.debug('addSubmitted');
-            this.workerPool.progress.addSubmitted();
-        }
-    }
-
-    addCompleted(): void {
-        if (this.workerPool && this.workerPool.progress) {
-            // console.debug('addCompleted');
-            this.workerPool.progress.addCompleted();
-        }
-    }
-
-    addFailed(): void {
-        if (this.workerPool && this.workerPool.progress) {
-            // console.debug('addFailed');
-            this.workerPool.progress.addFailed();
-        }
+    done(): void {
+        this.progress.done = true;
     }
 
     addLogPublisher(logPublisher: LogPublisher): void {
@@ -638,102 +602,40 @@ export class LoggerProxy implements Logger {
     }
 
     async waitQueue(): Promise<boolean> {
-        // console.debug('start waitQueue');
-        if (this.workerPool && this.workerPool.progress) {
-            // await delay(2);
-            this.workerPool.done();
-            await this.workerPool.progress.waitToFinish();
-            await this.workerPool.shutdown();
-            // for (const logPublisher of this.logPublishers) {
-            //     try {
-            //         await this.workerPool.progress.();
-            //     } catch (err) {
-            //         console.error(err);
-            //     }
-            // }
+        try {
+            this.done();
+            await this.progress.waitToFinish();
+        } catch (err) {
+            console.error(err);
         }
         console.debug('Log delivery queue finalized.');
         return Promise.resolve(true);
     }
 
-    // public async processQueue(): Promise<void> {
-    //     console.debug('Processing log delivery queue...');
-    //     for (const key in this.queue) {
-    //         try {
-    //             await this.queue[key]();
-    //         } catch (err) {
-    //             console.error(err);
-    //             if (err.retryable === true) {
-    //                 try {
-    //                     await this.queue[key]();
-    //                 } catch (err) {
-    //                     console.error(err);
-    //                 }
-    //             }
-    //         }
-    //     }
-    //     console.debug('Log delivery queue finalized.');
-    //     this.queue.length = 0;
-    // }
-
-    // private *publishLogsSync(
-    //     logPublishers: LogPublisher[],
-    //     message: string,
-    //     timestamp: Date
-    // ): Generator<Promise<boolean[]>> {
-    //     const responses = yield Promise.all(
-    //         logPublishers.map((logPublisher: LogPublisher) =>
-    //             logPublisher.publishLogEvent(message, timestamp)
-    //         )
-    //     );
-    //     return responses;
-    // }
-
     log(message?: any, ...optionalParams: any[]): void {
         const formatted = format(message, ...optionalParams);
         const eventTime = new Date(Date.now());
-        // console.debug('start log');
         for (const logPublisher of this.logPublishers) {
-            this.addSubmitted();
+            this.progress.addSubmitted();
             (async () => {
                 try {
                     await logPublisher.publishLogEvent(formatted, eventTime);
-                    this.addCompleted();
+                    this.progress.addCompleted();
                 } catch (err) {
                     console.error(err);
-                    this.addFailed();
-                    // if (err?.retryable === true) {
-                    //     this.progress.addSubmitted();
-                    //     try {
-                    //         await logPublisher.publishLogEvent(formatted, eventTime);
-                    //         this.progress.addCompleted();
-                    //     } catch (err) {
-                    //         console.error(err);
-                    //         this.progress.addFailed();
-                    //     }
-                    // }
+                    if (err?.retryable === true) {
+                        this.progress.addSubmitted();
+                        try {
+                            await logPublisher.publishLogEvent(formatted, eventTime);
+                            this.progress.addCompleted();
+                        } catch (err) {
+                            console.error(err);
+                            this.progress.addFailed();
+                        }
+                    }
+                    this.progress.addFailed();
                 }
             })();
         }
-        // for (const logPublisher of this.logPublishers) {
-        //     const thread = (function* () {
-        //         yield logPublisher
-        //             .publishLogEvent(formatted, eventTime)
-        //             .catch(console.error);
-        //     })();
-        //     thread.next();
-        //     // publishLogSync({
-        //     //     logPublisher: logPublisher,
-        //     //     message: formatted,
-        //     //     timestamp: eventTime,
-        //     // } as LogInput);
-        // }
-        // const generator = asyncIterator(
-        //     this.publishLogsSync(logPublishers, formatted, eventTime)
-        // );
-        // for (const result of generator) {
-        //     console.log(result);
-        // }
-        // console.debug('end log');
     }
 }

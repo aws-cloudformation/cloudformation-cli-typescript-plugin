@@ -37,10 +37,10 @@ export class SessionProxy implements Session {
         if (typeof service === 'string') {
             const clients: { [K in ClientName]: ClientMap[K] } = Aws;
             ctor = (clients[service] as unknown) as Constructor<S>;
-        } else if (typeof service === 'object' && service instanceof Service) {
-            ctor = service.constructor as Constructor<S>;
+        } else if (typeof service === 'function') {
+            ctor = service as Constructor<S>;
         } else {
-            ctor = service;
+            ctor = service.constructor as Constructor<S>;
         }
         const client = new ctor({
             ...this.options,
