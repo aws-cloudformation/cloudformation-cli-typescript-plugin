@@ -1,52 +1,8 @@
-import { AWSError } from 'aws-sdk';
-import { Service, ServiceConfigurationOptions } from 'aws-sdk/lib/service';
 import { EventEmitter } from 'events';
-import path from 'path';
-import Piscina from 'piscina';
-import { deserializeError } from 'serialize-error';
 // eslint-disable-next-line
 const replaceAllShim = require('string.prototype.replaceall');
 
-import { Constructor, OverloadedArguments, ServiceProperties } from './interface';
-import { ClientApiOptions, InferredResult, ServiceOperation } from './workers/aws-sdk';
-
 type PromiseFunction = () => Promise<any>;
-
-type PoolOptions = ConstructorParameters<typeof Piscina>[0];
-
-/**
- * Promise final result Type from a AWS Service Function
- *
- * @param S Type of the AWS Service
- * @param C Type of the constructor function of the AWS Service
- * @param O Names of the operations (method) within the service
- * @param E Type of the error thrown by the service function
- * @param N Type of the service function inferred by the given operation name
- */
-export type ExtendedClient<S extends Service = Service> = S & {
-    serviceIdentifier?: string;
-} & Partial<
-        Readonly<
-            Record<
-                'makeRequestPromise',
-                <
-                    C extends Constructor<S> = Constructor<S>,
-                    O extends ServiceProperties<S, C> = ServiceProperties<S, C>,
-                    E extends Error = AWSError,
-                    N extends ServiceOperation<S, C, O, E> = ServiceOperation<
-                        S,
-                        C,
-                        O,
-                        E
-                    >
-                >(
-                    operation: O,
-                    input: OverloadedArguments<N>,
-                    headers?: { [key: string]: string }
-                ) => Promise<InferredResult<S, C, O, E, N>>
-            >
-        >
-    >;
 
 interface QueueItem {
     promise: PromiseFunction;
@@ -64,8 +20,8 @@ export async function delay(seconds: number): Promise<void> {
 }
 
 /**
- * Class to track progress of worker threads,
- * so that we know when it is finished.
+ * Class to track progress of multiple asynchronous tasks,
+ * so that we know when they are all finished.
  */
 export class Progress extends EventEmitter {
     #tasksSubmitted: number;
@@ -88,8 +44,8 @@ export class Progress extends EventEmitter {
         return this.#done;
     }
 
-    set done(value: boolean) {
-        this.#done = value;
+    end(): void {
+        this.#done = true;
     }
 
     restart(): void {
@@ -117,22 +73,12 @@ export class Progress extends EventEmitter {
         process.nextTick(() => this.emit('include', 'failed'));
     }
 
-    get isFinished(): boolean {
-        return this.done && this.completed === this.#tasksSubmitted;
-    }
-
-    async waitToFinish(): Promise<void> {
-        return await new Promise((resolve) => {
-            if (this.isFinished) {
-                resolve();
-            } else {
-                this.once('finished', resolve);
-            }
-        });
-    }
-
     get completed(): number {
         return this.#tasksCompleted + this.#tasksFailed;
+    }
+
+    get isFinished(): boolean {
+        return this.done && this.completed === this.#tasksSubmitted;
     }
 
     get message(): string {
@@ -142,120 +88,25 @@ export class Progress extends EventEmitter {
             ` [${this.#tasksFailed} failed]`
         );
     }
-}
 
-/**
- * Class to manage the pool of threads where we will have multiple workers
- * to interact with the AWS APIs by using its SDK.
- */
-export class AwsSdkThreadPool extends Piscina {
-    #drained: boolean;
-    #done: boolean;
-
-    constructor(poolOptions?: PoolOptions) {
-        super({
-            filename: path.resolve(__dirname, '../dist/workers/aws-sdk.js'),
-            idleTimeout: 25000, // Little less than the minimum 30 seconds from lambda handlers
-            ...poolOptions,
-        });
-        this.restart();
-        this.on('drain', () => {
-            this.#drained = true;
-        });
-    }
-
-    done(): void {
-        this.#done = true;
-    }
-
-    updateProgress(): void {
-        this.#drained = false;
-    }
-
-    restart(): void {
-        this.#drained = true;
-        this.#done = false;
-    }
-
-    get isFinished(): boolean {
-        return !this.queueSize && this.#drained && this.#done; //&& this.progress.isFinished;
-    }
-
-    client<
-        S extends Service = Service,
-        C extends Constructor<S> = Constructor<S>,
-        O extends ServiceProperties<S, C> = ServiceProperties<S, C>,
-        E extends Error = AWSError,
-        N extends ServiceOperation<S, C, O, E> = ServiceOperation<S, C, O, E>
-    >(service: S, options?: ServiceConfigurationOptions): ExtendedClient<S> {
-        const client: ExtendedClient<S> = service;
-        Object.defineProperty(client, 'makeRequestPromise', {
-            value: async (
-                operation: O,
-                input: OverloadedArguments<N>,
-                headers?: { [key: string]: string }
-            ): Promise<InferredResult<S, C, O, E, N>> => {
-                return await this.makeRequest<S, C, O, E, N>({
-                    name: client.serviceIdentifier,
-                    options: { ...client.config, options },
-                    operation,
-                    input,
-                    headers,
-                });
-            },
-        });
-        return client;
-    }
-
-    async makeRequest<
-        S extends Service = Service,
-        C extends Constructor<S> = Constructor<S>,
-        O extends ServiceProperties<S, C> = ServiceProperties<S, C>,
-        E extends Error = AWSError,
-        N extends ServiceOperation<S, C, O, E> = ServiceOperation<S, C, O, E>
-    >(params: ClientApiOptions<S, C, O, E, N>): Promise<InferredResult<S, C, O, E, N>> {
-        if (this.#done) {
-            throw Error(
-                'Not allowed to make an API call after the worker pool has been flagged as Done.'
-            );
-        }
-        this.updateProgress();
-        try {
-            const taskInput = JSON.parse(JSON.stringify(params));
-            const result = await this.runTask(taskInput);
-            return result;
-        } catch (err) {
-            if (typeof err === 'string') {
-                throw deserializeError(err);
-            }
-            throw err;
-        }
-    }
-
-    async shutdown(doDestroy = true): Promise<boolean> {
-        this.done();
-        await new Promise((resolve, reject) => {
+    async waitCompletion(): Promise<void> {
+        return await new Promise((resolve) => {
             if (this.isFinished) {
-                resolve(null);
+                resolve();
             } else {
-                this.once('error', reject);
-                this.once('drain', resolve);
+                this.once('finished', resolve);
             }
         });
-        if (doDestroy) {
-            await this.destroy();
-        }
-        return true;
     }
 }
 
 export class Queue {
-    private queue: QueueItem[] = [];
-    private pendingPromise = false;
+    #queue: QueueItem[] = [];
+    #pendingPromise = false;
 
     public enqueue(promise: PromiseFunction): Promise<any> {
         return new Promise((resolve, reject) => {
-            this.queue.push({
+            this.#queue.push({
                 promise,
                 resolve,
                 reject,
@@ -265,28 +116,28 @@ export class Queue {
     }
 
     private dequeue(): boolean {
-        if (this.pendingPromise) {
+        if (this.#pendingPromise) {
             return false;
         }
-        const item = this.queue.shift();
+        const item = this.#queue.shift();
         if (!item) {
             return false;
         }
         try {
-            this.pendingPromise = true;
+            this.#pendingPromise = true;
             item.promise()
                 .then((value) => {
-                    this.pendingPromise = false;
+                    this.#pendingPromise = false;
                     item.resolve(value);
                     this.dequeue();
                 })
                 .catch((err) => {
-                    this.pendingPromise = false;
+                    this.#pendingPromise = false;
                     item.reject(err);
                     this.dequeue();
                 });
         } catch (err) {
-            this.pendingPromise = false;
+            this.#pendingPromise = false;
             item.reject(err);
             this.dequeue();
         }

@@ -1,8 +1,11 @@
+import { AWSError } from 'aws-sdk';
 import { CredentialsOptions } from 'aws-sdk/lib/credentials';
 import { Service, ServiceConfigurationOptions } from 'aws-sdk/lib/service';
 import * as Aws from 'aws-sdk/clients/all';
 import { NextToken } from 'aws-sdk/clients/cloudformation';
+import { EventEmitter } from 'events';
 import { builder, IBuilder } from '@org-formation/tombok';
+import { Exclude, Expose } from 'class-transformer';
 
 import {
     BaseDto,
@@ -12,40 +15,134 @@ import {
     Dict,
     HandlerErrorCode,
     OperationStatus,
+    OverloadedArguments,
+    ServiceProperties,
 } from './interface';
-import { Exclude, Expose } from 'class-transformer';
+import { InferredResult, ServiceOperation } from './workers/aws-sdk';
 
 type ClientMap = typeof Aws;
 export type ClientName = keyof ClientMap;
 export type Client = InstanceType<ClientMap[ClientName]>;
 
+type RunTaskSignature = <
+    S extends Service = Service,
+    C extends Constructor<S> = Constructor<S>,
+    O extends ServiceProperties<S, C> = ServiceProperties<S, C>,
+    E extends Error = AWSError,
+    N extends ServiceOperation<S, C, O, E> = ServiceOperation<S, C, O, E>
+>(
+    params: any
+) => Promise<InferredResult<S, C, O, E, N>>;
+
+/**
+ * Promise final result Type from a AWS Service Function
+ *
+ * @param S Type of the AWS Service
+ * @param C Type of the constructor function of the AWS Service
+ * @param O Names of the operations (method) within the service
+ * @param E Type of the error thrown by the service function
+ * @param N Type of the service function inferred by the given operation name
+ */
+export type ExtendedClient<S extends Service = Service> = S & {
+    serviceIdentifier?: string;
+} & Partial<
+        Readonly<
+            Record<
+                'makeRequestPromise',
+                <
+                    C extends Constructor<S> = Constructor<S>,
+                    O extends ServiceProperties<S, C> = ServiceProperties<S, C>,
+                    E extends Error = AWSError,
+                    N extends ServiceOperation<S, C, O, E> = ServiceOperation<
+                        S,
+                        C,
+                        O,
+                        E
+                    >
+                >(
+                    operation: O,
+                    input: OverloadedArguments<N>,
+                    headers?: Record<string, string>
+                ) => Promise<InferredResult<S, C, O, E, N>>
+            >
+        >
+    >;
+
 export interface Session {
     client: <S extends Service>(
         service: ClientName | S | Constructor<S>,
         options?: ServiceConfigurationOptions
-    ) => S;
+    ) => ExtendedClient<S>;
 }
 
 export class SessionProxy implements Session {
     constructor(private options: ServiceConfigurationOptions) {}
 
+    private extendAwsClient<
+        S extends Service = Service,
+        C extends Constructor<S> = Constructor<S>,
+        O extends ServiceProperties<S, C> = ServiceProperties<S, C>,
+        E extends Error = AWSError,
+        N extends ServiceOperation<S, C, O, E> = ServiceOperation<S, C, O, E>
+    >(
+        service: S,
+        options?: ServiceConfigurationOptions,
+        workerPool?: EventEmitter & { runAwsTask?: RunTaskSignature }
+    ): ExtendedClient<S> {
+        const client: ExtendedClient<S> = service;
+        Object.defineProperty(client, 'makeRequestPromise', {
+            value: async (
+                operation: O,
+                input: OverloadedArguments<N>,
+                headers?: Record<string, string>
+            ): Promise<InferredResult<S, C, O, E, N>> => {
+                if (workerPool && workerPool.runAwsTask) {
+                    return await workerPool.runAwsTask<S, C, O, E, N>({
+                        name: client.serviceIdentifier,
+                        options,
+                        operation,
+                        input,
+                        headers,
+                    });
+                } else {
+                    const request = client.makeRequest(operation as string, input);
+                    if (headers?.length) {
+                        request.on('build', () => {
+                            for (const [key, value] of Object.entries(headers)) {
+                                request.httpRequest.headers[key] = value;
+                            }
+                        });
+                    }
+                    return await request.promise();
+                }
+            },
+        });
+        if (client.config && client.config.update) {
+            client.config.update(options);
+        }
+        return client;
+    }
+
     public client<S extends Service = Service>(
         service: ClientName | S | Constructor<S>,
-        options?: ServiceConfigurationOptions
-    ): S {
+        options?: ServiceConfigurationOptions,
+        workerPool?: EventEmitter & { runAwsTask?: RunTaskSignature }
+    ): ExtendedClient<S> {
+        const updatedConfig = { ...this.options, ...options };
         let ctor: Constructor<S>;
+        let client: ExtendedClient<S>;
         if (typeof service === 'string') {
+            // Kept for backward compatibility
             const clients: { [K in ClientName]: ClientMap[K] } = Aws;
             ctor = (clients[service] as unknown) as Constructor<S>;
         } else if (typeof service === 'function') {
             ctor = service as Constructor<S>;
         } else {
-            ctor = service.constructor as Constructor<S>;
+            client = this.extendAwsClient(service, updatedConfig, workerPool);
         }
-        const client = new ctor({
-            ...this.options,
-            ...options,
-        });
+        if (!client) {
+            client = this.extendAwsClient(new ctor(), updatedConfig, workerPool);
+        }
         return client;
     }
 

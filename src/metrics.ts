@@ -2,10 +2,11 @@ import CloudWatch, { Dimension, DimensionName } from 'aws-sdk/clients/cloudwatch
 import { ServiceConfigurationOptions } from 'aws-sdk/lib/service';
 
 import { Logger } from './log-delivery';
-import { SessionProxy } from './proxy';
+import { ExtendedClient, SessionProxy } from './proxy';
 import { Action, MetricTypes, StandardUnit } from './interface';
 import { BaseHandlerException } from './exceptions';
-import { AwsSdkThreadPool, ExtendedClient, Queue } from './utils';
+import { Queue } from './utils';
+import { AwsSdkThreadPool } from './workers/index';
 
 const METRIC_NAMESPACE_ROOT = 'AWS/CloudFormation';
 
@@ -41,14 +42,10 @@ export class MetricsPublisher {
         protected readonly workerPool?: AwsSdkThreadPool
     ) {
         this.resourceNamespace = resourceType.replace(/::/g, '/');
-        if (!workerPool) {
-            this.workerPool = new AwsSdkThreadPool();
-        }
     }
 
     public refreshClient(options?: ServiceConfigurationOptions): void {
-        const cloudwatch = this.session.client(CloudWatch);
-        this.client = this.workerPool.client(cloudwatch, options);
+        this.client = this.session.client(CloudWatch, options, this.workerPool);
     }
 
     async publishMetric(

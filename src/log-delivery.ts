@@ -7,9 +7,10 @@ import { ServiceConfigurationOptions } from 'aws-sdk/lib/service';
 import S3, { PutObjectRequest } from 'aws-sdk/clients/s3';
 import { v4 as uuidv4 } from 'uuid';
 
-import { SessionProxy } from './proxy';
+import { ExtendedClient, SessionProxy } from './proxy';
 import { MetricsPublisherProxy } from './metrics';
-import { AwsSdkThreadPool, delay, ExtendedClient, Progress, Queue } from './utils';
+import { delay, Progress, Queue } from './utils';
+import { AwsSdkThreadPool } from './workers/index';
 
 type Console = globalThis.Console;
 export type LambdaLogger = Partial<Console>;
@@ -108,12 +109,11 @@ export class CloudWatchLogPublisher extends LogPublisher {
         protected readonly workerPool?: AwsSdkThreadPool,
         ...logFilters: readonly LogFilter[]
     ) {
-        super(new AwsSdkThreadPool(), ...logFilters);
+        super(workerPool, ...logFilters);
     }
 
     public refreshClient(options?: ServiceConfigurationOptions): void {
-        const cwLogs = this.session.client(CloudWatchLogs);
-        this.client = this.workerPool.client(cwLogs, options);
+        this.client = this.session.client(CloudWatchLogs, options, this.workerPool);
     }
 
     protected async publishMessage(message: string, eventTime: Date): Promise<void> {
@@ -252,14 +252,10 @@ export class CloudWatchLogHelper {
         } else {
             this.logStreamName = logStreamName.replace(/:/g, '__');
         }
-        if (!workerPool) {
-            this.workerPool = new AwsSdkThreadPool();
-        }
     }
 
     public refreshClient(options?: ServiceConfigurationOptions): void {
-        const cwLogs = this.session.client(CloudWatchLogs);
-        this.client = this.workerPool.client(cwLogs, options);
+        this.client = this.session.client(CloudWatchLogs, options, this.workerPool);
     }
 
     public async prepareLogStream(): Promise<string | null> {
@@ -374,12 +370,11 @@ export class S3LogPublisher extends LogPublisher {
         protected readonly workerPool?: AwsSdkThreadPool,
         ...logFilters: readonly LogFilter[]
     ) {
-        super(workerPool || new AwsSdkThreadPool(), ...logFilters);
+        super(workerPool, ...logFilters);
     }
 
     public refreshClient(options?: ServiceConfigurationOptions): void {
-        const s3 = this.session.client(S3);
-        this.client = this.workerPool.client(s3, options);
+        this.client = this.session.client(S3, options, this.workerPool);
     }
 
     protected async publishMessage(message: string, eventTime: Date): Promise<void> {
@@ -452,14 +447,10 @@ export class S3LogHelper {
             this.folderName = uuidv4();
         }
         this.folderName = this.folderName.replace(/[^a-z0-9!_'.*()/-]/gi, '_');
-        if (!workerPool) {
-            this.workerPool = new AwsSdkThreadPool();
-        }
     }
 
     public refreshClient(options?: ServiceConfigurationOptions): void {
-        const s3 = this.session.client(S3);
-        this.client = this.workerPool.client(s3, options);
+        this.client = this.session.client(S3, options, this.workerPool);
     }
 
     public async prepareFolder(): Promise<string | null> {
@@ -587,10 +578,6 @@ export class LoggerProxy implements Logger {
         };
     }
 
-    done(): void {
-        this.progress.done = true;
-    }
-
     addLogPublisher(logPublisher: LogPublisher): void {
         this.logPublishers.push(logPublisher);
     }
@@ -601,14 +588,14 @@ export class LoggerProxy implements Logger {
         });
     }
 
-    async waitQueue(): Promise<boolean> {
+    async waitCompletion(): Promise<boolean> {
         try {
-            this.done();
-            await this.progress.waitToFinish();
+            this.progress.end();
+            await this.progress.waitCompletion();
         } catch (err) {
             console.error(err);
         }
-        console.debug('Log delivery queue finalized.');
+        console.debug('Log delivery completed.');
         return Promise.resolve(true);
     }
 

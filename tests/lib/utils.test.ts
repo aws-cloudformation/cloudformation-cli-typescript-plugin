@@ -1,4 +1,5 @@
-import { AwsSdkThreadPool, deepFreeze, replaceAll } from '~/utils';
+import { deepFreeze, replaceAll } from '~/utils';
+import { AwsSdkThreadPool } from '~/workers/index';
 
 describe('when getting utils', () => {
     afterEach(() => {
@@ -19,27 +20,27 @@ describe('when getting utils', () => {
 
         test('should fail with running task after done', async () => {
             try {
-                await workerPool.makeRequest(null);
+                await workerPool.runAwsTask(null);
             } catch (err) {
                 expect(err.name).toBe('TypeError');
             }
-            workerPool.done();
+            workerPool.end();
             try {
-                await workerPool.makeRequest(null);
+                await workerPool.runAwsTask(null);
             } catch (err) {
                 expect(err.message).toMatch(
-                    /Not allowed to make an API call after the worker pool has been flagged as Done/
+                    /Not allowed to make an API call after the worker pool has been flagged as done/
                 );
             }
         });
 
         test('should not fail while destroying two times', async () => {
             try {
-                await workerPool.makeRequest(null);
+                await workerPool.runAwsTask(null);
             } catch (err) {
                 expect(err.name).toBe('TypeError');
             }
-            workerPool.done();
+            workerPool.end();
             await workerPool.shutdown();
             await workerPool.shutdown();
             expect(workerPool.queueSize).toBe(0);

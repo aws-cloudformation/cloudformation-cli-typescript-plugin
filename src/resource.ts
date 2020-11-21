@@ -32,8 +32,8 @@ import {
     S3LogPublisher,
 } from './log-delivery';
 import { MetricsPublisher, MetricsPublisherProxy } from './metrics';
-import { AwsSdkThreadPool, deepFreeze, replaceAll } from './utils';
-import { exceptions } from '.';
+import { deepFreeze, replaceAll } from './utils';
+import { AwsSdkThreadPool } from './workers/index';
 
 const MUTATING_ACTIONS: [Action, Action, Action] = [
     Action.Create,
@@ -112,15 +112,12 @@ export abstract class BaseResource<T extends BaseModel = BaseModel> {
     constructor(
         public readonly typeName: string,
         public readonly modelTypeReference: Constructor<T>,
-        private readonly workerPool?: AwsSdkThreadPool,
+        protected readonly workerPool?: AwsSdkThreadPool,
         private handlers?: HandlerSignatures<T>
     ) {
         this.typeName = typeName || '';
         this.handlers = handlers || new HandlerSignatures<T>();
 
-        if (!workerPool) {
-            this.workerPool = new AwsSdkThreadPool();
-        }
         this.lambdaLogger = console;
         this.platformLoggerProxy = new LoggerProxy();
         this.platformLambdaLogger = new LambdaLogPublisher(this.lambdaLogger);
@@ -246,6 +243,16 @@ export abstract class BaseResource<T extends BaseModel = BaseModel> {
         return null;
     }
 
+    private async waitLongProcesses() {
+        if (this.loggerProxy) {
+            await this.loggerProxy.waitCompletion();
+        }
+        await this.platformLoggerProxy.waitCompletion();
+        if (this.workerPool) {
+            await this.workerPool.shutdown();
+        }
+    }
+
     /*
      * null-safe exception metrics delivery
      */
@@ -365,7 +372,7 @@ export abstract class BaseResource<T extends BaseModel = BaseModel> {
         let progress: ProgressEvent<T>;
         try {
             if (!this.modelTypeReference) {
-                throw new exceptions.InternalFailure(
+                throw new InternalFailure(
                     'Missing Model class to be used to deserialize JSON data.'
                 );
             }
@@ -398,8 +405,7 @@ export abstract class BaseResource<T extends BaseModel = BaseModel> {
             }
         }
         this.log(`END RequestId: ${context?.awsRequestId}`);
-        await this.platformLoggerProxy.waitQueue();
-        await this.workerPool.shutdown();
+        await this.waitLongProcesses();
         return Promise.resolve(progress);
     }
 
@@ -471,7 +477,7 @@ export abstract class BaseResource<T extends BaseModel = BaseModel> {
         let milliseconds: number = null;
         try {
             if (!this.modelTypeReference) {
-                throw new exceptions.InternalFailure(
+                throw new InternalFailure(
                     'Missing Model class to be used to deserialize JSON data.'
                 );
             }
@@ -564,11 +570,7 @@ export abstract class BaseResource<T extends BaseModel = BaseModel> {
         this.log(
             `REPORT RequestId: ${context?.awsRequestId}\tDuration: ${milliseconds} ms\tMemory Size: ${context?.memoryLimitInMB} MB`
         );
-        if (this.loggerProxy) {
-            await this.loggerProxy.waitQueue();
-        }
-        await this.platformLoggerProxy.waitQueue();
-        await this.workerPool.shutdown();
+        await this.waitLongProcesses();
         return progress;
     }
 }
