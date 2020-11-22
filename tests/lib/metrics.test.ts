@@ -1,9 +1,9 @@
 import CloudWatch from 'aws-sdk/clients/cloudwatch';
 import awsUtil from 'aws-sdk/lib/util';
+import WorkerPoolAwsSdk from 'worker-pool-aws-sdk';
 
 import { Action, MetricTypes, StandardUnit } from '~/interface';
 import { SessionProxy } from '~/proxy';
-import { AwsSdkThreadPool } from '~/workers/index';
 import {
     DimensionRecord,
     MetricsPublisher,
@@ -32,7 +32,7 @@ describe('when getting metrics', () => {
     };
 
     let session: SessionProxy;
-    let workerPool: AwsSdkThreadPool;
+    let workerPool: WorkerPoolAwsSdk;
     let proxy: MetricsPublisherProxy;
     let publisher: MetricsPublisher;
     let cloudwatch: jest.Mock<Partial<CloudWatch>>;
@@ -40,10 +40,10 @@ describe('when getting metrics', () => {
 
     beforeAll(() => {
         session = new SessionProxy(AWS_CONFIG);
-        jest.spyOn<any, any>(AwsSdkThreadPool.prototype, 'runTask').mockRejectedValue(
+        jest.spyOn<any, any>(WorkerPoolAwsSdk.prototype, 'runTask').mockRejectedValue(
             Error('Method runTask should not be called.')
         );
-        workerPool = new AwsSdkThreadPool({ minThreads: 1, maxThreads: 1 });
+        workerPool = new WorkerPoolAwsSdk({ minThreads: 1, maxThreads: 1 });
         workerPool.runAwsTask = null;
     });
 

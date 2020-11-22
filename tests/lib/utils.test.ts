@@ -1,50 +1,9 @@
 import { deepFreeze, replaceAll } from '~/utils';
-import { AwsSdkThreadPool } from '~/workers/index';
 
 describe('when getting utils', () => {
     afterEach(() => {
         jest.clearAllMocks();
         jest.restoreAllMocks();
-    });
-
-    describe('aws sdk thread pool', () => {
-        let workerPool: AwsSdkThreadPool;
-
-        beforeEach(() => {
-            workerPool = new AwsSdkThreadPool({ minThreads: 1, maxThreads: 1 });
-        });
-
-        afterEach(async () => {
-            await workerPool.shutdown();
-        });
-
-        test('should fail with running task after done', async () => {
-            try {
-                await workerPool.runAwsTask(null);
-            } catch (err) {
-                expect(err.name).toBe('TypeError');
-            }
-            workerPool.end();
-            try {
-                await workerPool.runAwsTask(null);
-            } catch (err) {
-                expect(err.message).toMatch(
-                    /Not allowed to make an API call after the worker pool has been flagged as done/
-                );
-            }
-        });
-
-        test('should not fail while destroying two times', async () => {
-            try {
-                await workerPool.runAwsTask(null);
-            } catch (err) {
-                expect(err.name).toBe('TypeError');
-            }
-            workerPool.end();
-            await workerPool.shutdown();
-            await workerPool.shutdown();
-            expect(workerPool.queueSize).toBe(0);
-        });
     });
 
     describe('replace all', () => {

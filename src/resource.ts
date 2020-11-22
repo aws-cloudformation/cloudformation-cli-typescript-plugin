@@ -1,7 +1,7 @@
 import 'reflect-metadata';
 import { boundMethod } from 'autobind-decorator';
 
-import { ProgressEvent, SessionProxy } from './proxy';
+import { AwsTaskWorkerPool, ProgressEvent, SessionProxy } from './proxy';
 import { BaseHandlerException, InternalFailure, InvalidRequest } from './exceptions';
 import {
     Action,
@@ -33,7 +33,6 @@ import {
 } from './log-delivery';
 import { MetricsPublisher, MetricsPublisherProxy } from './metrics';
 import { deepFreeze, replaceAll } from './utils';
-import { AwsSdkThreadPool } from './workers/index';
 
 const MUTATING_ACTIONS: [Action, Action, Action] = [
     Action.Create,
@@ -112,7 +111,7 @@ export abstract class BaseResource<T extends BaseModel = BaseModel> {
     constructor(
         public readonly typeName: string,
         public readonly modelTypeReference: Constructor<T>,
-        protected readonly workerPool?: AwsSdkThreadPool,
+        protected readonly workerPool?: AwsTaskWorkerPool,
         private handlers?: HandlerSignatures<T>
     ) {
         this.typeName = typeName || '';

@@ -4,6 +4,7 @@ import CloudWatchLogs, {
 import S3, { ListObjectsV2Output } from 'aws-sdk/clients/s3';
 import awsUtil from 'aws-sdk/lib/util';
 import { inspect } from 'util';
+import WorkerPoolAwsSdk from 'worker-pool-aws-sdk';
 
 import { SessionProxy } from '~/proxy';
 import { MetricsPublisherProxy } from '~/metrics';
@@ -16,7 +17,6 @@ import {
     S3LogHelper,
     S3LogPublisher,
 } from '~/log-delivery';
-import { AwsSdkThreadPool } from '~/workers/index';
 
 const mockResult = (output: any): jest.Mock => {
     return jest.fn().mockReturnValue({
@@ -68,7 +68,7 @@ describe('when delivering logs', () => {
     let listObjectsV2: jest.Mock;
     let spyPublishLogEvent: jest.SpyInstance;
     let loggerProxy: LoggerProxy;
-    let workerPool: AwsSdkThreadPool;
+    let workerPool: WorkerPoolAwsSdk;
     let metricsPublisherProxy: MetricsPublisherProxy;
     let publishExceptionMetric: jest.Mock;
     let lambdaLogger: LambdaLogPublisher;
@@ -82,10 +82,10 @@ describe('when delivering logs', () => {
 
     beforeAll(async () => {
         session = new SessionProxy(AWS_CONFIG);
-        jest.spyOn<any, any>(AwsSdkThreadPool.prototype, 'runTask').mockRejectedValue(
+        jest.spyOn<any, any>(WorkerPoolAwsSdk.prototype, 'runTask').mockRejectedValue(
             Error('Method runTask should not be called.')
         );
-        workerPool = new AwsSdkThreadPool({ minThreads: 1, maxThreads: 1 });
+        workerPool = new WorkerPoolAwsSdk({ minThreads: 1, maxThreads: 1 });
         workerPool.runAwsTask = null;
     });
 

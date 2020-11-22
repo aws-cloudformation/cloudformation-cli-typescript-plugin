@@ -1,3 +1,5 @@
+import WorkerPoolAwsSdk from 'worker-pool-aws-sdk';
+
 import * as exceptions from '~/exceptions';
 import { ProgressEvent, SessionProxy } from '~/proxy';
 import {
@@ -18,7 +20,6 @@ import {
 } from '~/log-delivery';
 import { MetricsPublisherProxy } from '~/metrics';
 import { handlerEvent, HandlerSignatures, BaseResource } from '~/resource';
-import { AwsSdkThreadPool } from '~/workers/index';
 import { SimpleStateModel } from '../data/sample-model';
 
 jest.mock('aws-sdk');
@@ -32,7 +33,7 @@ jest.mock('worker_threads');
 describe('when getting resource', () => {
     let entrypointPayload: any;
     let testEntrypointPayload: any;
-    let workerPool: AwsSdkThreadPool;
+    let workerPool: WorkerPoolAwsSdk;
     let spySession: jest.SpyInstance;
     let spySessionClient: jest.SpyInstance;
     let spyInitializeRuntime: jest.SpyInstance;
@@ -44,10 +45,10 @@ describe('when getting resource', () => {
     class Resource extends BaseResource<MockModel> {}
 
     beforeAll(() => {
-        jest.spyOn<any, any>(AwsSdkThreadPool.prototype, 'runTask').mockRejectedValue(
+        jest.spyOn<any, any>(WorkerPoolAwsSdk.prototype, 'runTask').mockRejectedValue(
             Error('Method runTask should not be called.')
         );
-        workerPool = new AwsSdkThreadPool({ minThreads: 1, maxThreads: 1 });
+        workerPool = new WorkerPoolAwsSdk({ minThreads: 1, maxThreads: 1 });
         workerPool.runAwsTask = null;
     });
 

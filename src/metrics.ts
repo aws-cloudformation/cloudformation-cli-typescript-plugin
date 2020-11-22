@@ -2,11 +2,10 @@ import CloudWatch, { Dimension, DimensionName } from 'aws-sdk/clients/cloudwatch
 import { ServiceConfigurationOptions } from 'aws-sdk/lib/service';
 
 import { Logger } from './log-delivery';
-import { ExtendedClient, SessionProxy } from './proxy';
+import { AwsTaskWorkerPool, ExtendedClient, SessionProxy } from './proxy';
 import { Action, MetricTypes, StandardUnit } from './interface';
 import { BaseHandlerException } from './exceptions';
 import { Queue } from './utils';
-import { AwsSdkThreadPool } from './workers/index';
 
 const METRIC_NAMESPACE_ROOT = 'AWS/CloudFormation';
 
@@ -39,7 +38,7 @@ export class MetricsPublisher {
         private readonly session: SessionProxy,
         private readonly logger: Logger,
         private readonly resourceType: string,
-        protected readonly workerPool?: AwsSdkThreadPool
+        protected readonly workerPool?: AwsTaskWorkerPool
     ) {
         this.resourceNamespace = resourceType.replace(/::/g, '/');
     }

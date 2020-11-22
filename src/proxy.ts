@@ -1,8 +1,9 @@
 import { AWSError } from 'aws-sdk';
-import { CredentialsOptions } from 'aws-sdk/lib/credentials';
-import { Service, ServiceConfigurationOptions } from 'aws-sdk/lib/service';
 import * as Aws from 'aws-sdk/clients/all';
 import { NextToken } from 'aws-sdk/clients/cloudformation';
+import { CredentialsOptions } from 'aws-sdk/lib/credentials';
+import { PromiseResult } from 'aws-sdk/lib/request';
+import { Service, ServiceConfigurationOptions } from 'aws-sdk/lib/service';
 import { EventEmitter } from 'events';
 import { builder, IBuilder } from '@org-formation/tombok';
 import { Exclude, Expose } from 'class-transformer';
@@ -18,13 +19,33 @@ import {
     OverloadedArguments,
     ServiceProperties,
 } from './interface';
-import { InferredResult, ServiceOperation } from './workers/aws-sdk';
 
 type ClientMap = typeof Aws;
 export type ClientName = keyof ClientMap;
 export type Client = InstanceType<ClientMap[ClientName]>;
 
-type RunTaskSignature = <
+export type Result<T> = T extends (...args: any) => infer R ? R : any;
+export type Input<T> = T extends (...args: infer P) => any ? P : never;
+export type ServiceOptions<S extends Service = Service> = ConstructorParameters<
+    Constructor<S>
+>[0];
+export type ServiceOperation<
+    S extends Service = Service,
+    C extends Constructor<S> = Constructor<S>,
+    O extends ServiceProperties<S, C> = ServiceProperties<S, C>,
+    E extends Error = AWSError
+> = InstanceType<C>[O] & {
+    promise(): Promise<PromiseResult<any, E>>;
+};
+export type InferredResult<
+    S extends Service = Service,
+    C extends Constructor<S> = Constructor<S>,
+    O extends ServiceProperties<S, C> = ServiceProperties<S, C>,
+    E extends Error = AWSError,
+    N extends ServiceOperation<S, C, O, E> = ServiceOperation<S, C, O, E>
+> = Input<Input<Result<Result<N>['promise']>['then']>[0]>[0];
+
+type AwsTaskSignature = <
     S extends Service = Service,
     C extends Constructor<S> = Constructor<S>,
     O extends ServiceProperties<S, C> = ServiceProperties<S, C>,
@@ -61,13 +82,17 @@ export type ExtendedClient<S extends Service = Service> = S & {
                     >
                 >(
                     operation: O,
-                    input: OverloadedArguments<N>,
+                    input?: OverloadedArguments<N>,
                     headers?: Record<string, string>
                 ) => Promise<InferredResult<S, C, O, E, N>>
             >
         >
     >;
 
+export interface AwsTaskWorkerPool extends EventEmitter {
+    runAwsTask: AwsTaskSignature;
+    shutdown: (doDestroy?: boolean) => Promise<boolean>;
+}
 export interface Session {
     client: <S extends Service>(
         service: ClientName | S | Constructor<S>,
@@ -87,13 +112,13 @@ export class SessionProxy implements Session {
     >(
         service: S,
         options?: ServiceConfigurationOptions,
-        workerPool?: EventEmitter & { runAwsTask?: RunTaskSignature }
+        workerPool?: AwsTaskWorkerPool
     ): ExtendedClient<S> {
         const client: ExtendedClient<S> = service;
         Object.defineProperty(client, 'makeRequestPromise', {
             value: async (
                 operation: O,
-                input: OverloadedArguments<N>,
+                input?: OverloadedArguments<N>,
                 headers?: Record<string, string>
             ): Promise<InferredResult<S, C, O, E, N>> => {
                 if (workerPool && workerPool.runAwsTask) {
@@ -126,7 +151,7 @@ export class SessionProxy implements Session {
     public client<S extends Service = Service>(
         service: ClientName | S | Constructor<S>,
         options?: ServiceConfigurationOptions,
-        workerPool?: EventEmitter & { runAwsTask?: RunTaskSignature }
+        workerPool?: AwsTaskWorkerPool
     ): ExtendedClient<S> {
         const updatedConfig = { ...this.options, ...options };
         let ctor: Constructor<S>;

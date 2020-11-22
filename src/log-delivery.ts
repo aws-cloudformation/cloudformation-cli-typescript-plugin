@@ -7,10 +7,9 @@ import { ServiceConfigurationOptions } from 'aws-sdk/lib/service';
 import S3, { PutObjectRequest } from 'aws-sdk/clients/s3';
 import { v4 as uuidv4 } from 'uuid';
 
-import { ExtendedClient, SessionProxy } from './proxy';
+import { AwsTaskWorkerPool, ExtendedClient, SessionProxy } from './proxy';
 import { MetricsPublisherProxy } from './metrics';
 import { delay, Progress, Queue } from './utils';
-import { AwsSdkThreadPool } from './workers/index';
 
 type Console = globalThis.Console;
 export type LambdaLogger = Partial<Console>;
@@ -33,7 +32,7 @@ export abstract class LogPublisher {
     private logFilters: LogFilter[];
 
     constructor(
-        protected readonly workerPool?: AwsSdkThreadPool,
+        protected readonly workerPool?: AwsTaskWorkerPool,
         ...filters: readonly LogFilter[]
     ) {
         this.logFilters = Array.from(filters);
@@ -106,7 +105,7 @@ export class CloudWatchLogPublisher extends LogPublisher {
         private readonly logStreamName: string,
         private readonly platformLogger: Logger,
         private readonly metricsPublisherProxy?: MetricsPublisherProxy,
-        protected readonly workerPool?: AwsSdkThreadPool,
+        protected readonly workerPool?: AwsTaskWorkerPool,
         ...logFilters: readonly LogFilter[]
     ) {
         super(workerPool, ...logFilters);
@@ -245,7 +244,7 @@ export class CloudWatchLogHelper {
         private logStreamName: string,
         private readonly platformLogger: Logger,
         private readonly metricsPublisherProxy?: MetricsPublisherProxy,
-        protected readonly workerPool?: AwsSdkThreadPool
+        protected readonly workerPool?: AwsTaskWorkerPool
     ) {
         if (!this.logStreamName) {
             this.logStreamName = uuidv4();
@@ -367,7 +366,7 @@ export class S3LogPublisher extends LogPublisher {
         private readonly folderName: string,
         private readonly platformLogger: Logger,
         private readonly metricsPublisherProxy?: MetricsPublisherProxy,
-        protected readonly workerPool?: AwsSdkThreadPool,
+        protected readonly workerPool?: AwsTaskWorkerPool,
         ...logFilters: readonly LogFilter[]
     ) {
         super(workerPool, ...logFilters);
@@ -441,7 +440,7 @@ export class S3LogHelper {
         private folderName: string,
         private readonly platformLogger: Logger,
         private readonly metricsPublisherProxy?: MetricsPublisherProxy,
-        protected readonly workerPool?: AwsSdkThreadPool
+        protected readonly workerPool?: AwsTaskWorkerPool
     ) {
         if (!this.folderName) {
             this.folderName = uuidv4();
