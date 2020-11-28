@@ -200,19 +200,25 @@ export class MetricsPublisherProxy {
         timestamp: Date,
         action: Action,
         error: Error
-    ): Promise<void> {
-        for (const publisher of this.publishers) {
-            await publisher.publishExceptionMetric(timestamp, action, error);
-        }
+    ): Promise<any> {
+        const promises: Array<Promise<void>> = this.publishers.map(
+            (publisher: MetricsPublisher) => {
+                return publisher.publishExceptionMetric(timestamp, action, error);
+            }
+        );
+        return await Promise.all(promises);
     }
 
     /**
      * Publishes a metric related to invocations to the list of publishers
      */
-    async publishInvocationMetric(timestamp: Date, action: Action): Promise<void> {
-        for (const publisher of this.publishers) {
-            await publisher.publishInvocationMetric(timestamp, action);
-        }
+    async publishInvocationMetric(timestamp: Date, action: Action): Promise<any> {
+        const promises: Array<Promise<void>> = this.publishers.map(
+            (publisher: MetricsPublisher) => {
+                return publisher.publishInvocationMetric(timestamp, action);
+            }
+        );
+        return await Promise.all(promises);
     }
 
     /**
@@ -222,10 +228,13 @@ export class MetricsPublisherProxy {
         timestamp: Date,
         action: Action,
         milliseconds: number
-    ): Promise<void> {
-        for (const publisher of this.publishers) {
-            await publisher.publishDurationMetric(timestamp, action, milliseconds);
-        }
+    ): Promise<any> {
+        const promises: Array<Promise<void>> = this.publishers.map(
+            (publisher: MetricsPublisher) => {
+                return publisher.publishDurationMetric(timestamp, action, milliseconds);
+            }
+        );
+        return await Promise.all(promises);
     }
 
     /**
@@ -234,9 +243,12 @@ export class MetricsPublisherProxy {
     async publishLogDeliveryExceptionMetric(
         timestamp: Date,
         error: Error
-    ): Promise<void> {
-        for (const publisher of this.publishers) {
-            await publisher.publishLogDeliveryExceptionMetric(timestamp, error);
-        }
+    ): Promise<any> {
+        const promises: Array<Promise<void>> = this.publishers.map(
+            (publisher: MetricsPublisher) => {
+                return publisher.publishLogDeliveryExceptionMetric(timestamp, error);
+            }
+        );
+        return await Promise.all(promises);
     }
 }

@@ -126,7 +126,7 @@ export class CloudWatchLogPublisher extends LogPublisher {
         }
         try {
             // Delay to avoid throttling
-            await delay(0.1);
+            await delay(0.25);
             const record: InputLogEvent = {
                 message,
                 timestamp: Math.round(eventTime.getTime()),
@@ -222,6 +222,7 @@ export class CloudWatchLogPublisher extends LogPublisher {
  *   * logs:CreateLogGroup
  *   * logs:CreateLogStream
  *   * logs:DescribeLogGroups
+ *   * logs:DescribeLogStreams
  */
 export class CloudWatchLogHelper {
     private client: CloudWatchLogs;
@@ -261,7 +262,7 @@ export class CloudWatchLogHelper {
             );
             await this.emitMetricsForLoggingFailure(err);
         }
-        return Promise.resolve(null);
+        return null;
     }
 
     private async doesLogGroupExist(): Promise<boolean> {
