@@ -33,6 +33,7 @@ jest.mock('worker_threads');
 describe('when getting resource', () => {
     let entrypointPayload: any;
     let testEntrypointPayload: any;
+    let lambdaContext: any;
     let workerPool: WorkerPoolAwsSdk;
     let spySession: jest.SpyInstance;
     let spySessionClient: jest.SpyInstance;
@@ -99,6 +100,12 @@ describe('when getting resource', () => {
                 logicalResourceIdentifier: null,
             },
         };
+        lambdaContext = {
+            awsRequestId: 'a11164a0-2fe5-11eb-bc69-06d8413a1460',
+            functionVersion: '$LATEST',
+            memoryLimitInMB: 256,
+            getRemainingTimeInMillis: () => 1000,
+        };
         spySession = jest.spyOn(SessionProxy, 'getSession');
         spySessionClient = jest.spyOn<any, any>(SessionProxy.prototype, 'client');
         spyInitializeRuntime = jest.spyOn<any, any>(
@@ -108,6 +115,7 @@ describe('when getting resource', () => {
     });
 
     afterEach(() => {
+        workerPool.restart();
         jest.clearAllMocks();
         jest.restoreAllMocks();
     });
@@ -138,7 +146,7 @@ describe('when getting resource', () => {
         });
     });
 
-    test('entrypoint success', async () => {
+    test('entrypoint success production-like', async () => {
         const mockHandler: jest.Mock = jest.fn(() => ProgressEvent.success());
         const resource = new Resource(TYPE_NAME, MockModel);
         resource.addHandler(Action.Create, mockHandler);
@@ -440,6 +448,48 @@ describe('when getting resource', () => {
         expect(event.message).toBe('exception');
     });
 
+    test('entrypoint success even with wait logger failure', async () => {
+        const spyWaitRunningProcesses = jest
+            .spyOn<any, any>(Resource.prototype, 'waitRunningProcesses')
+            .mockRejectedValue({
+                message:
+                    'Not allowed to submit a new task after progress tracker has been closed',
+            });
+        const mockHandler: jest.Mock = jest.fn(() => ProgressEvent.success());
+        const resource = new Resource(TYPE_NAME, MockModel);
+        resource.addHandler(Action.Create, mockHandler);
+        const event = await resource.entrypoint(entrypointPayload, lambdaContext);
+        expect(spyInitializeRuntime).toBeCalledTimes(1);
+        expect(spyWaitRunningProcesses).toBeCalledTimes(1);
+        expect(event).toMatchObject({
+            message: '',
+            status: OperationStatus.Success,
+            callbackDelaySeconds: 0,
+        });
+        expect(mockHandler).toBeCalledTimes(1);
+    });
+
+    test('entrypoint success with two consecutive calls', async () => {
+        // We are emulating the execution context reuse in the lambda function
+        const mockHandler: jest.Mock = jest.fn(() => ProgressEvent.success());
+        const resource = new Resource(TYPE_NAME, MockModel);
+        resource.addHandler(Action.Create, mockHandler);
+        jest.spyOn<any, any>(S3LogHelper.prototype, 'prepareFolder').mockResolvedValue(
+            null
+        );
+        let event = await resource.entrypoint(entrypointPayload, lambdaContext);
+        expect(resource['loggerProxy']['logPublishers'].length).toBe(1);
+        expect(event.status).toBe(OperationStatus.Success);
+        event = await resource.entrypoint(entrypointPayload, {
+            ...lambdaContext,
+            awsRequestId: 'd8181a30-302a-11eb-9c27-0aeffe35c30a',
+        });
+        expect(resource['loggerProxy']['logPublishers'].length).toBe(1);
+        expect(event.status).toBe(OperationStatus.Success);
+        expect(spyInitializeRuntime).toBeCalledTimes(2);
+        expect(mockHandler).toBeCalledTimes(2);
+    });
+
     test('add handler', () => {
         class ResourceEventHandler extends BaseResource<MockModel> {
             @handlerEvent(Action.Create)
@@ -520,7 +570,7 @@ describe('when getting resource', () => {
             session,
             request,
             callbackContext,
-            undefined
+            expect.any(LoggerProxy)
         );
     });
 

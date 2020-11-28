@@ -64,10 +64,15 @@
         "ts-jest": "^26.4.4",
         "ts-node": "^9.0.0",
         "typescript": "^4.1.2",
-        "worker-pool-aws-sdk": "^0.0.2"
+        "worker-pool-aws-sdk": "^0.0.5"
     },
-    "optionalDependencies": {
-        "aws-sdk": "~2.712.0"
+    "peerDependencies": {
+        "aws-sdk": "^2.712.0"
+    },
+    "peerDependenciesMeta": {
+        "aws-sdk": {
+            "optional": true
+        }
     },
     "prettier": {
         "parser": "typescript",

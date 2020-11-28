@@ -9,7 +9,7 @@ import { v4 as uuidv4 } from 'uuid';
 
 import { AwsTaskWorkerPool, ExtendedClient, SessionProxy } from './proxy';
 import { MetricsPublisherProxy } from './metrics';
-import { delay, Progress, Queue } from './utils';
+import { delay, ProgressTracker, Queue } from './utils';
 
 type Console = globalThis.Console;
 export type LambdaLogger = Partial<Console>;
@@ -565,7 +565,7 @@ export class S3LogHelper {
  */
 export class LoggerProxy implements Logger {
     private readonly logPublishers = new Array<LogPublisher>();
-    readonly progress = new Progress();
+    readonly tracker = new ProgressTracker();
 
     constructor(defaultOptions: InspectOptions = {}) {
         // Allow passing Node.js inspect options,
@@ -578,7 +578,9 @@ export class LoggerProxy implements Logger {
     }
 
     addLogPublisher(logPublisher: LogPublisher): void {
-        this.logPublishers.push(logPublisher);
+        if (logPublisher) {
+            this.logPublishers.push(logPublisher);
+        }
     }
 
     addFilter(filter: LogFilter): void {
@@ -589,12 +591,11 @@ export class LoggerProxy implements Logger {
 
     async waitCompletion(): Promise<boolean> {
         try {
-            this.progress.end();
-            await this.progress.waitCompletion();
+            this.tracker.end();
+            await this.tracker.waitCompletion();
         } catch (err) {
             console.error(err);
         }
-        console.debug('Log delivery completed.');
         return Promise.resolve(true);
     }
 
@@ -602,24 +603,24 @@ export class LoggerProxy implements Logger {
         const formatted = format(message, ...optionalParams);
         const eventTime = new Date(Date.now());
         for (const logPublisher of this.logPublishers) {
-            this.progress.addSubmitted();
+            this.tracker.addSubmitted();
             (async () => {
                 try {
                     await logPublisher.publishLogEvent(formatted, eventTime);
-                    this.progress.addCompleted();
+                    this.tracker.addCompleted();
                 } catch (err) {
                     console.error(err);
-                    if (err?.retryable === true) {
-                        this.progress.addSubmitted();
+                    if (err.retryable === true) {
                         try {
                             await logPublisher.publishLogEvent(formatted, eventTime);
-                            this.progress.addCompleted();
+                            this.tracker.addCompleted();
                         } catch (err) {
                             console.error(err);
-                            this.progress.addFailed();
+                            this.tracker.addFailed();
                         }
+                    } else {
+                        this.tracker.addFailed();
                     }
-                    this.progress.addFailed();
                 }
             })();
         }

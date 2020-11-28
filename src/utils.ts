@@ -23,7 +23,7 @@ export async function delay(seconds: number): Promise<void> {
  * Class to track progress of multiple asynchronous tasks,
  * so that we know when they are all finished.
  */
-export class Progress extends EventEmitter {
+export class ProgressTracker extends EventEmitter {
     #tasksSubmitted: number;
     #tasksCompleted: number;
     #tasksFailed: number;
@@ -44,6 +44,10 @@ export class Progress extends EventEmitter {
         return this.#done;
     }
 
+    set done(value: boolean) {
+        this.#done = !!value;
+    }
+
     end(): void {
         this.#done = true;
     }
@@ -57,7 +61,9 @@ export class Progress extends EventEmitter {
 
     addSubmitted(): void {
         if (this.isFinished) {
-            throw Error('Not allowed to submit a new task after it has been finished.');
+            throw Error(
+                'Not allowed to submit a new task after progress tracker has been closed.'
+            );
         }
         this.#tasksSubmitted++;
         process.nextTick(() => this.emit('include', 'submitted'));
@@ -90,13 +96,14 @@ export class Progress extends EventEmitter {
     }
 
     async waitCompletion(): Promise<void> {
-        return await new Promise((resolve) => {
+        await new Promise<void>((resolve) => {
             if (this.isFinished) {
                 resolve();
             } else {
                 this.once('finished', resolve);
             }
         });
+        this.restart();
     }
 }
 

@@ -2,13 +2,13 @@ import CloudWatch from 'aws-sdk/clients/cloudwatch';
 import awsUtil from 'aws-sdk/lib/util';
 import WorkerPoolAwsSdk from 'worker-pool-aws-sdk';
 
-import { Action, MetricTypes, StandardUnit } from '~/interface';
+import { Action, MetricTypes, ServiceProperties, StandardUnit } from '~/interface';
 import { SessionProxy } from '~/proxy';
 import {
     DimensionRecord,
+    formatDimensions,
     MetricsPublisher,
     MetricsPublisherProxy,
-    formatDimensions,
 } from '~/metrics';
 
 const mockResult = (output: any): jest.Mock => {
@@ -50,19 +50,21 @@ describe('when getting metrics', () => {
     beforeEach(() => {
         putMetricData = mockResult({ ResponseMetadata: { RequestId: 'mock-request' } });
         cloudwatch = (CloudWatch as unknown) as jest.Mock;
-        cloudwatch.mockImplementation((config) => {
-            const returnValue = {
+        cloudwatch.mockImplementation((config = {}) => {
+            const returnValue: jest.Mocked<Partial<CloudWatch>> = {
                 putMetricData,
             };
+            const ctor = CloudWatch;
+            ctor['serviceIdentifier'] = 'cloudwatch';
             return {
                 ...returnValue,
                 config: { ...AWS_CONFIG, ...config, update: () => undefined },
-                serviceIdentifier: 'cloudwatchlogs',
+                constructor: ctor,
                 makeRequest: (
-                    operation: keyof typeof returnValue,
+                    operation: ServiceProperties<CloudWatch>,
                     params?: Record<string, any>
                 ): any => {
-                    return returnValue[operation](params);
+                    return returnValue[operation](params as any);
                 },
             };
         });

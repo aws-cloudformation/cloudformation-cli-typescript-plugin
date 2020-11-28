@@ -92,6 +92,8 @@ export type ExtendedClient<S extends Service = Service> = S & {
 export interface AwsTaskWorkerPool extends EventEmitter {
     runAwsTask: AwsTaskSignature;
     shutdown: (doDestroy?: boolean) => Promise<boolean>;
+    completed?: number;
+    duration?: number;
 }
 export interface Session {
     client: <S extends Service>(
@@ -122,24 +124,28 @@ export class SessionProxy implements Session {
                 headers?: Record<string, string>
             ): Promise<InferredResult<S, C, O, E, N>> => {
                 if (workerPool && workerPool.runAwsTask) {
-                    return await workerPool.runAwsTask<S, C, O, E, N>({
-                        name: client.serviceIdentifier,
-                        options,
-                        operation,
-                        input,
-                        headers,
-                    });
-                } else {
-                    const request = client.makeRequest(operation as string, input);
-                    if (headers?.length) {
-                        request.on('build', () => {
-                            for (const [key, value] of Object.entries(headers)) {
-                                request.httpRequest.headers[key] = value;
-                            }
+                    try {
+                        const result = await workerPool.runAwsTask<S, C, O, E, N>({
+                            name: client.serviceIdentifier,
+                            options,
+                            operation,
+                            input,
+                            headers,
                         });
+                        return result;
+                    } catch (err) {
+                        console.log(err);
                     }
-                    return await request.promise();
                 }
+                const request = client.makeRequest(operation as string, input);
+                if (headers?.length) {
+                    request.on('build', () => {
+                        for (const [key, value] of Object.entries(headers)) {
+                            request.httpRequest.headers[key] = value;
+                        }
+                    });
+                }
+                return await request.promise();
             },
         });
         if (client.config && client.config.update) {
@@ -166,7 +172,11 @@ export class SessionProxy implements Session {
             client = this.extendAwsClient(service, updatedConfig, workerPool);
         }
         if (!client) {
-            client = this.extendAwsClient(new ctor(), updatedConfig, workerPool);
+            client = this.extendAwsClient(
+                new ctor(updatedConfig),
+                updatedConfig,
+                workerPool
+            );
         }
         return client;
     }

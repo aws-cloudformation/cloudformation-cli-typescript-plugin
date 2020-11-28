@@ -8,6 +8,7 @@ import WorkerPoolAwsSdk from 'worker-pool-aws-sdk';
 
 import { SessionProxy } from '~/proxy';
 import { MetricsPublisherProxy } from '~/metrics';
+import { ServiceProperties } from '~/interface';
 import {
     CloudWatchLogHelper,
     CloudWatchLogPublisher,
@@ -104,23 +105,25 @@ describe('when delivering logs', () => {
         });
         putLogEvents = mockResult({ ResponseMetadata: { RequestId: 'mock-request' } });
         cwLogs = (CloudWatchLogs as unknown) as jest.Mock;
-        cwLogs.mockImplementation((config) => {
-            const returnValue = {
+        cwLogs.mockImplementation((config = {}) => {
+            const returnValue: jest.Mocked<Partial<CloudWatchLogs>> = {
                 createLogGroup,
                 createLogStream,
                 describeLogGroups,
                 describeLogStreams,
                 putLogEvents,
             };
+            const ctor = CloudWatchLogs;
+            ctor['serviceIdentifier'] = 'cloudwatchlogs';
             return {
                 ...returnValue,
                 config: { ...AWS_CONFIG, ...config, update: () => undefined },
-                serviceIdentifier: 'cloudwatchlogs',
+                constructor: ctor,
                 makeRequest: (
-                    operation: keyof typeof returnValue,
+                    operation: ServiceProperties<CloudWatchLogs>,
                     params?: Record<string, any>
                 ): any => {
-                    return returnValue[operation](params);
+                    return returnValue[operation](params as any);
                 },
             };
         });
@@ -128,21 +131,23 @@ describe('when delivering logs', () => {
         putObject = mockResult({ ResponseMetadata: { RequestId: 'mock-request' } });
         listObjectsV2 = mockResult({ ResponseMetadata: { RequestId: 'mock-request' } });
         s3 = (S3 as unknown) as jest.Mock;
-        s3.mockImplementation((config) => {
-            const returnValue = {
+        s3.mockImplementation((config = {}) => {
+            const returnValue: jest.Mocked<Partial<S3>> = {
                 createBucket,
                 putObject,
                 listObjectsV2,
             };
+            const ctor = S3;
+            ctor['serviceIdentifier'] = 's3';
             return {
                 ...returnValue,
                 config: { ...AWS_CONFIG, ...config, update: () => undefined },
-                serviceIdentifier: 's3',
+                constructor: ctor,
                 makeRequest: (
-                    operation: keyof typeof returnValue,
+                    operation: ServiceProperties<S3>,
                     params?: Record<string, any>
                 ): any => {
-                    return returnValue[operation](params);
+                    return (returnValue[operation] as any)(params);
                 },
             };
         });
@@ -201,7 +206,7 @@ describe('when delivering logs', () => {
         s3Logger.refreshClient();
         loggerProxy.addLogPublisher(cloudWatchLogger);
         workerPool.restart();
-        loggerProxy.progress.restart();
+        loggerProxy.tracker.restart();
         jest.clearAllMocks();
     });
 
@@ -1315,9 +1320,9 @@ describe('when delivering logs', () => {
             );
         });
 
-        test('should swallow error on wait progress failure', async () => {
+        test('should swallow error on wait tracker failure', async () => {
             const spyWaitCompletion = jest
-                .spyOn<any, any>(loggerProxy['progress'], 'waitCompletion')
+                .spyOn<any, any>(loggerProxy['tracker'], 'waitCompletion')
                 .mockRejectedValueOnce('some random error');
             loggerProxy.log('How is it going?');
             const result = await loggerProxy.waitCompletion();
