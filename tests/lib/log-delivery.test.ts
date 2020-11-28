@@ -3,6 +3,7 @@ import CloudWatchLogs, {
 } from 'aws-sdk/clients/cloudwatchlogs';
 import S3, { ListObjectsV2Output } from 'aws-sdk/clients/s3';
 import awsUtil from 'aws-sdk/lib/util';
+import { inspect } from 'util';
 
 import { SessionProxy } from '../../src/proxy';
 import { MetricsPublisherProxy } from '../../src/metrics';
@@ -129,7 +130,7 @@ describe('when delivering logs', () => {
             if (name === 'CloudWatchLogs') return cwLogs(options);
             if (name === 'S3') return s3(options);
         };
-        loggerProxy = new LoggerProxy();
+        loggerProxy = new LoggerProxy({ depth: 8 });
         metricsPublisherProxy = new MetricsPublisherProxy();
         publishExceptionMetric = mockResult({
             ResponseMetadata: { RequestId: 'mock-request' },
@@ -493,7 +494,9 @@ describe('when delivering logs', () => {
                         code: 'AccessDeniedException',
                     })
                 ),
-                on: () => {},
+                on: (_event: string, callback: Function) => {
+                    callback({ httpRequest: { headers: [] } });
+                },
             });
             const msgToLog = 'How is it going?';
             try {
@@ -1213,6 +1216,7 @@ describe('when delivering logs', () => {
             loggerProxy.log('timestamp: [%s]', new Date('2020-01-03'));
             loggerProxy.log('timestamp: [%s]', new Date('2020-01-04'));
             expect(loggerProxy['queue'].length).toBe(9);
+            expect(inspect.defaultOptions.depth).toBe(8);
             await loggerProxy.processQueue();
 
             expect(cloudWatchLogger['logStreamName']).toBe(LOG_STREAM_NAME);

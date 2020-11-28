@@ -42,11 +42,11 @@ describe('when getting resource', () => {
     let spySessionClient: jest.SpyInstance;
     let spyInitializeRuntime: jest.SpyInstance;
     const TYPE_NAME = 'Test::Foo::Bar';
-    class Resource extends BaseResource {}
     class MockModel extends SimpleStateModel {
         ['constructor']: typeof MockModel;
         public static readonly TYPE_NAME: string = TYPE_NAME;
     }
+    class Resource extends BaseResource<MockModel> {}
 
     beforeEach(() => {
         const mockCloudformation = (CloudFormation as unknown) as jest.Mock;
@@ -120,7 +120,7 @@ describe('when getting resource', () => {
         jest.restoreAllMocks();
     });
 
-    const getResource = (handlers?: HandlerSignatures) => {
+    const getResource = (handlers?: HandlerSignatures<MockModel>): Resource => {
         const instance = new Resource(TYPE_NAME, MockModel, handlers);
         return instance;
     };
@@ -204,6 +204,7 @@ describe('when getting resource', () => {
     });
 
     test('entrypoint redacting credentials', async () => {
+        expect.assertions(13);
         const spyPublishLogEvent = jest.spyOn<any, any>(
             LogPublisher.prototype,
             'publishLogEvent'
@@ -217,29 +218,31 @@ describe('when getting resource', () => {
         const resource = new Resource(TYPE_NAME, MockModel);
         entrypointPayload['action'] = 'READ';
         const mockHandler: jest.Mock = jest.fn(() => ProgressEvent.success());
-        resource.addHandler(Action.Create, mockHandler);
+        resource.addHandler(Action.Read, mockHandler);
         await resource.entrypoint(entrypointPayload, null);
         expect(spySession).toHaveBeenCalled();
         expect(spySessionClient).toBeCalledTimes(3);
         expect(spyPrepareLogStream).toBeCalledTimes(1);
-        expect(spyPublishLogEvent).toHaveBeenCalledTimes(2);
-        expect(mockPublishMessage).toHaveBeenCalledTimes(2);
+        expect(spyPublishLogEvent).toHaveBeenCalled();
+        expect(mockPublishMessage).toHaveBeenCalled();
         mockPublishMessage.mock.calls.forEach((value: any[]) => {
-            const message = value[0];
-            expect(message).toMatch(/bearerToken: '<REDACTED>'/);
-            expect(message).toMatch(
-                /providerCredentials: {\s+accessKeyId: '<REDACTED>',\s+secretAccessKey: '<REDACTED>',\s+sessionToken: '<REDACTED>'\s+}/
-            );
-            expect(message).toMatch(
-                /callerCredentials: {\s+accessKeyId: '<REDACTED>',\s+secretAccessKey: '<REDACTED>',\s+sessionToken: '<REDACTED>'\s+}/
-            );
-            expect(message).toMatch(/stack\/sample-stack\/<REDACTED>/);
+            const message = value[0] as string;
+            if (message && message.startsWith('entrypoint event data')) {
+                expect(message).toMatch(/bearerToken: '<REDACTED>'/);
+                expect(message).toMatch(
+                    /providerCredentials: {\s+accessKeyId: '<REDACTED>',\s+secretAccessKey: '<REDACTED>',\s+sessionToken: '<REDACTED>'\s+}/
+                );
+                expect(message).toMatch(
+                    /callerCredentials: {\s+accessKeyId: '<REDACTED>',\s+secretAccessKey: '<REDACTED>',\s+sessionToken: '<REDACTED>'\s+}/
+                );
+                expect(message).toMatch(/stack\/sample-stack\/<REDACTED>/);
+            }
         });
     });
 
     test('entrypoint with callback context', async () => {
         entrypointPayload['callbackContext'] = { a: 'b' };
-        const event: ProgressEvent = ProgressEvent.success(null, { c: 'd' });
+        const event = ProgressEvent.success(null, { c: 'd' });
         const mockHandler: jest.Mock = jest.fn(() => event);
         const resource = new Resource(TYPE_NAME, MockModel);
         resource.addHandler(Action.Create, mockHandler);
@@ -260,7 +263,7 @@ describe('when getting resource', () => {
 
     test('entrypoint without callback context', async () => {
         entrypointPayload['callbackContext'] = null;
-        const event: ProgressEvent = ProgressEvent.progress(null, { c: 'd' });
+        const event = ProgressEvent.progress(null, { c: 'd' });
         event.callbackDelaySeconds = 5;
         const mockHandler: jest.Mock = jest.fn(() => event);
         const resource = new Resource(TYPE_NAME, MockModel);
@@ -421,7 +424,7 @@ describe('when getting resource', () => {
     test('entrypoint uncaught exception', async () => {
         const mockParseRequest = jest.spyOn<any, any>(BaseResource, 'parseRequest');
         mockParseRequest.mockImplementationOnce(() => {
-            throw new Error('exception');
+            throw { message: 'exception' };
         });
         const resource = getResource();
         const event = await resource.entrypoint({}, null);
@@ -432,7 +435,7 @@ describe('when getting resource', () => {
     });
 
     test('add handler', () => {
-        class ResourceEventHandler extends BaseResource {
+        class ResourceEventHandler extends BaseResource<MockModel> {
             @handlerEvent(Action.Create)
             public create(): void {}
             @handlerEvent(Action.Read)
@@ -444,7 +447,7 @@ describe('when getting resource', () => {
             @handlerEvent(Action.List)
             public list(): void {}
         }
-        const handlers: HandlerSignatures = new HandlerSignatures();
+        const handlers = new HandlerSignatures<MockModel>();
         const resource = new ResourceEventHandler(null, null, handlers);
         expect(resource['handlers'].get(Action.Create)).toBe(resource.create);
         expect(resource['handlers'].get(Action.Read)).toBe(resource.read);
@@ -456,17 +459,17 @@ describe('when getting resource', () => {
     test('check resource instance and type name', async () => {
         class ResourceEventHandler extends BaseResource<MockModel> {
             @handlerEvent(Action.Create)
-            public async create(): Promise<ProgressEvent> {
-                const progress: ProgressEvent<MockModel> = ProgressEvent.builder()
+            public async create(): Promise<ProgressEvent<MockModel>> {
+                const progress = ProgressEvent.builder<ProgressEvent<MockModel>>()
                     .message(this.typeName)
                     .status(OperationStatus.Success)
                     .resourceModels([])
-                    .build() as ProgressEvent<MockModel>;
+                    .build();
                 return progress;
             }
         }
         const spyCreate = jest.spyOn(ResourceEventHandler.prototype, 'create');
-        const handlers: HandlerSignatures = new HandlerSignatures();
+        const handlers = new HandlerSignatures<MockModel>();
         const resource = new ResourceEventHandler(TYPE_NAME, MockModel, handlers);
         const event = await resource.testEntrypoint(testEntrypointPayload, null);
         expect(spyCreate).toHaveReturnedTimes(1);
@@ -475,29 +478,26 @@ describe('when getting resource', () => {
     });
 
     test('invoke handler not found', async () => {
+        expect.assertions(1);
         const resource = getResource();
         const callbackContext = {};
-        const actual = await resource['invokeHandler'](
-            null,
-            null,
-            Action.Create,
-            callbackContext
-        );
-        const expected = ProgressEvent.failed(
-            HandlerErrorCode.InternalFailure,
-            'No handler for CREATE'
-        );
-        expect(actual).toStrictEqual(expected);
+        try {
+            await resource['invokeHandler'](null, null, Action.Create, callbackContext);
+        } catch (e) {
+            expect(e).toMatchObject({
+                message: 'Unknown action CREATE',
+            });
+        }
     });
 
     test('invoke handler was found', async () => {
-        const event: ProgressEvent = ProgressEvent.progress();
+        const event = ProgressEvent.progress();
         const mockHandler: jest.Mock = jest.fn(() => event);
-        const handlers: HandlerSignatures = new HandlerSignatures();
+        const handlers = new HandlerSignatures<MockModel>();
         handlers.set(Action.Create, mockHandler);
         const resource = getResource(handlers);
         const session = new SessionProxy({});
-        const request = new BaseResourceHandlerRequest();
+        const request = new BaseResourceHandlerRequest<MockModel>();
         const callbackContext = {};
         const response = await resource['invokeHandler'](
             session,
@@ -519,7 +519,7 @@ describe('when getting resource', () => {
         const promises: any[] = [];
         [Action.List, Action.Read].forEach(async (action: Action) => {
             const mockHandler: jest.Mock = jest.fn(() => ProgressEvent.progress());
-            const handlers: HandlerSignatures = new HandlerSignatures();
+            const handlers = new HandlerSignatures<MockModel>();
             handlers.set(action, mockHandler);
             const resource = getResource(handlers);
             const callbackContext = {};
@@ -540,9 +540,9 @@ describe('when getting resource', () => {
     });
 
     test('invoke handler try object modification', async () => {
-        const event: ProgressEvent = ProgressEvent.progress();
+        const event = ProgressEvent.progress();
         const mockHandler: jest.Mock = jest.fn(() => event);
-        const handlers: HandlerSignatures = new HandlerSignatures();
+        const handlers = new HandlerSignatures<MockModel>();
         handlers.set(Action.Create, mockHandler);
         const resource = getResource(handlers);
         const callbackContext = {
@@ -633,7 +633,7 @@ describe('when getting resource', () => {
 
     test('test entrypoint handler error', async () => {
         const resource = getResource();
-        const event: ProgressEvent = await resource.testEntrypoint({}, null);
+        const event = await resource.testEntrypoint({}, null);
         expect(event.status).toBe(OperationStatus.Failed);
         expect(event.errorCode).toBe(HandlerErrorCode.InternalFailure);
     });
@@ -642,9 +642,9 @@ describe('when getting resource', () => {
         const resource = getResource();
         const mockParseRequest = jest.spyOn<any, any>(resource, 'parseTestRequest');
         mockParseRequest.mockImplementationOnce(() => {
-            throw new Error('exception');
+            throw { message: 'exception' };
         });
-        const event: ProgressEvent = await resource.testEntrypoint({}, null);
+        const event = await resource.testEntrypoint({}, null);
         expect(event.status).toBe(OperationStatus.Failed);
         expect(event.errorCode).toBe(HandlerErrorCode.InternalFailure);
         expect(event.message).toBe('exception');
@@ -664,7 +664,7 @@ describe('when getting resource', () => {
         const spyDeserialize: jest.SpyInstance = jest.spyOn(MockModel, 'deserialize');
         const resource = new Resource(TYPE_NAME, MockModel);
 
-        const progressEvent: ProgressEvent = ProgressEvent.progress();
+        const progressEvent = ProgressEvent.progress();
         const mockHandler: jest.Mock = jest.fn(() => progressEvent);
         resource.addHandler(Action.Create, mockHandler);
         const event = await resource.testEntrypoint(testEntrypointPayload, null);

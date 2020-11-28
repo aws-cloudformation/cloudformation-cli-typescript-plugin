@@ -21,7 +21,7 @@ describe('when getting session proxy', () => {
     });
 
     test('get session returns proxy', () => {
-        const proxy: SessionProxy = SessionProxy.getSession({
+        const proxy = SessionProxy.getSession({
             accessKeyId: '',
             secretAccessKey: '',
             sessionToken: '',
@@ -31,14 +31,14 @@ describe('when getting session proxy', () => {
     });
 
     test('get session returns null', () => {
-        const proxy: SessionProxy = SessionProxy.getSession(null);
+        const proxy = SessionProxy.getSession(null);
         expect(proxy).toBeNull();
     });
 
     test('progress event failed is json serializable', () => {
-        const errorCode: HandlerErrorCode = HandlerErrorCode.AlreadyExists;
+        const errorCode = HandlerErrorCode.AlreadyExists;
         const message = 'message of failed event';
-        const event: ProgressEvent = ProgressEvent.failed(errorCode, message);
+        const event = ProgressEvent.failed(errorCode, message);
         expect(event.status).toBe(OperationStatus.Failed);
         expect(event.errorCode).toBe(errorCode);
         expect(event.message).toBe(message);
@@ -76,7 +76,7 @@ describe('when getting session proxy', () => {
             someotherkey: 'b',
             somenullkey: null,
         });
-        const event = ProgressEvent.progress(model, null);
+        const event = ProgressEvent.progress<ProgressEvent<ResourceModel>>(model, null);
         event.message = message;
         const serialized = event.serialize();
         expect(serialized).toMatchObject({
@@ -102,7 +102,7 @@ describe('when getting session proxy', () => {
                 someotherkey: 'd',
             }),
         ];
-        const event = new ProgressEvent({
+        const event = new ProgressEvent<ResourceModel>({
             status: OperationStatus.Success,
             message,
             resourceModels: models,

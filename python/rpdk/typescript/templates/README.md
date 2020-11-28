@@ -10,7 +10,7 @@ Congratulations on starting development! Next steps:
 Implement CloudFormation resource here. Each function must always return a ProgressEvent.
 
 ```typescript
-const progress: ProgressEvent = ProgressEvent.builder<ProgressEvent<ResourceModel>>()
+const progress = ProgressEvent.builder<ProgressEvent<ResourceModel>>()
 
     // Required
     // Must be one of OperationStatus.InProgress, OperationStatus.Failed, OperationStatus.Success

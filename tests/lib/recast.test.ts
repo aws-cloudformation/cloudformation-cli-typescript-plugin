@@ -34,7 +34,7 @@ describe('when recasting objects', () => {
             ListListInt: [['1', '2', '3', '']],
             ListSetInt: [['1', '2', '3']],
             ASet: ['1', '2', '3'],
-            AnotherSet: ['a', 'b', 'c'],
+            AnotherSet: ['a', 'b', 'c', ''],
             AFreeformDict: { somekey: 'somevalue', someotherkey: '1' },
             ANumberDict: { key: '52.76' },
             AnInt: '1',
@@ -66,7 +66,7 @@ describe('when recasting objects', () => {
             ListListInt: [[1, 2, 3, null]],
             ListListAny: [[{ key: 'val' }]],
             ASet: new Set(['1', '2', '3']),
-            AnotherSet: new Set(['a', 'b', 'c']),
+            AnotherSet: new Set(['a', 'b', 'c', '']),
             AFreeformDict: new Map([
                 ['somekey', 'somevalue'],
                 ['someotherkey', '1'],
@@ -147,8 +147,10 @@ describe('when recasting objects', () => {
         const bool = recastPrimitive(Boolean, k, v);
         const num = recastPrimitive(Number, k, v);
         const int = recastPrimitive(BigInt, k, v);
+        const string = recastPrimitive(String, k, v);
         expect(bool).toBeNull();
         expect(num).toBeNull();
         expect(int).toBeNull();
+        expect(string).toBe('');
     });
 });

@@ -15,11 +15,14 @@ describe('when getting interface', () => {
     test('base resource model serialize', () => {
         const model = SerializableModel.deserialize({
             somekey: 'a',
+            somestring: '',
             someotherkey: null,
             someint: null,
         });
         const serialized = JSON.parse(JSON.stringify(model));
-        expect(Object.keys(serialized).length).toBe(1);
+        expect(Object.keys(serialized).length).toBe(2);
+        expect(serialized.somekey).toBe('a');
+        expect(serialized.somestring).toBe('');
         expect(serialized.someotherkey).not.toBeDefined();
     });
 
