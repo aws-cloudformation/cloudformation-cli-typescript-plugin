@@ -153,14 +153,12 @@ export abstract class BaseResource<T extends BaseModel = BaseModel> {
         if (providerCredentials) {
             this.providerSession = SessionProxy.getSession(providerCredentials, region);
 
-            if (!this.providerMetricsPublisher) {
-                this.providerMetricsPublisher = new MetricsPublisher(
-                    this.providerSession,
-                    this.platformLoggerProxy,
-                    resourceType,
-                    this.workerPool
-                );
-            }
+            this.providerMetricsPublisher = new MetricsPublisher(
+                this.providerSession,
+                this.platformLoggerProxy,
+                resourceType,
+                this.workerPool
+            );
             this.metricsPublisherProxy.addMetricsPublisher(
                 this.providerMetricsPublisher
             );
