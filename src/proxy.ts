@@ -66,29 +66,17 @@ type AwsTaskSignature = <
  */
 export type ExtendedClient<S extends Service = Service> = S & {
     serviceIdentifier?: string;
-} & Partial<
-        Readonly<
-            Record<
-                'makeRequestPromise',
-                <
-                    C extends Constructor<S> = Constructor<S>,
-                    O extends ServiceProperties<S, C> = ServiceProperties<S, C>,
-                    E extends Error = AWSError,
-                    N extends ServiceOperation<S, C, O, E> = ServiceOperation<
-                        S,
-                        C,
-                        O,
-                        E
-                    >
-                >(
-                    operation: O,
-                    input?: OverloadedArguments<N>,
-                    headers?: Record<string, string>
-                ) => Promise<InferredResult<S, C, O, E, N>>
-            >
-        >
-    >;
-
+    makeRequestPromise?: <
+        C extends Constructor<S> = Constructor<S>,
+        O extends ServiceProperties<S, C> = ServiceProperties<S, C>,
+        E extends Error = AWSError,
+        N extends ServiceOperation<S, C, O, E> = ServiceOperation<S, C, O, E>
+    >(
+        operation: O,
+        input?: OverloadedArguments<N>,
+        headers?: Record<string, string>
+    ) => Promise<InferredResult<S, C, O, E, N>>;
+};
 export interface AwsTaskWorkerPool extends EventEmitter {
     runAwsTask: AwsTaskSignature;
     shutdown: (doDestroy?: boolean) => Promise<boolean>;
@@ -116,36 +104,49 @@ export class SessionProxy implements Session {
         options?: ServiceConfigurationOptions,
         workerPool?: AwsTaskWorkerPool
     ): ExtendedClient<S> {
-        const client: ExtendedClient<S> = service;
-        Object.defineProperty(client, 'makeRequestPromise', {
-            value: async (
-                operation: O,
-                input?: OverloadedArguments<N>,
-                headers?: Record<string, string>
-            ): Promise<InferredResult<S, C, O, E, N>> => {
-                if (workerPool && workerPool.runAwsTask) {
-                    try {
-                        const result = await workerPool.runAwsTask<S, C, O, E, N>({
-                            name: client.serviceIdentifier,
-                            options,
-                            operation,
-                            input,
-                            headers,
-                        });
-                        return result;
-                    } catch (err) {
-                        console.log(err);
-                    }
-                }
-                const request = client.makeRequest(operation as string, input);
-                if (headers?.length) {
-                    request.on('build', () => {
-                        for (const [key, value] of Object.entries(headers)) {
-                            request.httpRequest.headers[key] = value;
+        const client: ExtendedClient<S> = new Proxy(service, {
+            get(obj: ExtendedClient<S>, prop: string) {
+                if ('makeRequestPromise' === prop) {
+                    // Extend AWS client with promisified make request method
+                    // that can be used with worker pool
+                    return async (
+                        operation: O,
+                        input?: OverloadedArguments<N>,
+                        headers?: Record<string, string>
+                    ): Promise<InferredResult<S, C, O, E, N>> => {
+                        if (workerPool && workerPool.runAwsTask) {
+                            try {
+                                const result = await workerPool.runAwsTask<
+                                    S,
+                                    C,
+                                    O,
+                                    E,
+                                    N
+                                >({
+                                    name: obj.serviceIdentifier,
+                                    options,
+                                    operation,
+                                    input,
+                                    headers,
+                                });
+                                return result;
+                            } catch (err) {
+                                console.log(err);
+                            }
                         }
-                    });
+                        const request = obj.makeRequest(operation as string, input);
+                        const headerEntries = Object.entries(headers || {});
+                        if (headerEntries.length) {
+                            request.on('build', () => {
+                                for (const [key, value] of headerEntries) {
+                                    request.httpRequest.headers[key] = value;
+                                }
+                            });
+                        }
+                        return await request.promise();
+                    };
                 }
-                return await request.promise();
+                return obj[prop];
             },
         });
         if (client.config && client.config.update) {

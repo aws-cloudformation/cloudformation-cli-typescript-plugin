@@ -22,10 +22,12 @@ import {
 const mockResult = (output: any): jest.Mock => {
     return jest.fn().mockReturnValue({
         promise: jest.fn().mockResolvedValue(output),
-        httpRequest: {
-            headers: {},
-        },
-        on: () => {},
+        httpRequest: { headers: {} },
+        on: jest.fn().mockImplementation((_event: string, listener: () => void) => {
+            if (listener) {
+                listener();
+            }
+        }),
     });
 };
 
@@ -524,9 +526,12 @@ describe('when delivering logs', () => {
                         code: 'AccessDeniedException',
                     })
                 ),
-                on: (_event: string, callback: Function) => {
-                    callback({ httpRequest: { headers: [] } });
-                },
+                httpRequest: { headers: {} },
+                on: jest
+                    .fn()
+                    .mockImplementation((_event: string, listener: () => void) => {
+                        listener();
+                    }),
             });
             const msgToLog = 'How is it going?';
             try {
