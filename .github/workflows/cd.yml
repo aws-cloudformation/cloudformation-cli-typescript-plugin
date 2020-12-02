@@ -75,7 +75,7 @@ jobs:
           echo 'ARTIFACTS="$(echo package-npm/* && echo dist/*)"' >> $GITHUB_ENV
       - name: GitHub Release
         id: releasing
-        uses: docker://antonyurchenko/git-release:v3.1.2
+        uses: docker://antonyurchenko/git-release:v3.4.2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           DRAFT_RELEASE: 'false'
