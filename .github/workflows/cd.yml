@@ -17,10 +17,10 @@ jobs:
         with:
           node-version: 12
           registry-url: https://registry.npmjs.org/
-      - uses: olegtarasov/get-tag@v2
+      - name: Get Version from Git Tag
         id: tag_name
-        with:
-          tagRegex: 'v(.*)'
+        run: |
+          echo "VERSION=$(echo ${GITHUB_REF:11})" >> $GITHUB_ENV
       - name: Install Dependencies and Package Project
         id: installing
         run: |
@@ -31,7 +31,7 @@ jobs:
         uses: actions/upload-artifact@v1
         with:
           name: package-npm
-          path: cfn-rpdk-${{ steps.tag_name.outputs.tag }}.tgz
+          path: cfn-rpdk-${{ env.VERSION }}.tgz
 
   delivery-python:
     name: Prepare for PyPI
@@ -72,10 +72,10 @@ jobs:
           path: dist/
       - name: List Artifacts
         run: |
-          echo ::set-env name=ARTIFACTS::$(echo package-npm/* && echo dist/*)
+          echo 'ARTIFACTS="$(echo package-npm/* && echo dist/*)"' >> $GITHUB_ENV
       - name: GitHub Release
         id: releasing
-        uses: docker://antonyurchenko/git-release:v3.1.2
+        uses: docker://antonyurchenko/git-release:v3.4.2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           DRAFT_RELEASE: 'false'
