@@ -72,7 +72,7 @@ jobs:
           path: dist/
       - name: List Artifacts
         run: |
-          echo "ARTIFACTS=$(echo package-npm/* && echo dist/*)" >> $GITHUB_ENV
+          echo 'ARTIFACTS="$(echo package-npm/* && echo dist/*)"' >> $GITHUB_ENV
       - name: GitHub Release
         id: releasing
         uses: docker://antonyurchenko/git-release:v3.1.2
