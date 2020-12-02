@@ -19,6 +19,7 @@ jobs:
           registry-url: https://registry.npmjs.org/
       - name: Get Version from Git Tag
         id: tag_name
+        run: |
           echo "VERSION=$(echo ${GITHUB_REF:11})" >> $GITHUB_ENV
       - name: Install Dependencies and Package Project
         id: installing
