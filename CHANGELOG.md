@@ -6,6 +6,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.0] - 2020-12-02
+### Added
+- [Support Library] Queue to avoid throttling of internal AWS API calls (#30)
+- [Support Library] Optional use of worker threads for performance reasons (#30)
+
+### Changed
+- [Support Library] Increase default options for util inspect so that deep objects are also printed (#27)
+- [Support Library] Expose the model type reference in the resource class (#27)
+
+### Fixed
+- [Support Library] Expired security token when logging config enabled (#31) (#30)
+
 ## [0.4.0] - 2020-10-11
 ### Added
 - [Support Library] Pass a logger interface to the handlers (#26)
@@ -94,7 +106,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - [Support Library] Base Model class as well as Progress Event class (#2)
 
 
-[Unreleased]: https://github.com/eduardomourar/cloudformation-cli-typescript-plugin/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/eduardomourar/cloudformation-cli-typescript-plugin/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/eduardomourar/cloudformation-cli-typescript-plugin/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/eduardomourar/cloudformation-cli-typescript-plugin/compare/v0.3.3...v0.4.0
 [0.3.3]: https://github.com/eduardomourar/cloudformation-cli-typescript-plugin/compare/v0.3.2...v0.3.3
 [0.3.2]: https://github.com/eduardomourar/cloudformation-cli-typescript-plugin/compare/v0.3.1...v0.3.2
