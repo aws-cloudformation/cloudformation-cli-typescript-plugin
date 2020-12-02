@@ -6,10 +6,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.5.0-rc.6] - 2020-12-02
-### Added
-- TEST
-
 ## [0.5.0] - 2020-12-02
 ### Added
 - [Support Library] Queue to avoid throttling of internal AWS API calls (#30)
