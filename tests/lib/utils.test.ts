@@ -1,4 +1,4 @@
-import { deepFreeze, replaceAll } from '../../src/utils';
+import { deepFreeze, replaceAll } from '~/utils';
 
 describe('when getting utils', () => {
     afterEach(() => {

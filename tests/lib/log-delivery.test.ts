@@ -4,9 +4,11 @@ import CloudWatchLogs, {
 import S3, { ListObjectsV2Output } from 'aws-sdk/clients/s3';
 import awsUtil from 'aws-sdk/lib/util';
 import { inspect } from 'util';
+import WorkerPoolAwsSdk from 'worker-pool-aws-sdk';
 
-import { SessionProxy } from '../../src/proxy';
-import { MetricsPublisherProxy } from '../../src/metrics';
+import { SessionProxy } from '~/proxy';
+import { MetricsPublisherProxy } from '~/metrics';
+import { ServiceProperties } from '~/interface';
 import {
     CloudWatchLogHelper,
     CloudWatchLogPublisher,
@@ -15,30 +17,24 @@ import {
     LogPublisher,
     S3LogHelper,
     S3LogPublisher,
-} from '../../src/log-delivery';
+} from '~/log-delivery';
 
 const mockResult = (output: any): jest.Mock => {
     return jest.fn().mockReturnValue({
         promise: jest.fn().mockResolvedValue(output),
-        httpRequest: {
-            headers: {},
-        },
-        on: () => {},
+        httpRequest: { headers: {} },
+        on: jest.fn().mockImplementation((_event: string, listener: () => void) => {
+            if (listener) {
+                listener();
+            }
+        }),
     });
 };
 
 const IDENTIFIER = 'f3390613-b2b5-4c31-a4c6-66813dff96a6';
-const AWS_ACCOUNT_ID = '123456789012';
-const LOG_GROUP_NAME = 'log-group-name';
-const LOG_STREAM_NAME = 'log-stream-name';
-const S3_BUCKET_NAME = 'log-group-name-123456789012';
-const S3_FOLDER_NAME = 's3-folder-name';
-const AWS_CONFIG = {
-    region: 'us-east-1',
-    accessKeyId: 'AAAAA',
-    secretAccessKey: '11111',
-};
 
+jest.mock('aws-sdk');
+jest.mock('aws-sdk/clients/all');
 jest.mock('aws-sdk/clients/cloudwatchlogs');
 jest.mock('aws-sdk/clients/s3');
 jest.mock('uuid', () => {
@@ -46,12 +42,25 @@ jest.mock('uuid', () => {
         v4: () => IDENTIFIER,
     };
 });
-jest.mock('../../src/metrics');
+jest.mock('~/metrics');
 
 describe('when delivering logs', () => {
+    const AWS_ACCOUNT_ID = '123456789012';
+    const LOG_GROUP_NAME = 'log-group-name';
+    const LOG_STREAM_NAME = 'log-stream-name';
+    const S3_BUCKET_NAME = 'log-group-name-123456789012';
+    const S3_FOLDER_NAME = 's3-folder-name';
+    const AWS_CONFIG = {
+        region: 'us-east-1',
+        credentials: {
+            accessKeyId: 'AAAAA',
+            secretAccessKey: '11111',
+        },
+    };
+
     let session: SessionProxy;
-    let cwLogs: jest.Mock;
-    let s3: jest.Mock;
+    let cwLogs: jest.Mock<Partial<CloudWatchLogs>>;
+    let s3: jest.Mock<Partial<S3>>;
     let createLogGroup: jest.Mock;
     let createLogStream: jest.Mock;
     let describeLogGroups: jest.Mock;
@@ -62,6 +71,7 @@ describe('when delivering logs', () => {
     let listObjectsV2: jest.Mock;
     let spyPublishLogEvent: jest.SpyInstance;
     let loggerProxy: LoggerProxy;
+    let workerPool: WorkerPoolAwsSdk;
     let metricsPublisherProxy: MetricsPublisherProxy;
     let publishExceptionMetric: jest.Mock;
     let lambdaLogger: LambdaLogPublisher;
@@ -73,8 +83,13 @@ describe('when delivering logs', () => {
     let s3Logger: S3LogPublisher;
     let spyS3Publish: jest.SpyInstance;
 
-    beforeAll(() => {
-        session = new SessionProxy({});
+    beforeAll(async () => {
+        session = new SessionProxy(AWS_CONFIG);
+        jest.spyOn<any, any>(WorkerPoolAwsSdk.prototype, 'runTask').mockRejectedValue(
+            Error('Method runTask should not be called.')
+        );
+        workerPool = new WorkerPoolAwsSdk({ minThreads: 1, maxThreads: 1 });
+        workerPool.runAwsTask = null;
     });
 
     beforeEach(async () => {
@@ -92,19 +107,25 @@ describe('when delivering logs', () => {
         });
         putLogEvents = mockResult({ ResponseMetadata: { RequestId: 'mock-request' } });
         cwLogs = (CloudWatchLogs as unknown) as jest.Mock;
-        cwLogs.mockImplementation(() => {
-            const returnValue = {
+        cwLogs.mockImplementation((config = {}) => {
+            const returnValue: jest.Mocked<Partial<CloudWatchLogs>> = {
                 createLogGroup,
                 createLogStream,
                 describeLogGroups,
                 describeLogStreams,
                 putLogEvents,
             };
+            const ctor = CloudWatchLogs;
+            ctor['serviceIdentifier'] = 'cloudwatchlogs';
             return {
                 ...returnValue,
-                config: AWS_CONFIG,
-                makeRequest: (operation: string, params?: { [key: string]: any }) => {
-                    return returnValue[operation](params);
+                config: { ...AWS_CONFIG, ...config, update: () => undefined },
+                constructor: ctor,
+                makeRequest: (
+                    operation: ServiceProperties<CloudWatchLogs>,
+                    params?: Record<string, any>
+                ): any => {
+                    return returnValue[operation](params as any);
                 },
             };
         });
@@ -112,24 +133,26 @@ describe('when delivering logs', () => {
         putObject = mockResult({ ResponseMetadata: { RequestId: 'mock-request' } });
         listObjectsV2 = mockResult({ ResponseMetadata: { RequestId: 'mock-request' } });
         s3 = (S3 as unknown) as jest.Mock;
-        s3.mockImplementation((config) => {
-            const returnValue = {
+        s3.mockImplementation((config = {}) => {
+            const returnValue: jest.Mocked<Partial<S3>> = {
                 createBucket,
                 putObject,
                 listObjectsV2,
             };
+            const ctor = S3;
+            ctor['serviceIdentifier'] = 's3';
             return {
                 ...returnValue,
-                config,
-                makeRequest: (operation: string, params?: { [key: string]: any }) => {
-                    return returnValue[operation](params);
+                config: { ...AWS_CONFIG, ...config, update: () => undefined },
+                constructor: ctor,
+                makeRequest: (
+                    operation: ServiceProperties<S3>,
+                    params?: Record<string, any>
+                ): any => {
+                    return (returnValue[operation] as any)(params);
                 },
             };
         });
-        session['client'] = (name: string, options?: any): any => {
-            if (name === 'CloudWatchLogs') return cwLogs(options);
-            if (name === 'S3') return s3(options);
-        };
         loggerProxy = new LoggerProxy({ depth: 8 });
         metricsPublisherProxy = new MetricsPublisherProxy();
         publishExceptionMetric = mockResult({
@@ -152,7 +175,7 @@ describe('when delivering logs', () => {
             console,
             metricsPublisherProxy
         );
-        cloudWatchLogHelper.refreshClient({ region: AWS_CONFIG.region });
+        cloudWatchLogHelper.refreshClient();
         spyCloudWatchPublish = jest.spyOn<any, any>(
             CloudWatchLogPublisher.prototype,
             'publishMessage'
@@ -160,11 +183,12 @@ describe('when delivering logs', () => {
         cloudWatchLogger = new CloudWatchLogPublisher(
             session,
             LOG_GROUP_NAME,
-            LOG_STREAM_NAME,
+            await cloudWatchLogHelper.prepareLogStream(),
             console,
             metricsPublisherProxy
         );
-        cloudWatchLogger.refreshClient({ region: AWS_CONFIG.region });
+        cloudWatchLogger.refreshClient();
+        await cloudWatchLogger.populateSequenceToken();
         s3LogHelper = new S3LogHelper(
             session,
             S3_BUCKET_NAME,
@@ -172,23 +196,30 @@ describe('when delivering logs', () => {
             console,
             metricsPublisherProxy
         );
-        s3LogHelper.refreshClient({ region: AWS_CONFIG.region });
+        s3LogHelper.refreshClient();
         spyS3Publish = jest.spyOn<any, any>(S3LogPublisher.prototype, 'publishMessage');
         s3Logger = new S3LogPublisher(
             session,
             S3_BUCKET_NAME,
-            S3_FOLDER_NAME,
+            await s3LogHelper.prepareFolder(),
             console,
             metricsPublisherProxy
         );
-        s3Logger.refreshClient({ region: AWS_CONFIG.region });
+        s3Logger.refreshClient();
         loggerProxy.addLogPublisher(cloudWatchLogger);
+        workerPool.restart();
+        loggerProxy.tracker.restart();
         jest.clearAllMocks();
     });
 
-    afterEach(() => {
+    afterEach(async () => {
+        await loggerProxy.waitCompletion();
         jest.clearAllMocks();
         jest.restoreAllMocks();
+    });
+
+    afterAll(async () => {
+        await workerPool.shutdown();
     });
 
     describe('lambda log publisher', () => {
@@ -281,8 +312,7 @@ describe('when delivering logs', () => {
                 session,
                 LOG_GROUP_NAME,
                 LOG_STREAM_NAME,
-                console,
-                null
+                console
             );
             try {
                 await cloudWatchLogHelper.prepareLogStream();
@@ -325,8 +355,8 @@ describe('when delivering logs', () => {
         });
 
         test('initialization describe failure', async () => {
-            const spyPlatformLambdaLogger = jest.spyOn<any, any>(
-                cloudWatchLogHelper['platformLambdaLogger'],
+            const spyPlatformLogger = jest.spyOn<any, any>(
+                cloudWatchLogHelper['platformLogger'],
                 'log'
             );
             describeLogGroups.mockReturnValue({
@@ -348,12 +378,12 @@ describe('when delivering logs', () => {
                 expect.anything(),
                 expect.anything()
             );
-            expect(spyPlatformLambdaLogger).toHaveBeenCalled();
+            expect(spyPlatformLogger).toHaveBeenCalled();
         });
 
         test('initialization create log group failure', async () => {
-            const spyPlatformLambdaLogger = jest.spyOn<any, any>(
-                cloudWatchLogHelper['platformLambdaLogger'],
+            const spyPlatformLogger = jest.spyOn<any, any>(
+                cloudWatchLogHelper['platformLogger'],
                 'log'
             );
             createLogGroup.mockReturnValue({
@@ -378,12 +408,12 @@ describe('when delivering logs', () => {
                 expect.anything(),
                 expect.anything()
             );
-            expect(spyPlatformLambdaLogger).toHaveBeenCalled();
+            expect(spyPlatformLogger).toHaveBeenCalled();
         });
 
         test('initialization create log stream failure', async () => {
-            const spyPlatformLambdaLogger = jest.spyOn<any, any>(
-                cloudWatchLogHelper['platformLambdaLogger'],
+            const spyPlatformLogger = jest.spyOn<any, any>(
+                cloudWatchLogHelper['platformLogger'],
                 'log'
             );
             createLogStream.mockReturnValue({
@@ -414,7 +444,7 @@ describe('when delivering logs', () => {
                 expect.anything(),
                 expect.anything()
             );
-            expect(spyPlatformLambdaLogger).toHaveBeenCalled();
+            expect(spyPlatformLogger).toHaveBeenCalled();
         });
 
         test('create log group and stream already exist', async () => {
@@ -447,7 +477,8 @@ describe('when delivering logs', () => {
                 LOG_GROUP_NAME,
                 null,
                 console,
-                null
+                null,
+                workerPool
             );
             cloudWatchLogHelper.refreshClient();
             await cloudWatchLogHelper.prepareLogStream();
@@ -479,13 +510,14 @@ describe('when delivering logs', () => {
                         message: msgToLog,
                     }),
                 ],
+                sequenceToken: null,
             });
         });
 
         test('publish cloudwatch log with put events failure', async () => {
             expect.assertions(7);
-            const spyPlatformLambdaLogger = jest.spyOn<any, any>(
-                cloudWatchLogger['platformLambdaLogger'],
+            const spyPlatformLogger = jest.spyOn<any, any>(
+                cloudWatchLogger['platformLogger'],
                 'log'
             );
             putLogEvents.mockReturnValue({
@@ -494,9 +526,12 @@ describe('when delivering logs', () => {
                         code: 'AccessDeniedException',
                     })
                 ),
-                on: (_event: string, callback: Function) => {
-                    callback({ httpRequest: { headers: [] } });
-                },
+                httpRequest: { headers: {} },
+                on: jest
+                    .fn()
+                    .mockImplementation((_event: string, listener: () => void) => {
+                        listener();
+                    }),
             });
             const msgToLog = 'How is it going?';
             try {
@@ -513,6 +548,7 @@ describe('when delivering logs', () => {
                         message: msgToLog,
                     }),
                 ],
+                sequenceToken: null,
             });
             expect(describeLogStreams).toHaveBeenCalledTimes(0);
             expect(publishExceptionMetric).toHaveBeenCalledTimes(1);
@@ -520,13 +556,13 @@ describe('when delivering logs', () => {
                 expect.anything(),
                 expect.anything()
             );
-            expect(spyPlatformLambdaLogger).toHaveBeenCalled();
+            expect(spyPlatformLogger).toHaveBeenCalled();
         });
 
         test('publish cloudwatch log with describe failure', async () => {
             expect.assertions(8);
-            const spyPlatformLambdaLogger = jest.spyOn<any, any>(
-                cloudWatchLogger['platformLambdaLogger'],
+            const spyPlatformLogger = jest.spyOn<any, any>(
+                cloudWatchLogger['platformLogger'],
                 'log'
             );
             putLogEvents.mockReturnValue({
@@ -548,7 +584,7 @@ describe('when delivering logs', () => {
             try {
                 await cloudWatchLogger.publishLogEvent(msgToLog);
             } catch (e) {
-                expect(e).toBe('Publishing this log event should be retried.');
+                expect(e.retryable).toBe(true);
             }
             expect(putLogEvents).toHaveBeenCalledTimes(1);
             expect(putLogEvents).toHaveBeenCalledWith({
@@ -559,6 +595,7 @@ describe('when delivering logs', () => {
                         message: msgToLog,
                     }),
                 ],
+                sequenceToken: null,
             });
             expect(describeLogStreams).toHaveBeenCalledTimes(1);
             expect(describeLogStreams).toHaveBeenCalledWith(
@@ -567,12 +604,12 @@ describe('when delivering logs', () => {
                     logStreamNamePrefix: LOG_STREAM_NAME,
                 })
             );
-            expect(publishExceptionMetric).toHaveBeenCalledTimes(1);
+            expect(publishExceptionMetric).toHaveBeenCalledTimes(2);
             expect(publishExceptionMetric).toHaveBeenCalledWith(
                 expect.anything(),
                 expect.anything()
             );
-            expect(spyPlatformLambdaLogger).toHaveBeenCalled();
+            expect(spyPlatformLogger).toHaveBeenCalled();
         });
 
         test('cloudwatch publisher without refreshing client', async () => {
@@ -581,8 +618,7 @@ describe('when delivering logs', () => {
                 session,
                 LOG_GROUP_NAME,
                 LOG_STREAM_NAME,
-                console,
-                null
+                console
             );
             try {
                 await cloudWatchLogger.publishLogEvent('How is it going?');
@@ -603,6 +639,7 @@ describe('when delivering logs', () => {
                 LOG_STREAM_NAME,
                 console,
                 null,
+                workerPool,
                 filter
             );
             cloudWatchLogger.refreshClient();
@@ -617,6 +654,7 @@ describe('when delivering logs', () => {
                         message: 'This is log message for account <REDACTED>',
                     }),
                 ],
+                sequenceToken: null,
             });
         });
 
@@ -639,7 +677,8 @@ describe('when delivering logs', () => {
                 LOG_GROUP_NAME,
                 LOG_STREAM_NAME,
                 console,
-                null
+                null,
+                workerPool
             );
             cloudWatchLogger.refreshClient();
             const msgToLog = 'How is it going?';
@@ -657,6 +696,7 @@ describe('when delivering logs', () => {
                         message: msgToLog,
                     }),
                 ],
+                sequenceToken: null,
             });
             expect(spyEmitMetrics).toHaveBeenCalledTimes(1);
             expect(publishExceptionMetric).toHaveBeenCalledTimes(0);
@@ -672,7 +712,8 @@ describe('when delivering logs', () => {
                 LOG_GROUP_NAME,
                 null,
                 console,
-                null
+                null,
+                workerPool
             );
             cloudWatchLogger.refreshClient();
             const msgToLog = 'How is it going?';
@@ -731,7 +772,7 @@ describe('when delivering logs', () => {
                 try {
                     await cloudWatchLogger.publishLogEvent('log-msg');
                 } catch (e) {
-                    expect(e).toBe('Publishing this log event should be retried.');
+                    expect(e.retryable).toBe(true);
                 }
             }
             expect(putLogEvents).toHaveBeenCalledTimes(3);
@@ -807,8 +848,7 @@ describe('when delivering logs', () => {
                 session,
                 LOG_GROUP_NAME,
                 LOG_STREAM_NAME,
-                console,
-                null
+                console
             );
             try {
                 await s3LogHelper.prepareFolder();
@@ -860,8 +900,8 @@ describe('when delivering logs', () => {
         });
 
         test('initialization list failure', async () => {
-            const spyPlatformLambdaLogger = jest.spyOn<any, any>(
-                s3LogHelper['platformLambdaLogger'],
+            const spyPlatformLogger = jest.spyOn<any, any>(
+                s3LogHelper['platformLogger'],
                 'log'
             );
             listObjectsV2.mockReturnValue({
@@ -886,12 +926,12 @@ describe('when delivering logs', () => {
                 expect.anything(),
                 expect.anything()
             );
-            expect(spyPlatformLambdaLogger).toHaveBeenCalled();
+            expect(spyPlatformLogger).toHaveBeenCalled();
         });
 
         test('initialization create bucket failure', async () => {
-            const spyPlatformLambdaLogger = jest.spyOn<any, any>(
-                s3LogHelper['platformLambdaLogger'],
+            const spyPlatformLogger = jest.spyOn<any, any>(
+                s3LogHelper['platformLogger'],
                 'log'
             );
             listObjectsV2.mockReturnValue({
@@ -926,12 +966,12 @@ describe('when delivering logs', () => {
                 expect.anything(),
                 expect.anything()
             );
-            expect(spyPlatformLambdaLogger).toHaveBeenCalled();
+            expect(spyPlatformLogger).toHaveBeenCalled();
         });
 
         test('initialization create folder failure', async () => {
-            const spyPlatformLambdaLogger = jest.spyOn<any, any>(
-                s3LogHelper['platformLambdaLogger'],
+            const spyPlatformLogger = jest.spyOn<any, any>(
+                s3LogHelper['platformLogger'],
                 'log'
             );
             putObject.mockReturnValue({
@@ -963,7 +1003,7 @@ describe('when delivering logs', () => {
                 expect.anything(),
                 expect.anything()
             );
-            expect(spyPlatformLambdaLogger).toHaveBeenCalled();
+            expect(spyPlatformLogger).toHaveBeenCalled();
         });
 
         test('create bucket already exist', async () => {
@@ -985,7 +1025,8 @@ describe('when delivering logs', () => {
                 S3_BUCKET_NAME,
                 null,
                 console,
-                null
+                null,
+                workerPool
             );
             s3LogHelper.refreshClient();
             await s3LogHelper.prepareFolder();
@@ -1019,8 +1060,8 @@ describe('when delivering logs', () => {
 
         test('publish s3 log with put object failure', async () => {
             expect.assertions(6);
-            const spyPlatformLambdaLogger = jest.spyOn<any, any>(
-                s3Logger['platformLambdaLogger'],
+            const spyPlatformLogger = jest.spyOn<any, any>(
+                s3Logger['platformLogger'],
                 'log'
             );
             putObject.mockReturnValue({
@@ -1050,7 +1091,7 @@ describe('when delivering logs', () => {
                 expect.anything(),
                 expect.anything()
             );
-            expect(spyPlatformLambdaLogger).toHaveBeenCalled();
+            expect(spyPlatformLogger).toHaveBeenCalled();
         });
 
         test('s3 publisher without refreshing client', async () => {
@@ -1059,8 +1100,7 @@ describe('when delivering logs', () => {
                 session,
                 S3_BUCKET_NAME,
                 S3_FOLDER_NAME,
-                console,
-                null
+                console
             );
             try {
                 await s3Logger.publishLogEvent('How is it going?');
@@ -1081,6 +1121,7 @@ describe('when delivering logs', () => {
                 S3_FOLDER_NAME,
                 console,
                 null,
+                workerPool,
                 filter
             );
             s3Logger.refreshClient();
@@ -1115,7 +1156,8 @@ describe('when delivering logs', () => {
                 S3_BUCKET_NAME,
                 S3_FOLDER_NAME,
                 console,
-                null
+                null,
+                workerPool
             );
             s3Logger.refreshClient();
             const msgToLog = 'How is it going?';
@@ -1147,7 +1189,8 @@ describe('when delivering logs', () => {
                 S3_BUCKET_NAME,
                 null,
                 console,
-                null
+                null,
+                workerPool
             );
             s3Logger.refreshClient();
             const msgToLog = 'How is it going?';
@@ -1159,8 +1202,8 @@ describe('when delivering logs', () => {
     });
 
     describe('logger proxy', () => {
-        test('process log with deserialize error', async () => {
-            spyPublishLogEvent.mockRejectedValue(() => {
+        test('should process log with deserialize error', async () => {
+            spyPublishLogEvent.mockRejectedValueOnce(() => {
                 throw new Error();
             });
             const mockToJson: jest.Mock = jest.fn().mockReturnValue(() => {
@@ -1172,18 +1215,16 @@ describe('when delivering logs', () => {
             }
             const unserializable = new Unserializable();
             loggerProxy.log('%j', unserializable);
-            expect(loggerProxy['queue'].length).toBe(1);
-            await loggerProxy.processQueue();
-            expect(loggerProxy['queue'].length).toBe(0);
+            await loggerProxy.waitCompletion();
             expect(mockToJson).toHaveBeenCalledTimes(1);
-            expect(spyPublishLogEvent).toHaveBeenCalledTimes(2);
+            expect(spyPublishLogEvent).toHaveBeenCalledTimes(1);
             expect(spyPublishLogEvent).toHaveBeenCalledWith(
                 'undefined',
                 expect.any(Date)
             );
         });
 
-        test('logger proxy add filter', async () => {
+        test('should add filter', async () => {
             const filter = {
                 applyFilter(message: string): string {
                     return message.replace(AWS_ACCOUNT_ID, '<REDACTED>');
@@ -1192,7 +1233,7 @@ describe('when delivering logs', () => {
             loggerProxy.addLogPublisher(lambdaLogger);
             loggerProxy.addFilter(filter);
             loggerProxy.log(`This is log message for account ${AWS_ACCOUNT_ID}`);
-            await loggerProxy.processQueue();
+            await loggerProxy.waitCompletion();
             expect(spyLambdaPublish).toHaveBeenCalledWith(
                 'This is log message for account <REDACTED>',
                 expect.any(Date)
@@ -1203,25 +1244,21 @@ describe('when delivering logs', () => {
             );
         });
 
-        test('logger proxy process with success', async () => {
+        test('should process with success', async () => {
             loggerProxy.addLogPublisher(lambdaLogger);
             loggerProxy.addLogPublisher(s3Logger);
 
             loggerProxy.log('count: [%d]', 5.12);
             loggerProxy.log('timestamp: [%s]', new Date('2020-01-01'));
-            expect(loggerProxy['queue'].length).toBe(6);
-            await loggerProxy.processQueue();
 
             loggerProxy.log('timestamp: [%s]', new Date('2020-01-02'));
             loggerProxy.log('timestamp: [%s]', new Date('2020-01-03'));
             loggerProxy.log('timestamp: [%s]', new Date('2020-01-04'));
-            expect(loggerProxy['queue'].length).toBe(9);
             expect(inspect.defaultOptions.depth).toBe(8);
-            await loggerProxy.processQueue();
+            await loggerProxy.waitCompletion();
 
             expect(cloudWatchLogger['logStreamName']).toBe(LOG_STREAM_NAME);
             expect(s3Logger['folderName']).toBe(S3_FOLDER_NAME);
-            expect(loggerProxy['queue'].length).toBe(0);
             expect(spyLambdaPublish).toHaveBeenCalledTimes(5);
             expect(spyLambdaPublish).toHaveBeenCalledWith(
                 'count: [5.12]',
@@ -1251,6 +1288,52 @@ describe('when delivering logs', () => {
                 expect.any(Date)
             );
             expect(putObject).toHaveBeenCalledTimes(5);
+        });
+
+        test('should process log again with retryable error', async () => {
+            expect.assertions(4);
+            const returnedValue = { nextSequenceToken: 'some-other-seq' };
+            putLogEvents.mockReturnValue({
+                promise: jest
+                    .fn()
+                    .mockRejectedValueOnce(
+                        awsUtil.error(new Error(), {
+                            code: 'InvalidSequenceTokenException',
+                            message:
+                                'The given sequenceToken is invalid. The next expected sequenceToken is: 495579999999900356407851919528174642',
+                        })
+                    )
+                    .mockResolvedValue(returnedValue),
+                on: () => {},
+            });
+            const msgToLog = 'How is it going?';
+            loggerProxy.log(msgToLog);
+            await loggerProxy.waitCompletion();
+            expect(spyPublishLogEvent).toHaveBeenCalledTimes(2);
+            expect(spyPublishLogEvent).toHaveBeenCalledWith(msgToLog, expect.any(Date));
+            expect(spyPublishLogEvent).toHaveNthReturnedWith(
+                1,
+                Promise.resolve(
+                    expect.objectContaining({
+                        retryable: true,
+                    })
+                )
+            );
+            expect(spyPublishLogEvent).toHaveNthReturnedWith(
+                2,
+                Promise.resolve(returnedValue)
+            );
+        });
+
+        test('should swallow error on wait tracker failure', async () => {
+            const spyWaitCompletion = jest
+                .spyOn<any, any>(loggerProxy['tracker'], 'waitCompletion')
+                .mockRejectedValueOnce('some random error');
+            loggerProxy.log('How is it going?');
+            const result = await loggerProxy.waitCompletion();
+            expect(result).toBe(true);
+            expect(spyWaitCompletion).toHaveBeenCalledTimes(1);
+            expect(spyPublishLogEvent).toHaveBeenCalledTimes(1);
         });
     });
 });

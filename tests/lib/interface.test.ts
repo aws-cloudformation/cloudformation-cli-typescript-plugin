@@ -1,4 +1,4 @@
-import { Integer, UnmodeledRequest } from '../../src/interface';
+import { Integer, UnmodeledRequest } from '~/interface';
 import { SerializableModel } from '../data/sample-model';
 
 describe('when getting interface', () => {

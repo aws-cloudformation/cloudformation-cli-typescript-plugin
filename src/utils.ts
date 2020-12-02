@@ -1,5 +1,14 @@
+import { EventEmitter } from 'events';
 // eslint-disable-next-line
 const replaceAllShim = require('string.prototype.replaceall');
+
+type PromiseFunction = () => Promise<any>;
+
+interface QueueItem {
+    promise: PromiseFunction;
+    reject: (value: any) => void;
+    resolve: (reason: any) => void;
+}
 
 /**
  * Wait for a specified amount of time.
@@ -8,6 +17,139 @@ const replaceAllShim = require('string.prototype.replaceall');
  */
 export async function delay(seconds: number): Promise<void> {
     return new Promise((_) => setTimeout(() => _(), seconds * 1000));
+}
+
+/**
+ * Class to track progress of multiple asynchronous tasks,
+ * so that we know when they are all finished.
+ */
+export class ProgressTracker extends EventEmitter {
+    #tasksSubmitted: number;
+    #tasksCompleted: number;
+    #tasksFailed: number;
+    #done: boolean;
+
+    constructor() {
+        super();
+        this.restart();
+        this.on('include', (kind: string) => {
+            // console.debug(`Progress type being included [${kind}]`, this.message);
+            if (kind !== 'submitted' && this.isFinished) {
+                process.nextTick(() => this.emit('finished'));
+            }
+        });
+    }
+
+    get done(): boolean {
+        return this.#done;
+    }
+
+    set done(value: boolean) {
+        this.#done = !!value;
+    }
+
+    end(): void {
+        this.#done = true;
+    }
+
+    restart(): void {
+        this.#tasksSubmitted = 0;
+        this.#tasksCompleted = 0;
+        this.#tasksFailed = 0;
+        this.#done = false;
+    }
+
+    addSubmitted(): void {
+        if (this.isFinished) {
+            throw Error(
+                'Not allowed to submit a new task after progress tracker has been closed.'
+            );
+        }
+        this.#tasksSubmitted++;
+        process.nextTick(() => this.emit('include', 'submitted'));
+    }
+
+    addCompleted(): void {
+        this.#tasksCompleted++;
+        process.nextTick(() => this.emit('include', 'completed'));
+    }
+
+    addFailed(): void {
+        this.#tasksFailed++;
+        process.nextTick(() => this.emit('include', 'failed'));
+    }
+
+    get completed(): number {
+        return this.#tasksCompleted + this.#tasksFailed;
+    }
+
+    get isFinished(): boolean {
+        return this.done && this.completed === this.#tasksSubmitted;
+    }
+
+    get message(): string {
+        return (
+            `${this.#tasksCompleted} of ${this.#tasksSubmitted} completed` +
+            ` ${((this.#tasksCompleted / this.#tasksSubmitted) * 100).toFixed(2)}%` +
+            ` [${this.#tasksFailed} failed]`
+        );
+    }
+
+    async waitCompletion(): Promise<void> {
+        await new Promise<void>((resolve) => {
+            if (this.isFinished) {
+                resolve();
+            } else {
+                this.once('finished', resolve);
+            }
+        });
+        this.restart();
+    }
+}
+
+export class Queue {
+    #queue: QueueItem[] = [];
+    #pendingPromise = false;
+
+    public enqueue(promise: PromiseFunction): Promise<any> {
+        return new Promise((resolve, reject) => {
+            this.#queue.push({
+                promise,
+                resolve,
+                reject,
+            });
+            this.dequeue();
+        });
+    }
+
+    private dequeue(): boolean {
+        if (this.#pendingPromise) {
+            return false;
+        }
+        const item = this.#queue.shift();
+        if (!item) {
+            return false;
+        }
+        try {
+            this.#pendingPromise = true;
+            item.promise()
+                .then((value) => {
+                    this.#pendingPromise = false;
+                    item.resolve(value);
+                    this.dequeue();
+                })
+                .catch((err) => {
+                    this.#pendingPromise = false;
+                    item.reject(err);
+                    this.dequeue();
+                });
+        } catch (err) {
+            this.#pendingPromise = false;
+            item.reject(err);
+            this.dequeue();
+        }
+        return true;
+    }
 }
 
 /**
@@ -38,7 +180,7 @@ export function replaceAll(
 export function deepFreeze(
     obj: Record<string, any> | Array<any> | Function,
     processed = new Set()
-) {
+): Record<string, any> {
     if (
         // Prevent circular reference
         processed.has(obj) ||

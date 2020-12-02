@@ -3,10 +3,11 @@ module.exports = {
     testEnvironment: 'node',
     globals: {
         'ts-jest': {
-            diagnostics: false, // Necessary to avoid typeschecking error in decorators
+            ignoreCoverageForAllDecorators: true,
         },
     },
     testRegex: '\\.test.ts$',
+    testRunner: 'jest-circus/runner',
     coverageThreshold: {
         global: {
             branches: 70,
@@ -17,4 +18,8 @@ module.exports = {
     collectCoverage: true,
     coverageReporters: ['json', 'lcov', 'text'],
     coveragePathIgnorePatterns: ['/node_modules/', '/tests/data/'],
+    testTimeout: 60000,
+    moduleNameMapper: {
+        '^~/(.*)$': '<rootDir>/src/$1',
+    },
 };

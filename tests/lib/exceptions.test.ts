@@ -1,11 +1,14 @@
-import * as exceptions from '../../src/exceptions';
-import { HandlerErrorCode, OperationStatus } from '../../src/interface';
+import * as exceptions from '~/exceptions';
+import { HandlerErrorCode, OperationStatus } from '~/interface';
+
+type Exceptions = keyof typeof exceptions;
 
 describe('when getting exceptions', () => {
     test('all error codes have exceptions', () => {
         expect(exceptions.BaseHandlerException).toBeDefined();
         for (const errorCode in HandlerErrorCode) {
-            expect(exceptions[errorCode].prototype).toBeInstanceOf(
+            const exceptionName = errorCode as Exceptions;
+            expect(exceptions[exceptionName].prototype).toBeInstanceOf(
                 exceptions.BaseHandlerException
             );
         }
@@ -13,15 +16,21 @@ describe('when getting exceptions', () => {
 
     test('exception to progress event', () => {
         for (const errorCode in HandlerErrorCode) {
+            const exceptionName = errorCode as Exceptions;
             let e: exceptions.BaseHandlerException;
             try {
-                e = new exceptions[errorCode]();
+                e = new exceptions[exceptionName](null, null);
             } catch (err) {
-                e = new exceptions[errorCode]('Foo::Bar::Baz', 'ident');
+                e = new exceptions[exceptionName](
+                    'Foo::Bar::Baz',
+                    errorCode as HandlerErrorCode
+                );
             }
             const progressEvent = e.toProgressEvent();
             expect(progressEvent.status).toBe(OperationStatus.Failed);
-            expect(progressEvent.errorCode).toBe(HandlerErrorCode[errorCode]);
+            expect(progressEvent.errorCode).toBe(
+                HandlerErrorCode[errorCode as HandlerErrorCode]
+            );
         }
     });
 });

@@ -44,28 +44,35 @@
         "uuid": "^7.0.2"
     },
     "devDependencies": {
-        "@types/aws-sdk": "^2.7.0",
-        "@types/jest": "^25.2.1",
+        "@tsconfig/node12": "^1.0.7",
+        "@types/jest": "^26.0.15",
         "@types/node": "^12.0.0",
-        "@types/promise-sequential": "^1.1.0",
         "@types/uuid": "^7.0.0",
-        "@typescript-eslint/eslint-plugin": "^2.29.0",
-        "@typescript-eslint/parser": "^2.19.2",
-        "eslint": "^6.8.0",
-        "eslint-config-prettier": "^6.11.0",
+        "@typescript-eslint/eslint-plugin": "^4.8.1",
+        "@typescript-eslint/parser": "^4.8.1",
+        "aws-sdk": "~2.712.0",
+        "eslint": "^7.13.0",
+        "eslint-config-prettier": "^6.15.0",
         "eslint-import-resolver-node": "^0.3.3",
-        "eslint-import-resolver-typescript": "^2.0.0",
-        "eslint-plugin-import": "^2.20.2",
-        "eslint-plugin-prefer-arrow": "^1.1.7",
+        "eslint-import-resolver-typescript": "^2.3.0",
+        "eslint-plugin-import": "^2.22.1",
+        "eslint-plugin-prefer-arrow": "^1.2.2",
         "eslint-plugin-prettier": "^3.1.3",
-        "jest": "^25.5.2",
-        "minimist": ">=1.2.5",
-        "prettier": "^2.0.5",
-        "ts-jest": "^25.4.0",
-        "typescript": "^3.7.0"
+        "jest": "^26.6.3",
+        "jest-circus": "^26.6.3",
+        "prettier": "^2.2.0",
+        "ts-jest": "^26.4.4",
+        "ts-node": "^9.0.0",
+        "typescript": "^4.1.2",
+        "worker-pool-aws-sdk": "^0.1.0"
     },
-    "optionalDependencies": {
-        "aws-sdk": "~2.712.0"
+    "peerDependencies": {
+        "aws-sdk": "^2.712.0"
+    },
+    "peerDependenciesMeta": {
+        "aws-sdk": {
+            "optional": true
+        }
     },
     "prettier": {
         "parser": "typescript",

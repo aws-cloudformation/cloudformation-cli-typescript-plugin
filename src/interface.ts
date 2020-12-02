@@ -5,6 +5,7 @@ import {
     LogicalResourceId,
     NextToken,
 } from 'aws-sdk/clients/cloudformation';
+import { Service } from 'aws-sdk/lib/service';
 import {
     classToPlain,
     ClassTransformOptions,
@@ -17,6 +18,49 @@ export type Optional<T> = T | undefined | null;
 export type Dict<T = any> = Record<string, T>;
 export type Constructor<T = {}> = new (...args: any[]) => T;
 export type integer = bigint;
+
+export type InstanceProperties<
+    T extends object = Service,
+    C extends Constructor<T> = Constructor<T>
+> = keyof InstanceType<C>;
+
+export type ServiceProperties<
+    S extends Service = Service,
+    C extends Constructor<S> = Constructor<S>
+> = Exclude<
+    InstanceProperties<S, C>,
+    InstanceProperties<Service, Constructor<Service>>
+>;
+
+export type OverloadedArguments<T> = T extends {
+    (...args: any[]): any;
+    (params: infer P, callback: any): any;
+    (callback: any): any;
+}
+    ? P
+    : T extends {
+          (params: infer P, callback: any): any;
+          (callback: any): any;
+      }
+    ? P
+    : T extends (params: infer P, callback: any) => any
+    ? P
+    : any;
+
+export type OverloadedReturnType<T> = T extends {
+    (...args: any[]): any;
+    (params: any, callback: any): infer R;
+    (callback: any): any;
+}
+    ? R
+    : T extends {
+          (params: any, callback: any): infer R;
+          (callback: any): any;
+      }
+    ? R
+    : T extends (callback: any) => infer R
+    ? R
+    : any;
 
 export interface Callable<R extends Array<any>, T> {
     (...args: R): T;
@@ -270,7 +314,7 @@ export class UnmodeledRequest extends BaseResourceHandlerRequest<BaseModel> {
 
     @Exclude()
     public toModeled<T extends BaseModel = BaseModel>(
-        modelCls: Constructor<T> & { deserialize?: Function }
+        modelTypeReference: Constructor<T> & { deserialize?: Function }
     ): BaseResourceHandlerRequest<T> {
         const request = BaseResourceHandlerRequest.deserialize<
             BaseResourceHandlerRequest<T>
@@ -285,10 +329,10 @@ export class UnmodeledRequest extends BaseResourceHandlerRequest<BaseModel> {
             region: this.region,
             awsPartition: UnmodeledRequest.getPartition(this.region),
         });
-        request.desiredResourceState = modelCls.deserialize(
+        request.desiredResourceState = modelTypeReference.deserialize(
             this.desiredResourceState || {}
         );
-        request.previousResourceState = modelCls.deserialize(
+        request.previousResourceState = modelTypeReference.deserialize(
             this.previousResourceState || {}
         );
         return request;
@@ -305,6 +349,11 @@ export interface CfnResponse<T extends BaseModel> {
 }
 
 export interface LambdaContext {
-    invokedFunctionArn: string;
+    functionName?: string;
+    functionVersion?: string;
+    invokedFunctionArn?: string;
+    memoryLimitInMB?: number;
+    awsRequestId?: string;
+    callbackWaitsForEmptyEventLoop?: boolean;
     getRemainingTimeInMillis(): number;
 }

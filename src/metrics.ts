@@ -1,10 +1,11 @@
 import CloudWatch, { Dimension, DimensionName } from 'aws-sdk/clients/cloudwatch';
 import { ServiceConfigurationOptions } from 'aws-sdk/lib/service';
 
-import { LambdaLogger } from './log-delivery';
-import { SessionProxy } from './proxy';
+import { Logger } from './log-delivery';
+import { AwsTaskWorkerPool, ExtendedClient, SessionProxy } from './proxy';
 import { Action, MetricTypes, StandardUnit } from './interface';
 import { BaseHandlerException } from './exceptions';
+import { Queue } from './utils';
 
 const METRIC_NAMESPACE_ROOT = 'AWS/CloudFormation';
 
@@ -31,18 +32,19 @@ export function formatDimensions(dimensions: DimensionRecord): Array<Dimension> 
  */
 export class MetricsPublisher {
     private resourceNamespace: string;
-    private client: CloudWatch;
+    private client: ExtendedClient<CloudWatch>;
 
     constructor(
         private readonly session: SessionProxy,
-        private readonly logger: LambdaLogger,
-        private readonly resourceType: string
+        private readonly logger: Logger,
+        private readonly resourceType: string,
+        protected readonly workerPool?: AwsTaskWorkerPool
     ) {
         this.resourceNamespace = resourceType.replace(/::/g, '/');
     }
 
     public refreshClient(options?: ServiceConfigurationOptions): void {
-        this.client = this.session.client('CloudWatch', options) as CloudWatch;
+        this.client = this.session.client(CloudWatch, options, this.workerPool);
     }
 
     async publishMetric(
@@ -58,20 +60,18 @@ export class MetricsPublisher {
             );
         }
         try {
-            const metric = await this.client
-                .putMetricData({
-                    Namespace: `${METRIC_NAMESPACE_ROOT}/${this.resourceNamespace}`,
-                    MetricData: [
-                        {
-                            MetricName: metricName,
-                            Dimensions: formatDimensions(dimensions),
-                            Unit: unit,
-                            Timestamp: timestamp,
-                            Value: value,
-                        },
-                    ],
-                })
-                .promise();
+            const metric = await this.client.makeRequestPromise('putMetricData', {
+                Namespace: `${METRIC_NAMESPACE_ROOT}/${this.resourceNamespace}`,
+                MetricData: [
+                    {
+                        MetricName: metricName,
+                        Dimensions: formatDimensions(dimensions),
+                        Unit: unit,
+                        Timestamp: timestamp,
+                        Value: value,
+                    },
+                ],
+            });
             this.log('Response from "putMetricData"', metric);
         } catch (err) {
             if (err.retryable) {
@@ -183,6 +183,7 @@ export class MetricsPublisher {
  */
 export class MetricsPublisherProxy {
     private publishers: Array<MetricsPublisher> = [];
+    private queue = new Queue();
 
     /**
      * Adds a metrics publisher to the list of publishers
@@ -200,25 +201,23 @@ export class MetricsPublisherProxy {
         timestamp: Date,
         action: Action,
         error: Error
-    ): Promise<any> {
-        const promises: Array<Promise<void>> = this.publishers.map(
-            (publisher: MetricsPublisher) => {
-                return publisher.publishExceptionMetric(timestamp, action, error);
-            }
-        );
-        return await Promise.all(promises);
+    ): Promise<void> {
+        for (const publisher of this.publishers) {
+            await this.queue.enqueue(() =>
+                publisher.publishExceptionMetric(timestamp, action, error)
+            );
+        }
     }
 
     /**
      * Publishes a metric related to invocations to the list of publishers
      */
-    async publishInvocationMetric(timestamp: Date, action: Action): Promise<any> {
-        const promises: Array<Promise<void>> = this.publishers.map(
-            (publisher: MetricsPublisher) => {
-                return publisher.publishInvocationMetric(timestamp, action);
-            }
-        );
-        return await Promise.all(promises);
+    async publishInvocationMetric(timestamp: Date, action: Action): Promise<void> {
+        for (const publisher of this.publishers) {
+            await this.queue.enqueue(() =>
+                publisher.publishInvocationMetric(timestamp, action)
+            );
+        }
     }
 
     /**
@@ -228,13 +227,12 @@ export class MetricsPublisherProxy {
         timestamp: Date,
         action: Action,
         milliseconds: number
-    ): Promise<any> {
-        const promises: Array<Promise<void>> = this.publishers.map(
-            (publisher: MetricsPublisher) => {
-                return publisher.publishDurationMetric(timestamp, action, milliseconds);
-            }
-        );
-        return await Promise.all(promises);
+    ): Promise<void> {
+        for (const publisher of this.publishers) {
+            await this.queue.enqueue(() =>
+                publisher.publishDurationMetric(timestamp, action, milliseconds)
+            );
+        }
     }
 
     /**
@@ -243,12 +241,11 @@ export class MetricsPublisherProxy {
     async publishLogDeliveryExceptionMetric(
         timestamp: Date,
         error: Error
-    ): Promise<any> {
-        const promises: Array<Promise<void>> = this.publishers.map(
-            (publisher: MetricsPublisher) => {
-                return publisher.publishLogDeliveryExceptionMetric(timestamp, error);
-            }
-        );
-        return await Promise.all(promises);
+    ): Promise<void> {
+        for (const publisher of this.publishers) {
+            await this.queue.enqueue(() =>
+                publisher.publishLogDeliveryExceptionMetric(timestamp, error)
+            );
+        }
     }
 }
