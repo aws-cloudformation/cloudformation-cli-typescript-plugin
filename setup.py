@@ -38,7 +38,7 @@ setup(
     zip_safe=True,
     python_requires=">=3.6",
     install_requires=[
-        "cloudformation-cli>=0.1.10,<0.2",
+        "cloudformation-cli>=0.1.11,<0.2",
         # "aws-lambda-builders>=1.0,<2.0",
         "zipfile38>=0.0.2,<0.2",
     ],
