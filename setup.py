@@ -37,11 +37,7 @@ setup(
     include_package_data=True,
     zip_safe=True,
     python_requires=">=3.6",
-    install_requires=[
-        "cloudformation-cli>=0.1.11,<0.2",
-        # "aws-lambda-builders>=1.0,<2.0",
-        "zipfile38>=0.0.3,<0.2",
-    ],
+    install_requires=["cloudformation-cli>=0.1.14", "zipfile38>=0.0.3,<0.2"],
     entry_points={
         "rpdk.v1.languages": [
             "typescript = rpdk.typescript.codegen:TypescriptLanguagePlugin",
