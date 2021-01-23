@@ -14,11 +14,11 @@
     },
     "dependencies": {
         "{{lib_name}}": "{{lib_path}}",
-        "class-transformer": "^0.3.1"
+        "class-transformer": "0.3.1"
     },
     "devDependencies": {
         "@types/node": "^12.0.0",
-        "typescript": "^3.8.3"
+        "typescript": "^4.1.2"
     },
     "optionalDependencies": {
         "aws-sdk": "^2.656.0"

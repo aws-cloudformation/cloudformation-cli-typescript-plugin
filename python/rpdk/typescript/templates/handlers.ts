@@ -25,6 +25,7 @@ class Resource extends BaseResource<ResourceModel> {
      * @param request The request object for the provisioning request passed to the implementor
      * @param callbackContext Custom context object to allow the passing through of additional
      * state or metadata between subsequent retries
+     * @param logger Logger to proxy requests to default publishers
      */
     @handlerEvent(Action.Create)
     public async create(
@@ -62,6 +63,7 @@ class Resource extends BaseResource<ResourceModel> {
      * @param request The request object for the provisioning request passed to the implementor
      * @param callbackContext Custom context object to allow the passing through of additional
      * state or metadata between subsequent retries
+     * @param logger Logger to proxy requests to default publishers
      */
     @handlerEvent(Action.Update)
     public async update(
@@ -86,6 +88,7 @@ class Resource extends BaseResource<ResourceModel> {
      * @param request The request object for the provisioning request passed to the implementor
      * @param callbackContext Custom context object to allow the passing through of additional
      * state or metadata between subsequent retries
+     * @param logger Logger to proxy requests to default publishers
      */
     @handlerEvent(Action.Delete)
     public async delete(
@@ -109,6 +112,7 @@ class Resource extends BaseResource<ResourceModel> {
      * @param request The request object for the provisioning request passed to the implementor
      * @param callbackContext Custom context object to allow the passing through of additional
      * state or metadata between subsequent retries
+     * @param logger Logger to proxy requests to default publishers
      */
     @handlerEvent(Action.Read)
     public async read(
@@ -131,6 +135,7 @@ class Resource extends BaseResource<ResourceModel> {
      * @param request The request object for the provisioning request passed to the implementor
      * @param callbackContext Custom context object to allow the passing through of additional
      * state or metadata between subsequent retries
+     * @param logger Logger to proxy requests to default publishers
      */
     @handlerEvent(Action.List)
     public async list(
@@ -151,6 +156,8 @@ class Resource extends BaseResource<ResourceModel> {
 
 export const resource = new Resource(ResourceModel.TYPE_NAME, ResourceModel);
 
+// Entrypoint for production usage after registered in CloudFormation
 export const entrypoint = resource.entrypoint;
 
+// Entrypoint used for local testing
 export const testEntrypoint = resource.testEntrypoint;
