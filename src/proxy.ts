@@ -1,5 +1,5 @@
 import { AWSError } from 'aws-sdk';
-import * as Aws from 'aws-sdk/clients/all';
+import Aws from 'aws-sdk/clients/all';
 import { NextToken } from 'aws-sdk/clients/cloudformation';
 import { CredentialsOptions } from 'aws-sdk/lib/credentials';
 import { PromiseResult } from 'aws-sdk/lib/request';
