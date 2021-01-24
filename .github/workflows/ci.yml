@@ -68,7 +68,7 @@ jobs:
           cd "$DIR"
           echo "PROJECT_DIR=$DIR" >> $GITHUB_ENV
           ls -la
-          printf "n" | cfn init -vv -t AWS::Foo::Bar
+          printf "n" | cfn init -vv --artifact-type RESOURCE --type-name AWS::Foo::Bar
           ls -la
           mkdir ./dist
           cp "$RPDK_PATH" ./dist
@@ -77,7 +77,7 @@ jobs:
           npm install --optional
           sam build --debug --build-dir ./build TypeFunction
           sam build --debug --build-dir ./build TestEntrypoint
-          sam local invoke -t build/template.yaml --debug --event sam-tests/create.json  --log-file sam.log TestEntrypoint
+          sam local invoke -t build/template.yaml --debug --event sam-tests/create.json --log-file sam.log TestEntrypoint
           grep -q '"status":"SUCCESS"' sam.log
       - name: Gather Debug Logs
         id: gather_logs
