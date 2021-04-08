@@ -22,11 +22,9 @@ else:  # pragma: no cover
 LOG = logging.getLogger(__name__)
 
 EXECUTABLE = "cfn"
-SUPPORT_LIB_NAME = "cfn-rpdk"
-SUPPORT_LIB_VERSION = "0.5.0"
+SUPPORT_LIB_NAME = "@amazon-web-services-cloudformation/cloudformation-cli-typescript-lib"
+SUPPORT_LIB_VERSION = "^1.0.0"
 MAIN_HANDLER_FUNCTION = "TypeFunction"
-REPO_URL = "https://github.com/eduardomourar/cloudformation-cli-typescript-plugin"
-REPO_RELEASE_SUFFIX = f"v{SUPPORT_LIB_VERSION}/cfn-rpdk-{SUPPORT_LIB_VERSION}.tgz"
 
 
 def validate_no(value):
@@ -40,7 +38,6 @@ class TypescriptLanguagePlugin(LanguagePlugin):
     ENTRY_POINT = "dist/handlers.entrypoint"
     TEST_ENTRY_POINT = "dist/handlers.testEntrypoint"
     CODE_URI = "./"
-    SUPPORT_LIB_URI = f"{REPO_URL}/releases/download/{REPO_RELEASE_SUFFIX}"
 
     def __init__(self):
         self.env = self._setup_jinja_env(
@@ -65,7 +62,7 @@ class TypescriptLanguagePlugin(LanguagePlugin):
         self._use_docker = project.settings.get("useDocker", True)
         self.package_root = project.root / "src"
         self._build_command = project.settings.get("buildCommand", None)
-        self._lib_path = project.settings.get("supportLibrary", self.SUPPORT_LIB_URI)
+        self._lib_path = SUPPORT_LIB_VERSION
 
     def _init_settings(self, project):
         LOG.debug("Writing settings")
