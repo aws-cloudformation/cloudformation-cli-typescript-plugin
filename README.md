@@ -1,9 +1,6 @@
-# DEVELOPER PREVIEW (COMMUNITY DRIVEN)
-
-[![License MIT](https://img.shields.io/badge/license-MIT-brightgreen.svg)](https://opensource.org/licenses/MIT) [![contributions welcome](https://img.shields.io/badge/contributions-welcome-brightgreen.svg?style=flat)](https://github.com/eduardomourar/cloudformation-cli-typescript-plugin/issues) [![Project Status: WIP – Initial development](https://www.repostatus.org/badges/latest/wip.svg)](https://www.repostatus.org/#wip)
+# AWS CloudFormation Resource Provider Typescript Plugin
 
 We're excited to share our progress with adding new languages to the CloudFormation CLI!
-> This plugin is an early preview prepared by the community, and not ready for production use.
 
 ## AWS CloudFormation Resource Provider TypeScript Plugin
 
@@ -91,4 +88,4 @@ pre-commit run pytest-local
 License
 -------
 
-This library is licensed under the MIT License.
+This library is licensed under the Apache 2.0 License.
