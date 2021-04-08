@@ -23,7 +23,7 @@ LOG = logging.getLogger(__name__)
 
 EXECUTABLE = "cfn"
 SUPPORT_LIB_NAME = "@amazon-web-services-cloudformation/cloudformation-cli-typescript-lib"
-SUPPORT_LIB_VERSION = "^1.0.0"
+SUPPORT_LIB_VERSION = "^1.0.1"
 MAIN_HANDLER_FUNCTION = "TypeFunction"
 
 
