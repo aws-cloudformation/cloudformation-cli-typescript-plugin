@@ -10,7 +10,7 @@ import {
     ProgressEvent,
     ResourceHandlerRequest,
     SessionProxy,
-} from '@amazon-web-services-cloudformation/{{lib_name}}';
+} from '{{lib_name}}';
 import { ResourceModel } from './models';
 
 interface CallbackContext extends Record<string, any> {}

@@ -1,5 +1,5 @@
 // This is a generated file. Modifications will be overwritten.
-import { BaseModel, Dict, integer, Integer, Optional, transformValue } from '@amazon-web-services-cloudformation/{{lib_name}}';
+import { BaseModel, Dict, integer, Integer, Optional, transformValue } from '{{lib_name}}';
 import { Exclude, Expose, Type, Transform } from 'class-transformer';
 
 {% for model, properties in models.items() %}
