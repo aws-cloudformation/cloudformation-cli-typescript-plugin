@@ -39,7 +39,6 @@ setup(
     python_requires=">=3.6",
     install_requires=[
         "cloudformation-cli>=0.1.14",
-        "docker>=3.7,<5",
         "zipfile38>=0.0.3,<0.2",
     ],
     entry_points={
