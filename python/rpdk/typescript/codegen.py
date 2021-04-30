@@ -36,7 +36,7 @@ def validate_no(value):
 class TypescriptLanguagePlugin(LanguagePlugin):
     MODULE_NAME = __name__
     NAME = "typescript"
-    RUNTIME = "nodejs12.x"
+    RUNTIME = "nodejs14.x"
     ENTRY_POINT = "dist/handlers.entrypoint"
     TEST_ENTRY_POINT = "dist/handlers.testEntrypoint"
     CODE_URI = "./"
