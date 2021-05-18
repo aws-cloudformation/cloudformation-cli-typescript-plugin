@@ -1,6 +1,6 @@
 {
-    "name": "cfn-rpdk",
-    "version": "0.5.0",
+    "name": "@amazon-web-services-cloudformation/cloudformation-cli-typescript-lib",
+    "version": "1.0.1",
     "description": "The CloudFormation Resource Provider Development Kit (RPDK) allows you to author your own resource providers that can be used by CloudFormation. This plugin library helps to provide runtime bindings for the execution of your providers by CloudFormation.",
     "private": false,
     "main": "dist/index.js",
@@ -27,14 +27,14 @@
     },
     "repository": {
         "type": "git",
-        "url": "git+https://github.com/eduardomourar/cloudformation-cli-typescript-plugin.git"
+        "url": "git+https://github.com/aws-cloudformation/cloudformation-cli-typescript-plugin.git"
     },
-    "author": "eduardomourar",
-    "license": "MIT",
+    "author": "Amazon Web Services",
+    "license": "Apache License 2.0",
     "bugs": {
-        "url": "https://github.com/eduardomourar/cloudformation-cli-typescript-plugin/issues"
+        "url": "https://github.com/aws-cloudformation/cloudformation-cli-typescript-plugin/issues"
     },
-    "homepage": "https://github.com/eduardomourar/cloudformation-cli-typescript-plugin#readme",
+    "homepage": "https://github.com/aws-cloudformation/cloudformation-cli-typescript-plugin#readme",
     "dependencies": {
         "@org-formation/tombok": "^0.0.1",
         "autobind-decorator": "^2.4.0",
