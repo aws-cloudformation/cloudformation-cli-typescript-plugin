@@ -174,13 +174,15 @@ class TypescriptLanguagePlugin(LanguagePlugin):
         LOG.debug("Generate complete")
 
     def _pre_package(self, build_path):
+        # pylint: disable=consider-using-with
+        f = TemporaryFile("w+b")
+
         # pylint: disable=unexpected-keyword-arg
-        with TemporaryFile("w+b") as f, ZipFile(
-            f, mode="w", strict_timestamps=False
-        ) as zip_file:
+        with ZipFile(f, mode="w", strict_timestamps=False) as zip_file:
             self._recursive_relative_write(build_path, build_path, zip_file)
-            f.seek(0)
-            return f
+        f.seek(0)
+
+        return f
 
     @staticmethod
     def _recursive_relative_write(src_path, base_path, zip_file):
