@@ -121,9 +121,7 @@ class TypescriptLanguagePlugin(LanguagePlugin):
         _render_template(
             project.root / "package.json",
             name=project.hypenated_name,
-            description="AWS custom resource provider named {}.".format(
-                project.type_name
-            ),
+            description=f"AWS custom resource provider named {project.type_name}.",
             lib_name=SUPPORT_LIB_NAME,
             lib_path=self._lib_path,
         )
@@ -176,14 +174,13 @@ class TypescriptLanguagePlugin(LanguagePlugin):
         LOG.debug("Generate complete")
 
     def _pre_package(self, build_path):
-        f = TemporaryFile("w+b")
-
         # pylint: disable=unexpected-keyword-arg
-        with ZipFile(f, mode="w", strict_timestamps=False) as zip_file:
+        with TemporaryFile("w+b") as f, ZipFile(
+            f, mode="w", strict_timestamps=False
+        ) as zip_file:
             self._recursive_relative_write(build_path, build_path, zip_file)
-        f.seek(0)
-
-        return f
+            f.seek(0)
+            return f
 
     @staticmethod
     def _recursive_relative_write(src_path, base_path, zip_file):
