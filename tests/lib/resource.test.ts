@@ -641,6 +641,21 @@ describe('when getting resource', () => {
         );
     });
 
+    test('invoke handler does not provide response', async () => {
+        expect.assertions(1);
+        const mockHandler: jest.Mock = jest.fn().mockResolvedValue(null);
+        const resource = new Resource(TYPE_NAME, MockModel);
+        resource.addHandler(Action.Create, mockHandler);
+        const callbackContext = {};
+        try {
+            await resource['invokeHandler'](null, null, Action.Create, callbackContext);
+        } catch (e) {
+            expect(e).toMatchObject({
+                message: 'Handler failed to provide a response.',
+            });
+        }
+    });
+
     test('parse test request invalid request', () => {
         const resource = getResource();
         const parseTestRequest = () => {
