@@ -11,7 +11,7 @@ import {
     ResourceHandlerRequest,
     SessionProxy,
 } from '{{lib_name}}';
-import { ResourceModel } from './models';
+import { ResourceModel, TypeConfigurationModel } from './models';
 
 interface CallbackContext extends Record<string, any> {}
 
@@ -154,7 +154,7 @@ class Resource extends BaseResource<ResourceModel> {
     }
 }
 
-export const resource = new Resource(ResourceModel.TYPE_NAME, ResourceModel);
+export const resource = new Resource(ResourceModel.TYPE_NAME, ResourceModel, TypeConfigurationModel);
 
 // Entrypoint for production usage after registered in CloudFormation
 export const entrypoint = resource.entrypoint;

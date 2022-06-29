@@ -2,7 +2,12 @@ import 'reflect-metadata';
 import { boundMethod } from 'autobind-decorator';
 
 import { AwsTaskWorkerPool, ProgressEvent, SessionProxy } from './proxy';
-import { BaseHandlerException, InternalFailure, InvalidRequest } from './exceptions';
+import {
+    BaseHandlerException,
+    InternalFailure,
+    InvalidRequest,
+    InvalidTypeConfiguration,
+} from './exceptions';
 import {
     Action,
     BaseModel,
@@ -40,13 +45,13 @@ const MUTATING_ACTIONS: [Action, Action, Action] = [
     Action.Delete,
 ];
 
-export type HandlerSignature<T extends BaseModel> = Callable<
-    [Optional<SessionProxy>, any, Dict, LoggerProxy],
+export type HandlerSignature<T extends BaseModel, TC extends BaseModel> = Callable<
+    [Optional<SessionProxy>, any, Dict, TC, LoggerProxy],
     Promise<ProgressEvent<T>>
 >;
-export class HandlerSignatures<T extends BaseModel> extends Map<
+export class HandlerSignatures<T extends BaseModel, TC extends BaseModel> extends Map<
     Action,
-    HandlerSignature<T>
+    HandlerSignature<T, TC>
 > {}
 class HandlerEvents extends Map<Action, string | symbol> {}
 
@@ -88,7 +93,10 @@ function ensureSerialize<T extends BaseModel>(toResponse = false): MethodDecorat
     };
 }
 
-export abstract class BaseResource<T extends BaseModel = BaseModel> {
+export abstract class BaseResource<
+    T extends BaseModel = BaseModel,
+    TC extends BaseModel = BaseModel
+> {
     protected loggerProxy: LoggerProxy;
     protected metricsPublisherProxy: MetricsPublisherProxy;
 
@@ -111,11 +119,14 @@ export abstract class BaseResource<T extends BaseModel = BaseModel> {
     constructor(
         public readonly typeName: string,
         public readonly modelTypeReference: Constructor<T>,
+        public readonly typeConfigurationTypeReference: Constructor<TC> & {
+            deserialize: Function;
+        },
         protected readonly workerPool?: AwsTaskWorkerPool,
-        private handlers?: HandlerSignatures<T>
+        private handlers?: HandlerSignatures<T, TC>
     ) {
         this.typeName = typeName || '';
-        this.handlers = handlers || new HandlerSignatures<T>();
+        this.handlers = handlers || new HandlerSignatures<T, TC>();
 
         this.lambdaLogger = console;
         this.platformLoggerProxy = new LoggerProxy();
@@ -294,8 +305,8 @@ export abstract class BaseResource<T extends BaseModel = BaseModel> {
 
     public addHandler = (
         action: Action,
-        f: HandlerSignature<T>
-    ): HandlerSignature<T> => {
+        f: HandlerSignature<T, TC>
+    ): HandlerSignature<T, TC> => {
         this.handlers.set(action, f);
         return f;
     };
@@ -304,13 +315,14 @@ export abstract class BaseResource<T extends BaseModel = BaseModel> {
         session: Optional<SessionProxy>,
         request: BaseResourceHandlerRequest<T>,
         action: Action,
-        callbackContext: Dict
+        callbackContext: Dict,
+        typeConfiguration?: TC
     ): Promise<ProgressEvent<T>> => {
         const actionName = action == null ? '<null>' : action.toString();
         if (!this.handlers.has(action)) {
             throw new Error(`Unknown action ${actionName}`);
         }
-        const handleRequest: HandlerSignature<T> = this.handlers.get(action);
+        const handleRequest: HandlerSignature<T, TC> = this.handlers.get(action);
         // We will make the callback context and resource states readonly
         // to avoid modification at a later time
         deepFreeze(callbackContext);
@@ -320,6 +332,7 @@ export abstract class BaseResource<T extends BaseModel = BaseModel> {
             session,
             request,
             callbackContext,
+            typeConfiguration,
             this.loggerProxy || this.platformLoggerProxy
         );
         this.log(`[${action}] handler invoked`);
@@ -473,6 +486,17 @@ export abstract class BaseResource<T extends BaseModel = BaseModel> {
         }
     };
 
+    private castTypeConfigurationRequest = (request: HandlerRequest): TC => {
+        try {
+            return this.typeConfigurationTypeReference.deserialize(
+                request.requestData.typeConfiguration
+            );
+        } catch (err) {
+            this.log('Invalid Type Configuration');
+            throw new InvalidTypeConfiguration(this.typeName, `${err} (${err.name}`);
+        }
+    };
+
     // @ts-ignore
     public async entrypoint(
         eventData: any | Dict,
@@ -499,6 +523,8 @@ export abstract class BaseResource<T extends BaseModel = BaseModel> {
             bearerToken = event.bearerToken;
             const [callerCredentials, providerCredentials] = credentials;
             const request = this.castResourceRequest(event);
+
+            const typeConfiguration = this.castTypeConfigurationRequest(event);
 
             let streamName = `${event.awsAccountId}-${event.region}`;
             if (event.stackId && request.logicalResourceIdentifier) {
@@ -550,7 +576,8 @@ export abstract class BaseResource<T extends BaseModel = BaseModel> {
                     this.callerSession,
                     request,
                     action,
-                    callback
+                    callback,
+                    typeConfiguration
                 );
             } catch (err) {
                 error = err;
