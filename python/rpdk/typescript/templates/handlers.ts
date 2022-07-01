@@ -32,6 +32,7 @@ class Resource extends BaseResource<ResourceModel> {
         session: Optional<SessionProxy>,
         request: ResourceHandlerRequest<ResourceModel>,
         callbackContext: CallbackContext,
+        typeConfiguration: TypeConfigurationModel,
         logger: LoggerProxy
     ): Promise<ProgressEvent<ResourceModel, CallbackContext>> {
         const model = new ResourceModel(request.desiredResourceState);
@@ -70,6 +71,7 @@ class Resource extends BaseResource<ResourceModel> {
         session: Optional<SessionProxy>,
         request: ResourceHandlerRequest<ResourceModel>,
         callbackContext: CallbackContext,
+        typeConfiguration: TypeConfigurationModel,
         logger: LoggerProxy
     ): Promise<ProgressEvent<ResourceModel, CallbackContext>> {
         const model = new ResourceModel(request.desiredResourceState);
@@ -95,6 +97,7 @@ class Resource extends BaseResource<ResourceModel> {
         session: Optional<SessionProxy>,
         request: ResourceHandlerRequest<ResourceModel>,
         callbackContext: CallbackContext,
+        typeConfiguration: TypeConfigurationModel,
         logger: LoggerProxy
     ): Promise<ProgressEvent<ResourceModel, CallbackContext>> {
         const model = new ResourceModel(request.desiredResourceState);
@@ -119,6 +122,7 @@ class Resource extends BaseResource<ResourceModel> {
         session: Optional<SessionProxy>,
         request: ResourceHandlerRequest<ResourceModel>,
         callbackContext: CallbackContext,
+        typeConfiguration: TypeConfigurationModel,
         logger: LoggerProxy
     ): Promise<ProgressEvent<ResourceModel, CallbackContext>> {
         const model = new ResourceModel(request.desiredResourceState);
@@ -142,6 +146,7 @@ class Resource extends BaseResource<ResourceModel> {
         session: Optional<SessionProxy>,
         request: ResourceHandlerRequest<ResourceModel>,
         callbackContext: CallbackContext,
+        typeConfiguration: TypeConfigurationModel,
         logger: LoggerProxy
     ): Promise<ProgressEvent<ResourceModel, CallbackContext>> {
         const model = new ResourceModel(request.desiredResourceState);
