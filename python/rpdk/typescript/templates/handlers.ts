@@ -25,6 +25,8 @@ class Resource extends BaseResource<ResourceModel> {
      * @param request The request object for the provisioning request passed to the implementor
      * @param callbackContext Custom context object to allow the passing through of additional
      * state or metadata between subsequent retries
+     * @param typeConfiguration Configuration data for this resource type, in the given account
+     * and region
      * @param logger Logger to proxy requests to default publishers
      */
     @handlerEvent(Action.Create)
@@ -64,6 +66,8 @@ class Resource extends BaseResource<ResourceModel> {
      * @param request The request object for the provisioning request passed to the implementor
      * @param callbackContext Custom context object to allow the passing through of additional
      * state or metadata between subsequent retries
+     * @param typeConfiguration Configuration data for this resource type, in the given account
+     * and region
      * @param logger Logger to proxy requests to default publishers
      */
     @handlerEvent(Action.Update)
@@ -90,6 +94,8 @@ class Resource extends BaseResource<ResourceModel> {
      * @param request The request object for the provisioning request passed to the implementor
      * @param callbackContext Custom context object to allow the passing through of additional
      * state or metadata between subsequent retries
+     * @param typeConfiguration Configuration data for this resource type, in the given account
+     * and region
      * @param logger Logger to proxy requests to default publishers
      */
     @handlerEvent(Action.Delete)
@@ -115,6 +121,8 @@ class Resource extends BaseResource<ResourceModel> {
      * @param request The request object for the provisioning request passed to the implementor
      * @param callbackContext Custom context object to allow the passing through of additional
      * state or metadata between subsequent retries
+     * @param typeConfiguration Configuration data for this resource type, in the given account
+     * and region
      * @param logger Logger to proxy requests to default publishers
      */
     @handlerEvent(Action.Read)
@@ -139,6 +147,8 @@ class Resource extends BaseResource<ResourceModel> {
      * @param request The request object for the provisioning request passed to the implementor
      * @param callbackContext Custom context object to allow the passing through of additional
      * state or metadata between subsequent retries
+     * @param typeConfiguration Configuration data for this resource type, in the given account
+     * and region
      * @param logger Logger to proxy requests to default publishers
      */
     @handlerEvent(Action.List)
