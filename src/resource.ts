@@ -45,14 +45,17 @@ const MUTATING_ACTIONS: [Action, Action, Action] = [
     Action.Delete,
 ];
 
-export type HandlerSignature<T extends BaseModel, TC extends BaseModel> = Callable<
-    [Optional<SessionProxy>, any, Dict, TC, LoggerProxy],
+export type HandlerSignature<
+    T extends BaseModel,
+    TypeConfiguration extends BaseModel
+> = Callable<
+    [Optional<SessionProxy>, any, Dict, TypeConfiguration, LoggerProxy],
     Promise<ProgressEvent<T>>
 >;
-export class HandlerSignatures<T extends BaseModel, TC extends BaseModel> extends Map<
-    Action,
-    HandlerSignature<T, TC>
-> {}
+export class HandlerSignatures<
+    T extends BaseModel,
+    TypeConfiguration extends BaseModel
+> extends Map<Action, HandlerSignature<T, TypeConfiguration>> {}
 class HandlerEvents extends Map<Action, string | symbol> {}
 
 /**
@@ -95,7 +98,7 @@ function ensureSerialize<T extends BaseModel>(toResponse = false): MethodDecorat
 
 export abstract class BaseResource<
     T extends BaseModel = BaseModel,
-    TC extends BaseModel = BaseModel
+    TypeConfiguration extends BaseModel = BaseModel
 > {
     protected loggerProxy: LoggerProxy;
     protected metricsPublisherProxy: MetricsPublisherProxy;
@@ -119,14 +122,14 @@ export abstract class BaseResource<
     constructor(
         public readonly typeName: string,
         public readonly modelTypeReference: Constructor<T>,
-        public readonly typeConfigurationTypeReference: Constructor<TC> & {
+        public readonly typeConfigurationTypeReference: Constructor<TypeConfiguration> & {
             deserialize: Function;
         },
         protected readonly workerPool?: AwsTaskWorkerPool,
-        private handlers?: HandlerSignatures<T, TC>
+        private handlers?: HandlerSignatures<T, TypeConfiguration>
     ) {
         this.typeName = typeName || '';
-        this.handlers = handlers || new HandlerSignatures<T, TC>();
+        this.handlers = handlers || new HandlerSignatures<T, TypeConfiguration>();
 
         this.lambdaLogger = console;
         this.platformLoggerProxy = new LoggerProxy();
@@ -305,8 +308,8 @@ export abstract class BaseResource<
 
     public addHandler = (
         action: Action,
-        f: HandlerSignature<T, TC>
-    ): HandlerSignature<T, TC> => {
+        f: HandlerSignature<T, TypeConfiguration>
+    ): HandlerSignature<T, TypeConfiguration> => {
         this.handlers.set(action, f);
         return f;
     };
@@ -316,13 +319,15 @@ export abstract class BaseResource<
         request: BaseResourceHandlerRequest<T>,
         action: Action,
         callbackContext: Dict,
-        typeConfiguration?: TC
+        typeConfiguration?: TypeConfiguration
     ): Promise<ProgressEvent<T>> => {
         const actionName = action == null ? '<null>' : action.toString();
         if (!this.handlers.has(action)) {
             throw new Error(`Unknown action ${actionName}`);
         }
-        const handleRequest: HandlerSignature<T, TC> = this.handlers.get(action);
+        const handleRequest: HandlerSignature<T, TypeConfiguration> = this.handlers.get(
+            action
+        );
         // We will make the callback context and resource states readonly
         // to avoid modification at a later time
         deepFreeze(callbackContext);
@@ -486,7 +491,9 @@ export abstract class BaseResource<
         }
     };
 
-    private castTypeConfigurationRequest = (request: HandlerRequest): TC => {
+    private castTypeConfigurationRequest = (
+        request: HandlerRequest
+    ): TypeConfiguration => {
         try {
             return this.typeConfigurationTypeReference.deserialize(
                 request.requestData.typeConfiguration
