@@ -442,7 +442,9 @@ describe('when getting resource', () => {
             resource['castResourceRequest'](request);
         };
         expect(castResourceRequest).toThrow(exceptions.InvalidRequest);
-        expect(castResourceRequest).toThrow('TypeError: Cannot read property');
+        expect(castResourceRequest).toThrow(
+            "TypeError: Cannot read properties of null (reading 'resourceProperties')"
+        );
     });
 
     test('parse request valid request and cast resource request', () => {
