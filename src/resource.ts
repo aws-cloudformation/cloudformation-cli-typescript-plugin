@@ -49,7 +49,7 @@ export type HandlerSignature<
     T extends BaseModel,
     TypeConfiguration extends BaseModel
 > = Callable<
-    [Optional<SessionProxy>, any, Dict, TypeConfiguration, LoggerProxy],
+    [Optional<SessionProxy>, any, Dict, LoggerProxy, TypeConfiguration],
     Promise<ProgressEvent<T>>
 >;
 export class HandlerSignatures<
@@ -122,11 +122,11 @@ export abstract class BaseResource<
     constructor(
         public readonly typeName: string,
         public readonly modelTypeReference: Constructor<T>,
-        public readonly typeConfigurationTypeReference: Constructor<TypeConfiguration> & {
-            deserialize: Function;
-        },
         protected readonly workerPool?: AwsTaskWorkerPool,
-        private handlers?: HandlerSignatures<T, TypeConfiguration>
+        private handlers?: HandlerSignatures<T, TypeConfiguration>,
+        public readonly typeConfigurationTypeReference?: Constructor<TypeConfiguration> & {
+            deserialize: Function;
+        }
     ) {
         this.typeName = typeName || '';
         this.handlers = handlers || new HandlerSignatures<T, TypeConfiguration>();
@@ -337,8 +337,8 @@ export abstract class BaseResource<
             session,
             request,
             callbackContext,
-            typeConfiguration,
-            this.loggerProxy || this.platformLoggerProxy
+            this.loggerProxy || this.platformLoggerProxy,
+            typeConfiguration
         );
         this.log(`[${action}] handler invoked`);
         if (handlerResponse != null) {
@@ -495,6 +495,14 @@ export abstract class BaseResource<
         request: HandlerRequest
     ): TypeConfiguration => {
         try {
+            if (!this.typeConfigurationTypeReference) {
+                if (request.requestData.typeConfiguration) {
+                    throw new InternalFailure(
+                        'Type configuration supplied but running with legacy version of code which does not support type configuration.'
+                    );
+                }
+                return null;
+            }
             return this.typeConfigurationTypeReference.deserialize(
                 request.requestData.typeConfiguration
             );
