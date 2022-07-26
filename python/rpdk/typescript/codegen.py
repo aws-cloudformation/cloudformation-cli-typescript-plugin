@@ -173,6 +173,7 @@ class TypescriptLanguagePlugin(LanguagePlugin):
         path = self.package_root / "models.ts"
         LOG.debug("Writing file: %s", path)
         template = self.env.get_template("models.ts")
+
         contents = template.render(
             lib_name=SUPPORT_LIB_NAME,
             type_name=project.type_name,
@@ -186,6 +187,8 @@ class TypescriptLanguagePlugin(LanguagePlugin):
         LOG.debug("Generate complete")
 
     def _pre_package(self, build_path):
+        # Caller should own/delete this, not us.
+        # pylint: disable=consider-using-with
         f = TemporaryFile("w+b")
 
         # pylint: disable=unexpected-keyword-arg
