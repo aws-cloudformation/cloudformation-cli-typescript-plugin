@@ -503,10 +503,11 @@ describe('when getting resource', () => {
         };
         expect(castResourceRequest).toThrow(exceptions.InvalidRequest);
         expect(castResourceRequest).toThrow(
-            // previously tested for (1), but now seeing (2); error message probably depends on version of JS/TS
+            // previously tested for (0) and (1), but now seeing (2); error message probably depends on version of JS/TS
+            // (0) "TypeError: Cannot read property"
             // (1) "TypeError: Cannot read property 'resourceProperties' of null (TypeError)"
             // (2) "TypeError: Cannot read properties of null (reading 'resourceProperties') (TypeError)"
-            /TypeError: Cannot read propert.*'resourceProperties'.*/
+            /TypeError: Cannot read propert(y|.*'resourceProperties'.*)/
         );
     });
 
