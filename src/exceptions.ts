@@ -22,6 +22,15 @@ export class NotUpdatable extends BaseHandlerException {}
 
 export class InvalidRequest extends BaseHandlerException {}
 
+export class InvalidTypeConfiguration extends BaseHandlerException {
+    constructor(typeName: string, reason: string) {
+        super(
+            `Invalid TypeConfiguration provided for type '${typeName}'. Reason: ${reason}`,
+            HandlerErrorCode.InvalidTypeConfiguration
+        );
+    }
+}
+
 export class AccessDenied extends BaseHandlerException {}
 
 export class InvalidCredentials extends BaseHandlerException {}
