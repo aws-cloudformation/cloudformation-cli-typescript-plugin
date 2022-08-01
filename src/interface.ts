@@ -160,6 +160,7 @@ export enum HandlerErrorCode {
     ServiceInternalError = 'ServiceInternalError',
     NetworkFailure = 'NetworkFailure',
     InternalFailure = 'InternalFailure',
+    InvalidTypeConfiguration = 'InvalidTypeConfiguration',
 }
 
 export interface Credentials {
@@ -261,6 +262,7 @@ export class RequestData<T = Dict> extends BaseDto {
     @Expose() providerCredentials?: Credentials;
     @Expose() previousResourceProperties?: T;
     @Expose() previousStackTags?: Dict<string>;
+    @Expose() typeConfiguration?: Dict<string>;
 }
 
 export class HandlerRequest<ResourceT = Dict, CallbackT = Dict> extends BaseDto {

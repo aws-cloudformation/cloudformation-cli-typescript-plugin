@@ -139,3 +139,5 @@ tests/**/*.d.ts
 # Node.js
 node_modules/
 coverage/
+
+*.iml
