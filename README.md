@@ -17,9 +17,9 @@ If you are using this package to build resource providers for CloudFormation, in
 
 **Prerequisites**
 
- - Python version 3.6 or above
- - [SAM CLI](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/serverless-sam-cli-install.html)
- - Your choice of TypeScript IDE
+- Python version 3.6 or above
+- [SAM CLI](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/serverless-sam-cli-install.html)
+- Your choice of TypeScript IDE
 
 **Installation**
 
@@ -74,6 +74,19 @@ pip3 install \
 ```
 
 That ensures neither is accidentally installed from PyPI.
+
+For changes to the typescript library "@amazon-web-services-cloudformation/cloudformation-cli-typescript-lib" pack up the compiled javascript:
+
+```shell
+npm run build
+npm pack
+```
+
+You can then install this in a cfn resource project using:
+
+```shell
+npm install ../path/to/cloudformation-cli-typescript-plugin/amazon-web-services-cloudformation-cloudformation-cli-typescript-lib-1.0.1.tgz
+```
 
 Linting and running unit tests is done via [pre-commit](https://pre-commit.com/), and so is performed automatically on commit after being installed (`pre-commit install`). The continuous integration also runs these checks. Manual options are available so you don't have to commit:
 
