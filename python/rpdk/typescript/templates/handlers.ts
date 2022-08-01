@@ -11,7 +11,7 @@ import {
     ResourceHandlerRequest,
     SessionProxy,
 } from '{{lib_name}}';
-import { ResourceModel } from './models';
+import { ResourceModel, TypeConfigurationModel } from './models';
 
 interface CallbackContext extends Record<string, any> {}
 
@@ -25,6 +25,8 @@ class Resource extends BaseResource<ResourceModel> {
      * @param request The request object for the provisioning request passed to the implementor
      * @param callbackContext Custom context object to allow the passing through of additional
      * state or metadata between subsequent retries
+     * @param typeConfiguration Configuration data for this resource type, in the given account
+     * and region
      * @param logger Logger to proxy requests to default publishers
      */
     @handlerEvent(Action.Create)
@@ -32,7 +34,8 @@ class Resource extends BaseResource<ResourceModel> {
         session: Optional<SessionProxy>,
         request: ResourceHandlerRequest<ResourceModel>,
         callbackContext: CallbackContext,
-        logger: LoggerProxy
+        logger: LoggerProxy,
+        typeConfiguration: TypeConfigurationModel,
     ): Promise<ProgressEvent<ResourceModel, CallbackContext>> {
         const model = new ResourceModel(request.desiredResourceState);
         const progress = ProgressEvent.progress<ProgressEvent<ResourceModel, CallbackContext>>(model);
@@ -63,6 +66,8 @@ class Resource extends BaseResource<ResourceModel> {
      * @param request The request object for the provisioning request passed to the implementor
      * @param callbackContext Custom context object to allow the passing through of additional
      * state or metadata between subsequent retries
+     * @param typeConfiguration Configuration data for this resource type, in the given account
+     * and region
      * @param logger Logger to proxy requests to default publishers
      */
     @handlerEvent(Action.Update)
@@ -70,7 +75,8 @@ class Resource extends BaseResource<ResourceModel> {
         session: Optional<SessionProxy>,
         request: ResourceHandlerRequest<ResourceModel>,
         callbackContext: CallbackContext,
-        logger: LoggerProxy
+        logger: LoggerProxy,
+        typeConfiguration: TypeConfigurationModel,
     ): Promise<ProgressEvent<ResourceModel, CallbackContext>> {
         const model = new ResourceModel(request.desiredResourceState);
         const progress = ProgressEvent.progress<ProgressEvent<ResourceModel, CallbackContext>>(model);
@@ -88,6 +94,8 @@ class Resource extends BaseResource<ResourceModel> {
      * @param request The request object for the provisioning request passed to the implementor
      * @param callbackContext Custom context object to allow the passing through of additional
      * state or metadata between subsequent retries
+     * @param typeConfiguration Configuration data for this resource type, in the given account
+     * and region
      * @param logger Logger to proxy requests to default publishers
      */
     @handlerEvent(Action.Delete)
@@ -95,7 +103,8 @@ class Resource extends BaseResource<ResourceModel> {
         session: Optional<SessionProxy>,
         request: ResourceHandlerRequest<ResourceModel>,
         callbackContext: CallbackContext,
-        logger: LoggerProxy
+        logger: LoggerProxy,
+        typeConfiguration: TypeConfigurationModel,
     ): Promise<ProgressEvent<ResourceModel, CallbackContext>> {
         const model = new ResourceModel(request.desiredResourceState);
         const progress = ProgressEvent.progress<ProgressEvent<ResourceModel, CallbackContext>>();
@@ -112,6 +121,8 @@ class Resource extends BaseResource<ResourceModel> {
      * @param request The request object for the provisioning request passed to the implementor
      * @param callbackContext Custom context object to allow the passing through of additional
      * state or metadata between subsequent retries
+     * @param typeConfiguration Configuration data for this resource type, in the given account
+     * and region
      * @param logger Logger to proxy requests to default publishers
      */
     @handlerEvent(Action.Read)
@@ -119,7 +130,8 @@ class Resource extends BaseResource<ResourceModel> {
         session: Optional<SessionProxy>,
         request: ResourceHandlerRequest<ResourceModel>,
         callbackContext: CallbackContext,
-        logger: LoggerProxy
+        logger: LoggerProxy,
+        typeConfiguration: TypeConfigurationModel,
     ): Promise<ProgressEvent<ResourceModel, CallbackContext>> {
         const model = new ResourceModel(request.desiredResourceState);
         // TODO: put code here
@@ -135,6 +147,8 @@ class Resource extends BaseResource<ResourceModel> {
      * @param request The request object for the provisioning request passed to the implementor
      * @param callbackContext Custom context object to allow the passing through of additional
      * state or metadata between subsequent retries
+     * @param typeConfiguration Configuration data for this resource type, in the given account
+     * and region
      * @param logger Logger to proxy requests to default publishers
      */
     @handlerEvent(Action.List)
@@ -142,7 +156,8 @@ class Resource extends BaseResource<ResourceModel> {
         session: Optional<SessionProxy>,
         request: ResourceHandlerRequest<ResourceModel>,
         callbackContext: CallbackContext,
-        logger: LoggerProxy
+        logger: LoggerProxy,
+        typeConfiguration: TypeConfigurationModel,
     ): Promise<ProgressEvent<ResourceModel, CallbackContext>> {
         const model = new ResourceModel(request.desiredResourceState);
         // TODO: put code here
@@ -154,7 +169,8 @@ class Resource extends BaseResource<ResourceModel> {
     }
 }
 
-export const resource = new Resource(ResourceModel.TYPE_NAME, ResourceModel);
+// @ts-ignore // if running against v1.0.1 or earlier of plugin the 5th argument is not known but best to ignored (runtime code may warn)
+export const resource = new Resource(ResourceModel.TYPE_NAME, ResourceModel, null, null, TypeConfigurationModel)!;
 
 // Entrypoint for production usage after registered in CloudFormation
 export const entrypoint = resource.entrypoint;
