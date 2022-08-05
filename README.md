@@ -4,7 +4,7 @@ We're excited to share our progress with adding new languages to the CloudFormat
 
 ## AWS CloudFormation Resource Provider TypeScript Plugin
 
-[![GitHub Workflow Status](https://img.shields.io/github/workflow/status/eduardomourar/cloudformation-cli-typescript-plugin/ci/master)](https://github.com/eduardomourar/cloudformation-cli-typescript-plugin/actions?query=branch%3Amaster+workflow%3Aci) [![Codecov](https://img.shields.io/codecov/c/gh/eduardomourar/cloudformation-cli-typescript-plugin)](https://codecov.io/gh/eduardomourar/cloudformation-cli-typescript-plugin) [![GitHub release](https://img.shields.io/github/v/release/eduardomourar/cloudformation-cli-typescript-plugin?include_prereleases)](https://github.com/eduardomourar/cloudformation-cli-typescript-plugin/releases) [![Node.js version](https://img.shields.io/badge/dynamic/json?color=brightgreen&url=https://raw.githubusercontent.com/eduardomourar/cloudformation-cli-typescript-plugin/master/package.json&query=$.engines.node&label=nodejs)](https://nodejs.org/)
+[![GitHub Workflow Status](https://img.shields.io/github/workflow/status/aws-cloudformation/cloudformation-cli-typescript-plugin/ci/master)](https://github.com/aws-cloudformation/cloudformation-cli-typescript-plugin/actions?query=branch%3Amaster+workflow%3Aci) [![Codecov](https://img.shields.io/codecov/c/gh/aws-cloudformation/cloudformation-cli-typescript-plugin)](https://codecov.io/gh/aws-cloudformation/cloudformation-cli-typescript-plugin) [![PyPI version](https://img.shields.io/pypi/v/cloudformation-cli-typescript-plugin)](https://pypi.org/project/cloudformation-cli-typescript-plugin) [![NPM version](https://img.shields.io/npm/v/@amazon-web-services-cloudformation/cloudformation-cli-typescript-lib)](https://www.npmjs.com/package/@amazon-web-services-cloudformation/cloudformation-cli-typescript-lib) [![Node.js version](https://img.shields.io/badge/dynamic/json?color=brightgreen&url=https://raw.githubusercontent.com/aws-cloudformation/cloudformation-cli-typescript-plugin/master/package.json&query=$.engines.node&label=nodejs)](https://nodejs.org/)
 
 The CloudFormation CLI (cfn) allows you to author your own resource providers that can be used by CloudFormation.
 
@@ -13,7 +13,7 @@ This plugin library helps to provide TypeScript runtime bindings for the executi
 Usage
 -----
 
-If you are using this package to build resource providers for CloudFormation, install the [CloudFormation CLI TypeScript Plugin](https://github.com/eduardomourar/cloudformation-cli-typescript-plugin) - this will automatically install the [CloudFormation CLI](https://github.com/aws-cloudformation/cloudformation-cli)! A Python virtual environment is recommended.
+If you are using this package to build resource providers for CloudFormation, install the [CloudFormation CLI TypeScript Plugin](https://github.com/aws-cloudformation/cloudformation-cli-typescript-plugin) - this will automatically install the [CloudFormation CLI](https://github.com/aws-cloudformation/cloudformation-cli)! A Python virtual environment is recommended.
 
 **Prerequisites**
 

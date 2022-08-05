@@ -36,7 +36,7 @@ def validate_no(value):
 class TypescriptLanguagePlugin(LanguagePlugin):
     MODULE_NAME = __name__
     NAME = "typescript"
-    RUNTIME = "nodejs12.x"
+    RUNTIME = "nodejs14.x"
     ENTRY_POINT = "dist/handlers.entrypoint"
     TEST_ENTRY_POINT = "dist/handlers.testEntrypoint"
     CODE_URI = "./"
@@ -121,9 +121,7 @@ class TypescriptLanguagePlugin(LanguagePlugin):
         _render_template(
             project.root / "package.json",
             name=project.hypenated_name,
-            description="AWS custom resource provider named {}.".format(
-                project.type_name
-            ),
+            description=f"AWS custom resource provider named {project.type_name}.",
             lib_name=SUPPORT_LIB_NAME,
             lib_path=self._lib_path,
         )
