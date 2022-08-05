@@ -159,13 +159,24 @@ class TypescriptLanguagePlugin(LanguagePlugin):
 
         models = resolve_models(project.schema)
 
+        if project.configuration_schema:
+            configuration_models = resolve_models(
+                project.configuration_schema, "TypeConfigurationModel"
+            )
+        else:
+            configuration_models = {"TypeConfigurationModel": {}}
+
+        models.update(configuration_models)
+
         path = self.package_root / "models.ts"
         LOG.debug("Writing file: %s", path)
         template = self.env.get_template("models.ts")
+
         contents = template.render(
             lib_name=SUPPORT_LIB_NAME,
             type_name=project.type_name,
             models=models,
+            contains_type_configuration=project.configuration_schema,
             primaryIdentifier=project.schema.get("primaryIdentifier", []),
             additionalIdentifiers=project.schema.get("additionalIdentifiers", []),
         )
@@ -174,6 +185,7 @@ class TypescriptLanguagePlugin(LanguagePlugin):
         LOG.debug("Generate complete")
 
     def _pre_package(self, build_path):
+        # Caller should own/delete this, not us.
         # pylint: disable=consider-using-with
         f = TemporaryFile("w+b")
 
