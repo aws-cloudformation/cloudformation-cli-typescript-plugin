@@ -62,7 +62,9 @@ class TypescriptLanguagePlugin(LanguagePlugin):
         self.namespace = tuple(s.lower() for s in project.type_info)
         self.package_name = "-".join(self.namespace)
         # Check config file for (legacy) 'useDocker' and use_docker settings
-        self._use_docker = project.settings.get("useDocker") or project.settings.get("use_docker")
+        self._use_docker = project.settings.get("useDocker") or project.settings.get(
+            "use_docker"
+        )
         self.package_root = project.root / "src"
         self._build_command = project.settings.get("buildCommand", None)
         self._lib_path = SUPPORT_LIB_VERSION
@@ -75,7 +77,7 @@ class TypescriptLanguagePlugin(LanguagePlugin):
             "This is highly recommended unless you are experienced \n"
             "with cross-platform Typescript packaging.",
         )
-        # Initially was 'useDocker' switched to 'use_docker' to be in line with python version
+        # switched to 'use_docker' from 'useDocker' to be in line with python version
         project.settings["use_docker"] = self._use_docker
         project.settings["protocolVersion"] = self._protocol_version
 
