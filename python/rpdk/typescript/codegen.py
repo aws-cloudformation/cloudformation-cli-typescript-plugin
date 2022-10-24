@@ -68,7 +68,7 @@ class TypescriptLanguagePlugin(LanguagePlugin):
 
     def _init_settings(self, project):
         LOG.debug("Writing settings")
-        self._use_docker = input_with_validation(
+        self._use_docker = self._use_docker or input_with_validation(
             "Use docker for platform-independent packaging (Y/n)?\n",
             validate_no,
             "This is highly recommended unless you are experienced \n"
