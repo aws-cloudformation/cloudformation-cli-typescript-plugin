@@ -236,7 +236,8 @@ class TypescriptLanguagePlugin(LanguagePlugin):
             slash = "/"
 
         command = (
-            "npm install --optional "
+            f"cd {base_path};"
+            + "npm install --optional "
             + f"&& sam build --debug --build-dir {base_path}{slash}build"
         )
         if build_command is not None:
