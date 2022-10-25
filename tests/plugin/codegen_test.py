@@ -155,8 +155,8 @@ def test_package_local(project: Project):
     ) as zip_file:
         assert sorted(zip_file.namelist()) == [
             "ResourceProvider.zip",
-            f"{os.path.join('src', 'handlers.ts')}",
-            f"{os.path.join('src', 'models.ts')}",
+            "src/handlers.ts",
+            "src/models.ts",
         ]
 
 
