@@ -230,9 +230,14 @@ class TypescriptLanguagePlugin(LanguagePlugin):
 
     @staticmethod
     def _make_build_command(base_path, build_command=None):
+        if sys.platform == "win32":
+            slash = "\\"
+        else:
+            slash = "/"
+
         command = (
             "npm install --optional "
-            + f"&& sam build --debug --build-dir {base_path}/build"
+            + f"&& sam build --debug --build-dir {base_path}{slash}build"
         )
         if build_command is not None:
             command = build_command
