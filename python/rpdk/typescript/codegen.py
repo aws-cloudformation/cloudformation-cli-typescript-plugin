@@ -236,8 +236,7 @@ class TypescriptLanguagePlugin(LanguagePlugin):
             slash = "/"
 
         command = (
-            f"cd {base_path};"
-            + "npm install --optional "
+            "npm install --optional "
             + f"&& sam build --debug --build-dir {base_path}{slash}build"
         )
         if build_command is not None:
@@ -261,8 +260,9 @@ class TypescriptLanguagePlugin(LanguagePlugin):
             if os.path.exists("/bin/bash"):
                 shell = "/bin/bash"
                 shell_arg = "-c"
-            elif os.path.exists("C:/Windows/System32/cmd.exe"):
-                shell = r"C:\Windows\System32\cmd.exe"
+            # On windows get command line interpreter stored in COMSPEC environment variable e.g. c:\Windows\System32\cmd.exe
+            elif os.environ.get("comspec"):
+                shell = os.environ.get("comspec")
                 shell_arg = "/C"
 
             completed_proc = subprocess_run(  # nosec
