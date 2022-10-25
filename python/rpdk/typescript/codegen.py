@@ -260,11 +260,9 @@ class TypescriptLanguagePlugin(LanguagePlugin):
             if os.path.exists("/bin/bash"):
                 shell = "/bin/bash"
                 shell_arg = "-c"
-            elif os.path.exists(
-                "C:/Windows/System32/WindowsPowerShell/v1.0/powershell.exe"
-            ):
-                shell = r"C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe"
-                shell_arg = "-Command"
+            elif os.path.exists("C:/Windows/System32/cmd.exe"):
+                shell = r"C:\Windows\System32\cmd.exe"
+                shell_arg = "/C"
 
             completed_proc = subprocess_run(  # nosec
                 [shell, shell_arg, command],
