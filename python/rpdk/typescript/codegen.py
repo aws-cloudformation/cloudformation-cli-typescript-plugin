@@ -252,8 +252,9 @@ class TypescriptLanguagePlugin(LanguagePlugin):
 
         LOG.warning("Starting build.")
         try:
-            # On windows get the default CLI (e.g. c:\Windows\System32\cmd.exe) have it run 1 command and exit
-            # Building shell command manually, subprocess.run with shell=True behavior is inconsistent on windows
+            # On windows get the default CLI in environment variable comspec
+            # run 1 command and exit. Building shell command manually, subprocess.run
+            # with shell=True behavior is inconsistent on windows
             if sys.platform == "win32":
                 shell = os.environ.get("comspec")
                 shell_arg = "/C"
@@ -265,7 +266,7 @@ class TypescriptLanguagePlugin(LanguagePlugin):
                     check=True,
                 )
             else:
-            # On all other OS use default shell in subprocess to run build command
+                # On all other OS use default shell in subprocess to run build command
                 completed_proc = subprocess_run(  # nosec
                     [command],
                     stdout=PIPE,
