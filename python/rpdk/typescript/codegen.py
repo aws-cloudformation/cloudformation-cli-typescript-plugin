@@ -1,4 +1,5 @@
 import logging
+import os
 import shutil
 import sys
 from subprocess import PIPE, CalledProcessError, run as subprocess_run  # nosec
@@ -251,13 +252,23 @@ class TypescriptLanguagePlugin(LanguagePlugin):
 
         LOG.warning("Starting build.")
         try:
+            if os.path.exists("/bin/bash"):
+                shell = "/bin/bash"
+                shell_arg = "-c"
+            elif os.path.exists(
+                "C:/Windows/System32/WindowsPowerShell/v1.0/powershell.exe"
+            ):
+                shell = "C:/Windows/System32/WindowsPowerShell/v1.0/powershell.exe"
+                shell_arg = "-Command"
+
             completed_proc = subprocess_run(  # nosec
-                ["/bin/bash", "-c", command],
+                [shell, shell_arg, command],
                 stdout=PIPE,
                 stderr=PIPE,
                 cwd=base_path,
                 check=True,
             )
+
         except (FileNotFoundError, CalledProcessError) as e:
             raise DownstreamError("local build failed") from e
 
