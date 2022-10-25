@@ -258,7 +258,7 @@ class TypescriptLanguagePlugin(LanguagePlugin):
             elif os.path.exists(
                 "C:/Windows/System32/WindowsPowerShell/v1.0/powershell.exe"
             ):
-                shell = "C:/Windows/System32/WindowsPowerShell/v1.0/powershell.exe"
+                shell = r"C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe"
                 shell_arg = "-Command"
 
             completed_proc = subprocess_run(  # nosec
