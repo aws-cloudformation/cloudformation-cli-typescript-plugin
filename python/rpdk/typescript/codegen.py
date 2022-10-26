@@ -54,7 +54,7 @@ class TypescriptLanguagePlugin(LanguagePlugin):
         self.namespace = None
         self.package_name = None
         self.package_root = None
-        self._use_docker = True
+        self._use_docker = None
         self._protocol_version = "2.0.0"
         self._build_command = None
         self._lib_path = None
@@ -62,20 +62,24 @@ class TypescriptLanguagePlugin(LanguagePlugin):
     def _init_from_project(self, project):
         self.namespace = tuple(s.lower() for s in project.type_info)
         self.package_name = "-".join(self.namespace)
-        self._use_docker = project.settings.get("useDocker", True)
+        # Check config file for (legacy) 'useDocker' and use_docker settings
+        self._use_docker = project.settings.get("useDocker") or project.settings.get(
+            "use_docker"
+        )
         self.package_root = project.root / "src"
         self._build_command = project.settings.get("buildCommand", None)
         self._lib_path = SUPPORT_LIB_VERSION
 
     def _init_settings(self, project):
         LOG.debug("Writing settings")
-        self._use_docker = input_with_validation(
+        self._use_docker = self._use_docker or input_with_validation(
             "Use docker for platform-independent packaging (Y/n)?\n",
             validate_no,
             "This is highly recommended unless you are experienced \n"
             "with cross-platform Typescript packaging.",
         )
-        project.settings["useDocker"] = self._use_docker
+        # switched to 'use_docker' from 'useDocker' to be in line with python version
+        project.settings["use_docker"] = self._use_docker
         project.settings["protocolVersion"] = self._protocol_version
 
     def init(self, project):
