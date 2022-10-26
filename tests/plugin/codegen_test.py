@@ -101,15 +101,15 @@ def test_initialize(project: Project):
         ".rpdk-config",
         "foo-bar-baz.json",
         "example_inputs",
-        "example_inputs/inputs_1_create.json",
-        "example_inputs/inputs_1_invalid.json",
-        "example_inputs/inputs_1_update.json",
+        f"{os.path.join('example_inputs', 'inputs_1_create.json')}",
+        f"{os.path.join('example_inputs', 'inputs_1_invalid.json')}",
+        f"{os.path.join('example_inputs', 'inputs_1_update.json')}",
         "package.json",
         "README.md",
         "sam-tests",
-        "sam-tests/create.json",
+        f"{os.path.join('sam-tests', 'create.json')}",
         "src",
-        "src/handlers.ts",
+        f"{os.path.join('src', 'handlers.ts')}",
         "template.yml",
         "tsconfig.json",
     }
@@ -135,7 +135,7 @@ def test_generate(project: Project):
     after = get_files_in_project(project)
     files = after.keys() - before.keys() - {"resource-role.yaml"}
 
-    assert files == {"src/models.ts"}
+    assert files == {f"{os.path.join('src', 'models.ts')}"}
 
 
 def test_package_local(project: Project):
@@ -190,10 +190,20 @@ def test__build_docker(plugin: TypescriptLanguagePlugin):
         plugin._build(sentinel.base_path)
 
     mock_cmd.assert_called_once_with(sentinel.base_path, None)
-    mock_subprocess_run.assert_called_once_with(
-        ["/bin/bash", "-c", " --use-container TypeFunction"],
-        check=True,
-        cwd=sentinel.base_path,
-        stderr=-1,
-        stdout=-1,
-    )
+    if sys.platform == "win32":
+        mock_subprocess_run.assert_called_once_with(
+            [os.environ.get("comspec"), "/C", " --use-container TypeFunction"],
+            check=True,
+            cwd=sentinel.base_path,
+            stderr=-1,
+            stdout=-1,
+        )
+    else:
+        mock_subprocess_run.assert_called_once_with(
+            [" --use-container TypeFunction"],
+            check=True,
+            cwd=sentinel.base_path,
+            stderr=-1,
+            stdout=-1,
+            shell=True,
+        )

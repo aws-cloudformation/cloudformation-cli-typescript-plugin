@@ -1,4 +1,5 @@
 import logging
+import os
 import shutil
 import sys
 from subprocess import PIPE, CalledProcessError, run as subprocess_run  # nosec
@@ -235,7 +236,7 @@ class TypescriptLanguagePlugin(LanguagePlugin):
     def _make_build_command(base_path, build_command=None):
         command = (
             "npm install --optional "
-            + f"&& sam build --debug --build-dir {base_path}/build"
+            + f"&& sam build --debug --build-dir {os.path.join(base_path, 'build')}"
         )
         if build_command is not None:
             command = build_command
@@ -255,13 +256,30 @@ class TypescriptLanguagePlugin(LanguagePlugin):
 
         LOG.warning("Starting build.")
         try:
-            completed_proc = subprocess_run(  # nosec
-                ["/bin/bash", "-c", command],
-                stdout=PIPE,
-                stderr=PIPE,
-                cwd=base_path,
-                check=True,
-            )
+            # On windows get the default CLI in environment variable comspec
+            # run 1 command and exit. Building shell command manually, subprocess.run
+            # with shell=True behavior is inconsistent on windows
+            if sys.platform == "win32":  # pragma: no cover
+                shell = os.environ.get("comspec")
+                shell_arg = "/C"
+                completed_proc = subprocess_run(  # nosec
+                    [shell, shell_arg, command],
+                    stdout=PIPE,
+                    stderr=PIPE,
+                    cwd=base_path,
+                    check=True,
+                )
+            else:  # pragma: no cover
+                # On all other OS use default shell in subprocess to run build command
+                completed_proc = subprocess_run(  # nosec
+                    [command],
+                    stdout=PIPE,
+                    stderr=PIPE,
+                    cwd=base_path,
+                    check=True,
+                    shell=True,
+                )
+
         except (FileNotFoundError, CalledProcessError) as e:
             raise DownstreamError("local build failed") from e
 
