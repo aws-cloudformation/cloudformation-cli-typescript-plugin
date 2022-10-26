@@ -259,7 +259,7 @@ class TypescriptLanguagePlugin(LanguagePlugin):
             # On windows get the default CLI in environment variable comspec
             # run 1 command and exit. Building shell command manually, subprocess.run
             # with shell=True behavior is inconsistent on windows
-            if sys.platform == "win32":
+            if sys.platform == "win32":  # pragma: no cover
                 shell = os.environ.get("comspec")
                 shell_arg = "/C"
                 completed_proc = subprocess_run(  # nosec
@@ -269,7 +269,7 @@ class TypescriptLanguagePlugin(LanguagePlugin):
                     cwd=base_path,
                     check=True,
                 )
-            else:
+            else:  # pragma: no cover
                 # On all other OS use default shell in subprocess to run build command
                 completed_proc = subprocess_run(  # nosec
                     [command],
