@@ -44,7 +44,10 @@ setup(
     entry_points={
         "rpdk.v1.languages": [
             "typescript = rpdk.typescript.codegen:TypescriptLanguagePlugin",
-        ]
+        ],
+        "rpdk.v1.parsers": [
+            "typescript = rpdk.typescript.parser:setup_subparser",
+        ],
     },
     license="Apache License 2.0",
     classifiers=[
