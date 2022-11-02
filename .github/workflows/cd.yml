@@ -12,8 +12,8 @@ jobs:
     name: Prepare for NPM
     runs-on: ubuntu-18.04
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-node@v1
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
         with:
           node-version: 12
           registry-url: https://registry.npmjs.org/
@@ -28,7 +28,7 @@ jobs:
           npm pack
       - name: Upload NPM Artifacts
         id: upload_npm
-        uses: actions/upload-artifact@v1
+        uses: actions/upload-artifact@v3
         with:
           name: package-npm
           path: cfn-rpdk-${{ env.VERSION }}.tgz
@@ -40,9 +40,9 @@ jobs:
       matrix:
         python: [3.6]
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Setup Python ${{ matrix.python }}
-        uses: actions/setup-python@v1
+        uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python }}
       - name: Install Dependencies and Package Project
@@ -50,7 +50,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip setuptools wheel
           python3 setup.py sdist bdist_wheel
-      - uses: actions/upload-artifact@v1
+      - uses: actions/upload-artifact@v3
         with:
           name: dist-py${{ matrix.python }}
           path: dist
@@ -60,13 +60,13 @@ jobs:
     needs: [delivery-nodejs, delivery-python]
     runs-on: ubuntu-18.04
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Download NPM Artifacts
-        uses: actions/download-artifact@v1
+        uses: actions/download-artifact@v3
         with:
           name: package-npm
       - name: Download Python 3.6 Artifacts
-        uses: actions/download-artifact@v1
+        uses: actions/download-artifact@v3
         with:
           name: dist-py3.6
           path: dist/
