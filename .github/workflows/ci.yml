@@ -22,8 +22,8 @@ jobs:
       LOG_PATH: /tmp/debug-logs
       PIP_LOG_FILE: /tmp/pip.log
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-python@v1
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
         with:
           python-version: 3.7
       - name: Install Dependencies Python
@@ -33,7 +33,7 @@ jobs:
           pip install --upgrade pip
           pip install --upgrade setuptools wheel aws-sam-cli -r https://raw.githubusercontent.com/aws-cloudformation/cloudformation-cli/master/requirements.txt
           pip install .
-      - uses: actions/setup-node@v1
+      - uses: actions/setup-node@v3
         with:
           node-version: 14
       - name: Install Dependencies Node.js
@@ -55,7 +55,7 @@ jobs:
           bash codecov.sh -f coverage/ts/coverage-final.json -F unittests -n codecov-typescript
       - name: Upload Coverage Artifacts
         id: upload_coverage
-        uses: actions/upload-artifact@v1
+        uses: actions/upload-artifact@v3
         with:
           name: coverage
           path: coverage/
@@ -94,7 +94,7 @@ jobs:
       - name: Upload Debug Artifacts
         id: upload_logs
         if: failure()
-        uses: actions/upload-artifact@v1
+        uses: actions/upload-artifact@v3
         with:
           name: debug-logs
           path: ${{ env.LOG_PATH }}
