@@ -2,13 +2,7 @@
 # Continous Integration
 name: ci
 
-on:
-  pull_request:
-    branches:
-      - master
-  push:
-    branches:
-      - master
+on: [ push, pull_request ]
 
 jobs:
   build:
@@ -26,6 +20,7 @@ jobs:
       - uses: actions/setup-python@v4
         with:
           python-version: 3.7
+          cache: 'pip'
       - name: Install Dependencies Python
         id: install_python
         run: |
@@ -36,11 +31,12 @@ jobs:
       - uses: actions/setup-node@v3
         with:
           node-version: 14
+          cache: 'npm'
       - name: Install Dependencies Node.js
         id: install_nodejs
         # Touch needed because of https://github.com/aws/aws-cli/issues/2639
         run: |
-          npm ci --optional
+          npm ci --include=optional
           find ./node_modules/* -mtime +10950 -exec touch {} \;
           npm run build
       - name: Run Unit Tests
@@ -74,7 +70,7 @@ jobs:
           cp "$RPDK_PATH" ./dist
           npm install "./dist/$RPDK_PACKAGE"
           cfn generate -vv && cfn validate -vv
-          npm install --optional
+          npm install --include=optional
           sam build --debug --build-dir ./build TypeFunction
           sam build --debug --build-dir ./build TestEntrypoint
           sam local invoke -t build/template.yaml --debug --event sam-tests/create.json --log-file sam.log TestEntrypoint
