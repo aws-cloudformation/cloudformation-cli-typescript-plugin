@@ -1,4 +1,6 @@
 # pylint: disable=redefined-outer-name,protected-access
+from __future__ import unicode_literals
+
 import os
 import sys
 from subprocess import CalledProcessError
@@ -197,6 +199,7 @@ def test__build_docker(plugin: TypescriptLanguagePlugin):
             cwd=sentinel.base_path,
             stderr=-1,
             stdout=-1,
+            universal_newlines=True,
         )
     else:
         mock_subprocess_run.assert_called_once_with(
@@ -206,4 +209,5 @@ def test__build_docker(plugin: TypescriptLanguagePlugin):
             stderr=-1,
             stdout=-1,
             shell=True,
+            universal_newlines=True,
         )
