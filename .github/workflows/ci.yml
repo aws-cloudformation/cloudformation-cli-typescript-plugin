@@ -2,17 +2,22 @@
 # Continous Integration
 name: ci
 
-on:
-  pull_request:
-    branches:
-      - master
-  push:
-    branches:
-      - master
+on: [ push, pull_request ]
 
 jobs:
   build:
     runs-on: ubuntu-18.04
+    steps:
+    - uses: actions/setup-python@v4
+      with:
+        python-version: 3.7
+  os_build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ ubuntu-latest ]
+        python: [ 3.6, 3.7, 3.8, 3.9 ]
+        node: [ 14 ]
     env:
       SAM_CLI_TELEMETRY: "0"
       AWS_REGION: "us-east-1"
@@ -25,7 +30,8 @@ jobs:
       - uses: actions/checkout@v3
       - uses: actions/setup-python@v4
         with:
-          python-version: 3.7
+          python-version: ${{ matrix.python }}
+          cache: 'pip'
       - name: Install Dependencies Python
         id: install_python
         run: |
@@ -35,14 +41,19 @@ jobs:
           pip install .
       - uses: actions/setup-node@v3
         with:
-          node-version: 14
+          node-version: ${{ matrix.node }}
+          cache: 'npm'
       - name: Install Dependencies Node.js
         id: install_nodejs
         # Touch needed because of https://github.com/aws/aws-cli/issues/2639
         run: |
-          npm ci --optional
+          npm ci --include=optional
           find ./node_modules/* -mtime +10950 -exec touch {} \;
           npm run build
+      - uses: actions/cache@v3
+        with:
+          path: ~/.cache/pre-commit/
+          key: ${{ matrix.os }}-${{ env.pythonLocation }}${{ hashFiles('.pre-commit-config.yaml') }}
       - name: Run Unit Tests
         id: unit_testing
         run: |
@@ -74,7 +85,7 @@ jobs:
           cp "$RPDK_PATH" ./dist
           npm install "./dist/$RPDK_PACKAGE"
           cfn generate -vv && cfn validate -vv
-          npm install --optional
+          npm install --include=optional
           sam build --debug --build-dir ./build TypeFunction
           sam build --debug --build-dir ./build TestEntrypoint
           sam local invoke -t build/template.yaml --debug --event sam-tests/create.json --log-file sam.log TestEntrypoint
