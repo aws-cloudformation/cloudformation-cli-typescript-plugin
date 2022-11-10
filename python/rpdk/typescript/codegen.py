@@ -235,7 +235,7 @@ class TypescriptLanguagePlugin(LanguagePlugin):
     @staticmethod
     def _make_build_command(base_path, build_command=None):
         command = (
-            "npm install --optional "
+            "npm install --include=optional "
             + f"&& sam build --debug --build-dir {os.path.join(base_path, 'build')}"
         )
         if build_command is not None:
@@ -268,6 +268,7 @@ class TypescriptLanguagePlugin(LanguagePlugin):
                     stderr=PIPE,
                     cwd=base_path,
                     check=True,
+                    universal_newlines=True,
                 )
             else:  # pragma: no cover
                 # On all other OS use default shell in subprocess to run build command
@@ -278,6 +279,7 @@ class TypescriptLanguagePlugin(LanguagePlugin):
                     cwd=base_path,
                     check=True,
                     shell=True,
+                    universal_newlines=True,
                 )
 
         except (FileNotFoundError, CalledProcessError) as e:
