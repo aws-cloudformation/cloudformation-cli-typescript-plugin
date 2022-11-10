@@ -264,7 +264,7 @@ export abstract class BaseResource<
             await this.loggerProxy.waitCompletion();
         }
         await this.platformLoggerProxy.waitCompletion();
-        console.debug('Log delivery completed.');
+        this.log('Log delivery completed.');
         if (this.workerPool) {
             await this.workerPool.shutdown();
         }
