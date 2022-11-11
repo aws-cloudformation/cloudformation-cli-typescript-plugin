@@ -48,6 +48,8 @@ jobs:
         if: runner.os == 'macOS'
         run: |
           brew install docker
+          # Docker engine is no longer available because of licensing
+          # Alternative Colima is part of the github macOS runner
           colima start
           # Ensure colima is configured for later user
           echo "DOCKER_HOST=unix://$HOME/.colima/default/docker.sock" >> $GITHUB_ENV
@@ -106,7 +108,7 @@ jobs:
           DIR=TestCI
           mkdir $DIR
           cd "$DIR"
-          echo "PROJECT_DIR=$DIR" >> $GITHUB_ENV
+          echo "PROJECT_DIR=$PWD" >> $GITHUB_ENV
           ls -la
           printf "n" | cfn init -vv --artifact-type RESOURCE --type-name AWS::Foo::Bar typescript
           ls -la
@@ -117,7 +119,7 @@ jobs:
           npm install --include=optional
           sam build --debug --build-dir ./build TypeFunction
           sam build --debug --build-dir ./build TestEntrypoint
-          sam local invoke -t build/template.yaml --debug --event sam-tests/create.json --log-file sam.log TestEntrypoint
+          sam local invoke -t ./build/template.yaml --debug --event ./sam-tests/create.json --log-file ./sam.log TestEntrypoint
           cat sam.log
           find build/ | grep -v node_modules
           grep -q '"status":"SUCCESS"' sam.log
