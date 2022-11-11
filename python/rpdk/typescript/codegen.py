@@ -72,12 +72,17 @@ class TypescriptLanguagePlugin(LanguagePlugin):
 
     def _init_settings(self, project):
         LOG.debug("Writing settings")
-        self._use_docker = self._use_docker or input_with_validation(
-            "Use docker for platform-independent packaging (Y/n)?\n",
-            validate_no,
-            "This is highly recommended unless you are experienced \n"
-            "with cross-platform Typescript packaging.",
-        )
+        if project.settings.get("use_docker") is True:
+            self._use_docker = True
+        elif project.settings.get("no_docker") is True:
+            self._use_docker = False
+        else:
+            self._use_docker = input_with_validation(
+                "Use docker for platform-independent packaging (Y/n)?\n",
+                validate_no,
+                "This is highly recommended unless you are experienced \n"
+                "with cross-platform Typescript packaging.",
+            )
         # switched to 'use_docker' from 'useDocker' to be in line with python version
         project.settings["use_docker"] = self._use_docker
         project.settings["protocolVersion"] = self._protocol_version

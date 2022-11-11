@@ -15,4 +15,11 @@ def setup_subparser(subparsers, parents):
             with cross-platform TypeScript packaging.""",
     )
 
+    parser.add_argument(
+        "--no-docker",
+        action="store_true",
+        help="""Generally not recommended unless you are experienced
+            with cross-platform Typescript packaging.""",
+    )
+
     return parser

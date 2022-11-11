@@ -49,6 +49,8 @@ def project(tmp_path: str):
         lib_abspath = os.path.abspath(os.path.join(current_path, "..", "..", ".."))
         TypescriptLanguagePlugin.SUPPORT_LIB_URI = f"file:{lib_abspath}"
         project.init(TYPE_NAME, TypescriptLanguagePlugin.NAME)
+        project.settings["use_docker"] = False
+        project.settings["no_docker"] = False
     return project
 
 
@@ -94,7 +96,11 @@ def test__remove_build_artifacts_file_not_found(tmp_path: str):
 
 def test_initialize(project: Project):
     lib_path = project._plugin._lib_path
-    assert project.settings == {"use_docker": False, "protocolVersion": "2.0.0"}
+    assert project.settings == {
+        "protocolVersion": "2.0.0",
+        "no_docker": False,
+        "use_docker": False,
+    }
 
     files = get_files_in_project(project)
     assert set(files) == {
