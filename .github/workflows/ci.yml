@@ -16,7 +16,7 @@ jobs:
     strategy:
       matrix:
         os: [ ubuntu-latest, macos-latest ]
-        python: [ 3.6, 3.7, 3.8, 3.9 ]
+        python: [ 3.7, 3.8, 3.9 ]
         node: [ 14 ]
     env:
       SAM_CLI_TELEMETRY: "0"
@@ -50,6 +50,7 @@ jobs:
           brew install docker
           # Docker engine is no longer available because of licensing
           # Alternative Colima is part of the github macOS runner
+          # SAM v1.47.0+ needed for colima support, unable to use Python 3.6
           colima start
           # Ensure colima is configured for later user
           echo "DOCKER_HOST=unix://$HOME/.colima/default/docker.sock" >> $GITHUB_ENV
@@ -120,8 +121,6 @@ jobs:
           sam build --debug --build-dir ./build TypeFunction
           sam build --debug --build-dir ./build TestEntrypoint
           sam local invoke -t ./build/template.yaml --debug --event ./sam-tests/create.json --log-file ./sam.log TestEntrypoint
-          cat sam.log
-          find build/ | grep -v node_modules
           grep -q '"status":"SUCCESS"' sam.log
       - name: Gather Debug Logs
         id: gather_logs
