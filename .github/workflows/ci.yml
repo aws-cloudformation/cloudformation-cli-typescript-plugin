@@ -118,6 +118,8 @@ jobs:
           sam build --debug --build-dir ./build TypeFunction
           sam build --debug --build-dir ./build TestEntrypoint
           sam local invoke -t build/template.yaml --debug --event sam-tests/create.json --log-file sam.log TestEntrypoint
+          cat sam.log
+          find build/ | grep -v node_modules
           grep -q '"status":"SUCCESS"' sam.log
       - name: Gather Debug Logs
         id: gather_logs
