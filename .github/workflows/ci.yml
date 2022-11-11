@@ -12,11 +12,12 @@ jobs:
       with:
         python-version: 3.7
   os_build:
+    if: ! ( matrix.os == 'macos-latest' && matrix.python == 3.6 )
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         os: [ ubuntu-latest, macos-latest ]
-        python: [ 3.7, 3.8, 3.9 ]
+        python: [ 3.6, 3.7, 3.8, 3.9 ]
         node: [ 14 ]
     env:
       SAM_CLI_TELEMETRY: "0"
