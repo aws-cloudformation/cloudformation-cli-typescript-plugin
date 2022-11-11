@@ -15,7 +15,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ ubuntu-latest ]
+        os: [ ubuntu-latest, macos-latest ]
         python: [ 3.6, 3.7, 3.8, 3.9 ]
         node: [ 14 ]
     env:
@@ -26,8 +26,36 @@ jobs:
       AWS_SECRET_ACCESS_KEY: "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
       LOG_PATH: /tmp/debug-logs
       PIP_LOG_FILE: /tmp/pip.log
+      HOMEBREW_NO_AUTO_UPDATE: 1
     steps:
       - uses: actions/checkout@v3
+      - name: Update Homebrew and save docker version
+        if: runner.os == 'macOS'
+        run: |
+          brew update --preinstall
+          cat "$(brew --repository)/Library/Taps/homebrew/homebrew-core/Formula/docker.rb" > .github/brew-formulae
+      - name: Configure Homebrew docker cache files
+        uses: actions/cache@v3
+        if: runner.os == 'macOS'
+        with:
+          path: |
+            ~/Library/Caches/Homebrew/docker--*
+            ~/Library/Caches/Homebrew/downloads/*--docker-*
+          key: brew-${{ hashFiles('.github/brew-formulae') }}
+          restore-keys: brew-
+      - name: Install Docker if on MacOS and start colima
+        id: install_mac_docker
+        if: runner.os == 'macOS'
+        run: |
+          brew install docker
+          colima start
+          # Ensure colima is configured for later user
+          echo "DOCKER_HOST=unix://$HOME/.colima/default/docker.sock" >> $GITHUB_ENV
+          # Verify Docker
+          docker ps
+          docker --version
+          # Verify colima
+          colima status
       - uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python }}
@@ -75,11 +103,12 @@ jobs:
         run: |
           RPDK_PACKAGE=$(npm pack --silent)
           RPDK_PATH=$PWD/$RPDK_PACKAGE
-          DIR=$(mktemp -d)
+          DIR=TestCI
+          mkdir $DIR
           cd "$DIR"
           echo "PROJECT_DIR=$DIR" >> $GITHUB_ENV
           ls -la
-          printf "n" | cfn init -vv --artifact-type RESOURCE --type-name AWS::Foo::Bar
+          printf "n" | cfn init -vv --artifact-type RESOURCE --type-name AWS::Foo::Bar typescript
           ls -la
           mkdir ./dist
           cp "$RPDK_PATH" ./dist
