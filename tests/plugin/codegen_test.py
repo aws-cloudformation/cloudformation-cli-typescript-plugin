@@ -65,7 +65,11 @@ def project_use_docker(tmp_path: str):
         current_path = os.path.abspath(__file__)
         lib_abspath = os.path.abspath(os.path.join(current_path, "..", "..", ".."))
         TypescriptLanguagePlugin.SUPPORT_LIB_URI = f"file:{lib_abspath}"
-        project_use_docker.init(TYPE_NAME, TypescriptLanguagePlugin.NAME, settings = {'use_docker': True, 'no_docker': False})
+        project_use_docker.init(
+            TYPE_NAME,
+            TypescriptLanguagePlugin.NAME,
+            settings={"use_docker": True, "no_docker": False},
+        )
     return project_use_docker
 
 
@@ -82,7 +86,11 @@ def project_no_docker(tmp_path: str):
         current_path = os.path.abspath(__file__)
         lib_abspath = os.path.abspath(os.path.join(current_path, "..", "..", ".."))
         TypescriptLanguagePlugin.SUPPORT_LIB_URI = f"file:{lib_abspath}"
-        project_no_docker.init(TYPE_NAME, TypescriptLanguagePlugin.NAME, settings = {'use_docker': False, 'no_docker': True})
+        project_no_docker.init(
+            TYPE_NAME,
+            TypescriptLanguagePlugin.NAME,
+            settings={"use_docker": False, "no_docker": True},
+        )
     return project_no_docker
 
 
@@ -99,7 +107,11 @@ def project_both_true(tmp_path: str):
         current_path = os.path.abspath(__file__)
         lib_abspath = os.path.abspath(os.path.join(current_path, "..", "..", ".."))
         TypescriptLanguagePlugin.SUPPORT_LIB_URI = f"file:{lib_abspath}"
-        project_both_true.init(TYPE_NAME, TypescriptLanguagePlugin.NAME, settings = {'use_docker': True, 'no_docker': True})
+        project_both_true.init(
+            TYPE_NAME,
+            TypescriptLanguagePlugin.NAME,
+            settings={"use_docker": True, "no_docker": True},
+        )
     return project_both_true
 
 
