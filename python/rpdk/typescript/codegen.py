@@ -55,6 +55,7 @@ class TypescriptLanguagePlugin(LanguagePlugin):
         self.package_name = None
         self.package_root = None
         self._use_docker = None
+        self._no_docker = None
         self._protocol_version = "2.0.0"
         self._build_command = None
         self._lib_path = None
@@ -72,19 +73,30 @@ class TypescriptLanguagePlugin(LanguagePlugin):
 
     def _init_settings(self, project):
         LOG.debug("Writing settings")
+        # If use_docker specified in .rpdk-config file or cli switch
+        # Ensure only 1 is true, with preference to use_docker
         if project.settings.get("use_docker") is True:
             self._use_docker = True
+            self._no_docker = False
+        # If no_docker specified in .rpdk-config file or cli switch
         elif project.settings.get("no_docker") is True:
             self._use_docker = False
+            self._no_docker = True
         else:
+            # If neither no_docker nor use_docker specified in .rpdk-config
+            # file or cli switch, prompt to use containers or not
             self._use_docker = input_with_validation(
                 "Use docker for platform-independent packaging (Y/n)?\n",
                 validate_no,
                 "This is highly recommended unless you are experienced \n"
                 "with cross-platform Typescript packaging.",
             )
+            self._no_docker = not self._use_docker
+
         # switched to 'use_docker' from 'useDocker' to be in line with python version
+        # project.settings will get saved into .rpdk-config by cloudformation-cli
         project.settings["use_docker"] = self._use_docker
+        project.settings["no_docker"] = self._no_docker
         project.settings["protocolVersion"] = self._protocol_version
 
     def init(self, project):

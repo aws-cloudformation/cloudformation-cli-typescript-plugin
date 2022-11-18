@@ -49,9 +49,58 @@ def project(tmp_path: str):
         lib_abspath = os.path.abspath(os.path.join(current_path, "..", "..", ".."))
         TypescriptLanguagePlugin.SUPPORT_LIB_URI = f"file:{lib_abspath}"
         project.init(TYPE_NAME, TypescriptLanguagePlugin.NAME)
-        project.settings["use_docker"] = False
-        project.settings["no_docker"] = False
     return project
+
+
+@pytest.fixture
+def project_use_docker(tmp_path: str):
+    project_use_docker = Project(root=tmp_path)
+
+    patch_plugins = patch.dict(
+        "rpdk.core.plugin_registry.PLUGIN_REGISTRY",
+        {TypescriptLanguagePlugin.NAME: lambda: TypescriptLanguagePlugin},
+        clear=True,
+    )
+    with patch_plugins:
+        current_path = os.path.abspath(__file__)
+        lib_abspath = os.path.abspath(os.path.join(current_path, "..", "..", ".."))
+        TypescriptLanguagePlugin.SUPPORT_LIB_URI = f"file:{lib_abspath}"
+        project_use_docker.init(TYPE_NAME, TypescriptLanguagePlugin.NAME, settings = {'use_docker': True, 'no_docker': False})
+    return project_use_docker
+
+
+@pytest.fixture
+def project_no_docker(tmp_path: str):
+    project_no_docker = Project(root=tmp_path)
+
+    patch_plugins = patch.dict(
+        "rpdk.core.plugin_registry.PLUGIN_REGISTRY",
+        {TypescriptLanguagePlugin.NAME: lambda: TypescriptLanguagePlugin},
+        clear=True,
+    )
+    with patch_plugins:
+        current_path = os.path.abspath(__file__)
+        lib_abspath = os.path.abspath(os.path.join(current_path, "..", "..", ".."))
+        TypescriptLanguagePlugin.SUPPORT_LIB_URI = f"file:{lib_abspath}"
+        project_no_docker.init(TYPE_NAME, TypescriptLanguagePlugin.NAME, settings = {'use_docker': False, 'no_docker': True})
+    return project_no_docker
+
+
+@pytest.fixture
+def project_both_true(tmp_path: str):
+    project_both_true = Project(root=tmp_path)
+
+    patch_plugins = patch.dict(
+        "rpdk.core.plugin_registry.PLUGIN_REGISTRY",
+        {TypescriptLanguagePlugin.NAME: lambda: TypescriptLanguagePlugin},
+        clear=True,
+    )
+    with patch_plugins:
+        current_path = os.path.abspath(__file__)
+        lib_abspath = os.path.abspath(os.path.join(current_path, "..", "..", ".."))
+        TypescriptLanguagePlugin.SUPPORT_LIB_URI = f"file:{lib_abspath}"
+        project_both_true.init(TYPE_NAME, TypescriptLanguagePlugin.NAME, settings = {'use_docker': True, 'no_docker': True})
+    return project_both_true
 
 
 def get_files_in_project(project: Project):
@@ -98,7 +147,7 @@ def test_initialize(project: Project):
     lib_path = project._plugin._lib_path
     assert project.settings == {
         "protocolVersion": "2.0.0",
-        "no_docker": False,
+        "no_docker": True,
         "use_docker": False,
     }
 
@@ -134,6 +183,132 @@ def test_initialize(project: Project):
     assert "models.ts" in readme
 
     assert project.entrypoint in files["template.yml"].read_text()
+
+
+def test_initialize_use_docker(project_use_docker: Project):
+    lib_path = project_use_docker._plugin._lib_path
+    assert project_use_docker.settings == {
+        "protocolVersion": "2.0.0",
+        "no_docker": False,
+        "use_docker": True,
+    }
+
+    files = get_files_in_project(project_use_docker)
+    assert set(files) == {
+        ".gitignore",
+        ".npmrc",
+        ".rpdk-config",
+        "foo-bar-baz.json",
+        "example_inputs",
+        f"{os.path.join('example_inputs', 'inputs_1_create.json')}",
+        f"{os.path.join('example_inputs', 'inputs_1_invalid.json')}",
+        f"{os.path.join('example_inputs', 'inputs_1_update.json')}",
+        "package.json",
+        "README.md",
+        "sam-tests",
+        f"{os.path.join('sam-tests', 'create.json')}",
+        "src",
+        f"{os.path.join('src', 'handlers.ts')}",
+        "template.yml",
+        "tsconfig.json",
+    }
+
+    assert "node_modules" in files[".gitignore"].read_text()
+    package_json = files["package.json"].read_text()
+    assert SUPPORT_LIB_NAME in package_json
+    assert lib_path in package_json
+
+    readme = files["README.md"].read_text()
+    assert project_use_docker.type_name in readme
+    assert SUPPORT_LIB_NAME in readme
+    assert "handlers.ts" in readme
+    assert "models.ts" in readme
+
+    assert project_use_docker.entrypoint in files["template.yml"].read_text()
+
+
+def test_initialize_no_docker(project_no_docker: Project):
+    lib_path = project_no_docker._plugin._lib_path
+    assert project_no_docker.settings == {
+        "protocolVersion": "2.0.0",
+        "no_docker": True,
+        "use_docker": False,
+    }
+
+    files = get_files_in_project(project_no_docker)
+    assert set(files) == {
+        ".gitignore",
+        ".npmrc",
+        ".rpdk-config",
+        "foo-bar-baz.json",
+        "example_inputs",
+        f"{os.path.join('example_inputs', 'inputs_1_create.json')}",
+        f"{os.path.join('example_inputs', 'inputs_1_invalid.json')}",
+        f"{os.path.join('example_inputs', 'inputs_1_update.json')}",
+        "package.json",
+        "README.md",
+        "sam-tests",
+        f"{os.path.join('sam-tests', 'create.json')}",
+        "src",
+        f"{os.path.join('src', 'handlers.ts')}",
+        "template.yml",
+        "tsconfig.json",
+    }
+
+    assert "node_modules" in files[".gitignore"].read_text()
+    package_json = files["package.json"].read_text()
+    assert SUPPORT_LIB_NAME in package_json
+    assert lib_path in package_json
+
+    readme = files["README.md"].read_text()
+    assert project_no_docker.type_name in readme
+    assert SUPPORT_LIB_NAME in readme
+    assert "handlers.ts" in readme
+    assert "models.ts" in readme
+
+    assert project_no_docker.entrypoint in files["template.yml"].read_text()
+
+
+def test_initialize_both_true(project_both_true: Project):
+    lib_path = project_both_true._plugin._lib_path
+    assert project_both_true.settings == {
+        "protocolVersion": "2.0.0",
+        "no_docker": False,
+        "use_docker": True,
+    }
+
+    files = get_files_in_project(project_both_true)
+    assert set(files) == {
+        ".gitignore",
+        ".npmrc",
+        ".rpdk-config",
+        "foo-bar-baz.json",
+        "example_inputs",
+        f"{os.path.join('example_inputs', 'inputs_1_create.json')}",
+        f"{os.path.join('example_inputs', 'inputs_1_invalid.json')}",
+        f"{os.path.join('example_inputs', 'inputs_1_update.json')}",
+        "package.json",
+        "README.md",
+        "sam-tests",
+        f"{os.path.join('sam-tests', 'create.json')}",
+        "src",
+        f"{os.path.join('src', 'handlers.ts')}",
+        "template.yml",
+        "tsconfig.json",
+    }
+
+    assert "node_modules" in files[".gitignore"].read_text()
+    package_json = files["package.json"].read_text()
+    assert SUPPORT_LIB_NAME in package_json
+    assert lib_path in package_json
+
+    readme = files["README.md"].read_text()
+    assert project_both_true.type_name in readme
+    assert SUPPORT_LIB_NAME in readme
+    assert "handlers.ts" in readme
+    assert "models.ts" in readme
+
+    assert project_both_true.entrypoint in files["template.yml"].read_text()
 
 
 def test_generate(project: Project):
