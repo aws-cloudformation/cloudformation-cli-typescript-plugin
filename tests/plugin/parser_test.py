@@ -1,7 +1,6 @@
 import argparse
-from readline import set_completion_display_matches_hook
-import pytest
 
+import pytest
 from rpdk.typescript.parser import setup_subparser
 
 
@@ -31,5 +30,5 @@ def test_setup_subparser():
     assert no_docker.use_docker is False
     assert no_docker.no_docker is True
 
-    with pytest.raises(SystemExit) as e_info:
+    with pytest.raises(SystemExit):
         sub_parser.parse_args(["--no-docker", "--use-docker"])
