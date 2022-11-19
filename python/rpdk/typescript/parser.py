@@ -6,7 +6,9 @@ def setup_subparser(subparsers, parents):
     )
     parser.set_defaults(language="typescript")
 
-    parser.add_argument(
+    group = parser.add_mutually_exclusive_group()
+
+    group.add_argument(
         "-d",
         "--use-docker",
         action="store_true",
@@ -15,7 +17,7 @@ def setup_subparser(subparsers, parents):
             with cross-platform TypeScript packaging.""",
     )
 
-    parser.add_argument(
+    group.add_argument(
         "--no-docker",
         action="store_true",
         help="""Generally not recommended unless you are experienced
