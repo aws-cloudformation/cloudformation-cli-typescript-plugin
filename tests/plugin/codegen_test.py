@@ -154,8 +154,11 @@ def test__remove_build_artifacts_file_not_found(tmp_path: str):
 
     mock_log.debug.assert_called_once()
 
+
 @pytest.fixture
-def project_no_docker_use_docker_values(request, project, project_use_docker, project_no_docker, project_both_true):
+def project_no_docker_use_docker_values(
+    request, project, project_use_docker, project_no_docker, project_both_true
+):
     return [
         (project, True, False),
         (project_use_docker, False, True),
@@ -163,13 +166,16 @@ def project_no_docker_use_docker_values(request, project, project_use_docker, pr
         (project_both_true, False, True),
     ][request.param]
 
+
 @pytest.mark.parametrize(
-    'project_no_docker_use_docker_values',
-    [0, 1, 2, 3],
-    indirect=True
+    "project_no_docker_use_docker_values", [0, 1, 2, 3], indirect=True
 )
 def test_initialize(project_no_docker_use_docker_values):
-    project_value, no_docker_value, use_docker_value = project_no_docker_use_docker_values
+    (
+        project_value,
+        no_docker_value,
+        use_docker_value,
+    ) = project_no_docker_use_docker_values
     lib_path = project_value._plugin._lib_path
     assert project_value.settings == {
         "protocolVersion": "2.0.0",
