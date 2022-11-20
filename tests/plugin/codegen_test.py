@@ -154,16 +154,30 @@ def test__remove_build_artifacts_file_not_found(tmp_path: str):
 
     mock_log.debug.assert_called_once()
 
+@pytest.fixture
+def project_no_docker_use_docker_values(request, project, project_use_docker, project_no_docker, project_both_true):
+    return [
+        (project, True, False),
+        (project_use_docker, False, True),
+        (project_no_docker, True, False),
+        (project_both_true, False, True),
+    ][request.param]
 
-def test_initialize(project: Project):
-    lib_path = project._plugin._lib_path
-    assert project.settings == {
+@pytest.mark.parametrize(
+    'project_no_docker_use_docker_values',
+    [0, 1, 2, 3],
+    indirect=True
+)
+def test_initialize(project_no_docker_use_docker_values):
+    project_value, no_docker_value, use_docker_value = project_no_docker_use_docker_values
+    lib_path = project_value._plugin._lib_path
+    assert project_value.settings == {
         "protocolVersion": "2.0.0",
-        "no_docker": True,
-        "use_docker": False,
+        "no_docker": no_docker_value,
+        "use_docker": use_docker_value,
     }
 
-    files = get_files_in_project(project)
+    files = get_files_in_project(project_value)
     assert set(files) == {
         ".gitignore",
         ".npmrc",
@@ -189,138 +203,12 @@ def test_initialize(project: Project):
     assert lib_path in package_json
 
     readme = files["README.md"].read_text()
-    assert project.type_name in readme
+    assert project_value.type_name in readme
     assert SUPPORT_LIB_NAME in readme
     assert "handlers.ts" in readme
     assert "models.ts" in readme
 
-    assert project.entrypoint in files["template.yml"].read_text()
-
-
-def test_initialize_use_docker(project_use_docker: Project):
-    lib_path = project_use_docker._plugin._lib_path
-    assert project_use_docker.settings == {
-        "protocolVersion": "2.0.0",
-        "no_docker": False,
-        "use_docker": True,
-    }
-
-    files = get_files_in_project(project_use_docker)
-    assert set(files) == {
-        ".gitignore",
-        ".npmrc",
-        ".rpdk-config",
-        "foo-bar-baz.json",
-        "example_inputs",
-        f"{os.path.join('example_inputs', 'inputs_1_create.json')}",
-        f"{os.path.join('example_inputs', 'inputs_1_invalid.json')}",
-        f"{os.path.join('example_inputs', 'inputs_1_update.json')}",
-        "package.json",
-        "README.md",
-        "sam-tests",
-        f"{os.path.join('sam-tests', 'create.json')}",
-        "src",
-        f"{os.path.join('src', 'handlers.ts')}",
-        "template.yml",
-        "tsconfig.json",
-    }
-
-    assert "node_modules" in files[".gitignore"].read_text()
-    package_json = files["package.json"].read_text()
-    assert SUPPORT_LIB_NAME in package_json
-    assert lib_path in package_json
-
-    readme = files["README.md"].read_text()
-    assert project_use_docker.type_name in readme
-    assert SUPPORT_LIB_NAME in readme
-    assert "handlers.ts" in readme
-    assert "models.ts" in readme
-
-    assert project_use_docker.entrypoint in files["template.yml"].read_text()
-
-
-def test_initialize_no_docker(project_no_docker: Project):
-    lib_path = project_no_docker._plugin._lib_path
-    assert project_no_docker.settings == {
-        "protocolVersion": "2.0.0",
-        "no_docker": True,
-        "use_docker": False,
-    }
-
-    files = get_files_in_project(project_no_docker)
-    assert set(files) == {
-        ".gitignore",
-        ".npmrc",
-        ".rpdk-config",
-        "foo-bar-baz.json",
-        "example_inputs",
-        f"{os.path.join('example_inputs', 'inputs_1_create.json')}",
-        f"{os.path.join('example_inputs', 'inputs_1_invalid.json')}",
-        f"{os.path.join('example_inputs', 'inputs_1_update.json')}",
-        "package.json",
-        "README.md",
-        "sam-tests",
-        f"{os.path.join('sam-tests', 'create.json')}",
-        "src",
-        f"{os.path.join('src', 'handlers.ts')}",
-        "template.yml",
-        "tsconfig.json",
-    }
-
-    assert "node_modules" in files[".gitignore"].read_text()
-    package_json = files["package.json"].read_text()
-    assert SUPPORT_LIB_NAME in package_json
-    assert lib_path in package_json
-
-    readme = files["README.md"].read_text()
-    assert project_no_docker.type_name in readme
-    assert SUPPORT_LIB_NAME in readme
-    assert "handlers.ts" in readme
-    assert "models.ts" in readme
-
-    assert project_no_docker.entrypoint in files["template.yml"].read_text()
-
-
-def test_initialize_both_true(project_both_true: Project):
-    lib_path = project_both_true._plugin._lib_path
-    assert project_both_true.settings == {
-        "protocolVersion": "2.0.0",
-        "no_docker": False,
-        "use_docker": True,
-    }
-
-    files = get_files_in_project(project_both_true)
-    assert set(files) == {
-        ".gitignore",
-        ".npmrc",
-        ".rpdk-config",
-        "foo-bar-baz.json",
-        "example_inputs",
-        f"{os.path.join('example_inputs', 'inputs_1_create.json')}",
-        f"{os.path.join('example_inputs', 'inputs_1_invalid.json')}",
-        f"{os.path.join('example_inputs', 'inputs_1_update.json')}",
-        "package.json",
-        "README.md",
-        "sam-tests",
-        f"{os.path.join('sam-tests', 'create.json')}",
-        "src",
-        f"{os.path.join('src', 'handlers.ts')}",
-        "template.yml",
-        "tsconfig.json",
-    }
-
-    assert "node_modules" in files[".gitignore"].read_text()
-    package_json = files["package.json"].read_text()
-    assert SUPPORT_LIB_NAME in package_json
-    assert lib_path in package_json
-
-    readme = files["README.md"].read_text()
-    assert project_both_true.type_name in readme
-    assert SUPPORT_LIB_NAME in readme
-    assert "handlers.ts" in readme
-    assert "models.ts" in readme
-
-    assert project_both_true.entrypoint in files["template.yml"].read_text()
+    assert project_value.entrypoint in files["template.yml"].read_text()
 
 
 def test_generate(project: Project):
