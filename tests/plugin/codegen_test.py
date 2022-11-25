@@ -52,6 +52,69 @@ def project(tmp_path: str):
     return project
 
 
+@pytest.fixture
+def project_use_docker(tmp_path: str):
+    project_use_docker = Project(root=tmp_path)
+
+    patch_plugins = patch.dict(
+        "rpdk.core.plugin_registry.PLUGIN_REGISTRY",
+        {TypescriptLanguagePlugin.NAME: lambda: TypescriptLanguagePlugin},
+        clear=True,
+    )
+    with patch_plugins:
+        current_path = os.path.abspath(__file__)
+        lib_abspath = os.path.abspath(os.path.join(current_path, "..", "..", ".."))
+        TypescriptLanguagePlugin.SUPPORT_LIB_URI = f"file:{lib_abspath}"
+        project_use_docker.init(
+            TYPE_NAME,
+            TypescriptLanguagePlugin.NAME,
+            settings={"use_docker": True, "no_docker": False},
+        )
+    return project_use_docker
+
+
+@pytest.fixture
+def project_no_docker(tmp_path: str):
+    project_no_docker = Project(root=tmp_path)
+
+    patch_plugins = patch.dict(
+        "rpdk.core.plugin_registry.PLUGIN_REGISTRY",
+        {TypescriptLanguagePlugin.NAME: lambda: TypescriptLanguagePlugin},
+        clear=True,
+    )
+    with patch_plugins:
+        current_path = os.path.abspath(__file__)
+        lib_abspath = os.path.abspath(os.path.join(current_path, "..", "..", ".."))
+        TypescriptLanguagePlugin.SUPPORT_LIB_URI = f"file:{lib_abspath}"
+        project_no_docker.init(
+            TYPE_NAME,
+            TypescriptLanguagePlugin.NAME,
+            settings={"use_docker": False, "no_docker": True},
+        )
+    return project_no_docker
+
+
+@pytest.fixture
+def project_both_true(tmp_path: str):
+    project_both_true = Project(root=tmp_path)
+
+    patch_plugins = patch.dict(
+        "rpdk.core.plugin_registry.PLUGIN_REGISTRY",
+        {TypescriptLanguagePlugin.NAME: lambda: TypescriptLanguagePlugin},
+        clear=True,
+    )
+    with patch_plugins:
+        current_path = os.path.abspath(__file__)
+        lib_abspath = os.path.abspath(os.path.join(current_path, "..", "..", ".."))
+        TypescriptLanguagePlugin.SUPPORT_LIB_URI = f"file:{lib_abspath}"
+        project_both_true.init(
+            TYPE_NAME,
+            TypescriptLanguagePlugin.NAME,
+            settings={"use_docker": True, "no_docker": True},
+        )
+    return project_both_true
+
+
 def get_files_in_project(project: Project):
     return {
         str(child.relative_to(project.root)): child for child in project.root.rglob("*")
@@ -92,11 +155,35 @@ def test__remove_build_artifacts_file_not_found(tmp_path: str):
     mock_log.debug.assert_called_once()
 
 
-def test_initialize(project: Project):
-    lib_path = project._plugin._lib_path
-    assert project.settings == {"use_docker": False, "protocolVersion": "2.0.0"}
+@pytest.fixture
+def project_no_docker_use_docker_values(
+    request, project, project_use_docker, project_no_docker, project_both_true
+):
+    return [
+        (project, True, False),
+        (project_use_docker, False, True),
+        (project_no_docker, True, False),
+        (project_both_true, False, True),
+    ][request.param]
 
-    files = get_files_in_project(project)
+
+@pytest.mark.parametrize(
+    "project_no_docker_use_docker_values", [0, 1, 2, 3], indirect=True
+)
+def test_initialize(project_no_docker_use_docker_values):
+    (
+        project_value,
+        no_docker_value,
+        use_docker_value,
+    ) = project_no_docker_use_docker_values
+    lib_path = project_value._plugin._lib_path
+    assert project_value.settings == {
+        "protocolVersion": "2.0.0",
+        "no_docker": no_docker_value,
+        "use_docker": use_docker_value,
+    }
+
+    files = get_files_in_project(project_value)
     assert set(files) == {
         ".gitignore",
         ".npmrc",
@@ -122,12 +209,12 @@ def test_initialize(project: Project):
     assert lib_path in package_json
 
     readme = files["README.md"].read_text()
-    assert project.type_name in readme
+    assert project_value.type_name in readme
     assert SUPPORT_LIB_NAME in readme
     assert "handlers.ts" in readme
     assert "models.ts" in readme
 
-    assert project.entrypoint in files["template.yml"].read_text()
+    assert project_value.entrypoint in files["template.yml"].read_text()
 
 
 def test_generate(project: Project):
