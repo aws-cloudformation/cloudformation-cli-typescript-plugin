@@ -3,6 +3,7 @@ import { transformValue, recastPrimitive } from '~/recast';
 import {
     ResourceModel as ComplexResourceModel,
     SimpleResourceModel,
+    TagsModel,
 } from '../data/sample-model';
 
 describe('when recasting objects', () => {
@@ -103,6 +104,19 @@ describe('when recasting objects', () => {
         expect(ComplexResourceModel.deserialize(serialized).serialize()).toMatchObject(
             expected
         );
+    });
+
+    test('recast set type - array with unique items', () => {
+        const payload = {
+            Tags: [{ key: 'name', value: 'value' }],
+        };
+        const expected = {
+            tags: new Set([{ key: 'name', value: 'value' }]),
+        };
+        const model = TagsModel.deserialize(payload);
+        const serialized = JSON.parse(JSON.stringify(model));
+        expect(serialized).toMatchObject(expected);
+        // expect(TagsModel.deserialize(serialized).serialize()).toMatchObject(expected);
     });
 
     test('recast object invalid sub type', () => {

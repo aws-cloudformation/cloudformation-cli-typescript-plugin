@@ -200,6 +200,31 @@ export class DeeperDict extends BaseModel {
     deepestList?: Optional<Array<integer>>;
 }
 
+export class TagsModel extends BaseModel {
+    ['constructor']: typeof TagsModel;
+
+    @Expose({ name: 'Tags' })
+    @Transform((value, obj) => transformValue(Tag, 'tags', value, obj, [Set]), {
+        toClassOnly: true,
+    })
+    tags?: Optional<Set<Tag>>;
+}
+
+class Tag extends BaseModel {
+    ['constructor']: typeof Tag;
+
+    @Expose({ name: 'Name' })
+    @Transform((value, obj) => transformValue(String, 'name', value, obj), {
+        toClassOnly: true,
+    })
+    name: string;
+    @Expose({ name: 'Value' })
+    @Transform((value, obj) => transformValue(String, 'value', value, obj), {
+        toClassOnly: true,
+    })
+    value: string;
+}
+
 export class SimpleResourceModel extends BaseModel {
     ['constructor']: typeof SimpleResourceModel;
 
