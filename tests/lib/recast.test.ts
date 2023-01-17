@@ -120,14 +120,15 @@ describe('when recasting objects', () => {
     });
 
     test('recast object invalid sub type', () => {
+        class InvalidClass {}
         const k = 'key';
         const v = { a: 1, b: 2 };
         const recastObject = () => {
-            transformValue(SimpleResourceModel, k, v, {});
+            transformValue(InvalidClass, k, v, {});
         };
         expect(recastObject).toThrow(exceptions.InvalidRequest);
         expect(recastObject).toThrow(
-            `Unsupported type: ${typeof v} [${SimpleResourceModel.name}] for ${k}`
+            `Unsupported type: ${typeof v} [${InvalidClass.name}] for ${k}`
         );
     });
 
