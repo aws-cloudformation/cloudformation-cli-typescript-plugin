@@ -214,14 +214,8 @@ class Tag extends BaseModel {
     ['constructor']: typeof Tag;
 
     @Expose({ name: 'Name' })
-    @Transform((value, obj) => transformValue(String, 'name', value, obj), {
-        toClassOnly: true,
-    })
     name: string;
     @Expose({ name: 'Value' })
-    @Transform((value, obj) => transformValue(String, 'value', value, obj), {
-        toClassOnly: true,
-    })
     value: string;
 }
 
