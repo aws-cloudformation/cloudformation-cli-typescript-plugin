@@ -1,5 +1,5 @@
 import { InvalidRequest } from './exceptions';
-import { Callable, integer, Integer } from './interface';
+import { BaseModel, Callable, integer, Integer } from './interface';
 
 type primitive = string | number | boolean | bigint | integer | object;
 
@@ -70,7 +70,7 @@ export const transformValue = (
         });
     } else {
         // if type is plain object, we leave it as is
-        if (Object.is(cls, Object)) {
+        if (Object.is(cls, Object) || cls.prototype instanceof BaseModel) {
             return value;
         }
         if (
