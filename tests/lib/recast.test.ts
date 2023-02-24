@@ -3,6 +3,7 @@ import { transformValue, recastPrimitive } from '~/recast';
 import {
     ResourceModel as ComplexResourceModel,
     SimpleResourceModel,
+    TagsModel,
 } from '../data/sample-model';
 
 describe('when recasting objects', () => {
@@ -105,15 +106,29 @@ describe('when recasting objects', () => {
         );
     });
 
+    test('recast set type - array with unique items', () => {
+        const payload = {
+            Tags: [{ key: 'name', value: 'value' }],
+        };
+        const expected = {
+            Tags: new Set([{ key: 'name', value: 'value' }]),
+        };
+        const model = TagsModel.deserialize(payload);
+        const serialized = JSON.parse(JSON.stringify(model));
+        expect(serialized).toMatchObject(expected);
+        expect(TagsModel.deserialize(serialized).serialize()).toMatchObject(expected);
+    });
+
     test('recast object invalid sub type', () => {
+        class InvalidClass {}
         const k = 'key';
         const v = { a: 1, b: 2 };
         const recastObject = () => {
-            transformValue(SimpleResourceModel, k, v, {});
+            transformValue(InvalidClass, k, v, {});
         };
         expect(recastObject).toThrow(exceptions.InvalidRequest);
         expect(recastObject).toThrow(
-            `Unsupported type: ${typeof v} [${SimpleResourceModel.name}] for ${k}`
+            `Unsupported type: ${typeof v} [${InvalidClass.name}] for ${k}`
         );
     });
 
