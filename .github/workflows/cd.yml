@@ -10,7 +10,7 @@ on:
 jobs:
   delivery-nodejs:
     name: Prepare for NPM
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-node@v3
@@ -35,7 +35,7 @@ jobs:
 
   delivery-python:
     name: Prepare for PyPI
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-latest
     strategy:
       matrix:
         python: [3.6]
@@ -58,7 +58,7 @@ jobs:
   delivery-github:
     name: Delivery to GitHub
     needs: [delivery-nodejs, delivery-python]
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
       - name: Download NPM Artifacts
