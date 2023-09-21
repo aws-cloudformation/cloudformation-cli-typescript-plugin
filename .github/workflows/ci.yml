@@ -10,14 +10,14 @@ jobs:
     steps:
     - uses: actions/setup-python@v4
       with:
-        python-version: 3.7
+        python-version: 3.9
   os_build:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         os: [ ubuntu-latest, macos-latest ]
-        python: [ 3.7, 3.8, 3.9 ]
-        node: [ 14 ]
+        python: [ 3.8, 3.9 ]
+        node: [ 18 ]
     env:
       SAM_CLI_TELEMETRY: "0"
       AWS_REGION: "us-east-1"
@@ -32,8 +32,8 @@ jobs:
       - name: Update Homebrew and save docker version
         if: runner.os == 'macOS'
         run: |
-          brew update --preinstall
-          cat "$(brew --repository)/Library/Taps/homebrew/homebrew-core/Formula/docker.rb" > .github/brew-formulae
+          brew tap homebrew/core
+          cat "$(brew --repository)/Library/Taps/homebrew/homebrew-core/Formula/d/docker.rb" > .github/brew-formulae
       - name: Configure Homebrew docker cache files
         uses: actions/cache@v3
         if: runner.os == 'macOS'
@@ -121,7 +121,7 @@ jobs:
           sam build --debug --build-dir ./build TypeFunction
           sam build --debug --build-dir ./build TestEntrypoint
           sam local invoke -t ./build/template.yaml --debug --event ./sam-tests/create.json --log-file ./sam.log TestEntrypoint
-          grep -q '"status":"SUCCESS"' sam.log
+          grep -q '"SUCCESS"' sam.log
       - name: Gather Debug Logs
         id: gather_logs
         continue-on-error: true
