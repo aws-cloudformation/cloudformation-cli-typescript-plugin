@@ -142,7 +142,6 @@ class Resource extends BaseResource<ResourceModel> {
         typeConfiguration: TypeConfigurationModel,
     ): Promise<ProgressEvent<ResourceModel, CallbackContext>> {
         const model = new ResourceModel(request.desiredResourceState);
-        model
         /**
          * TODO: put code for getting the specific model from here from just your primary identifier
          * Example:
