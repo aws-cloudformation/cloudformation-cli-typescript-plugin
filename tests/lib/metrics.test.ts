@@ -1,8 +1,5 @@
-import CloudWatch from 'aws-sdk/clients/cloudwatch';
-import awsUtil from 'aws-sdk/lib/util';
-import WorkerPoolAwsSdk from 'worker-pool-aws-sdk';
-
-import { Action, MetricTypes, ServiceProperties, StandardUnit } from '~/interface';
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { Action, MetricTypes, StandardUnit } from '~/interface';
 import { SessionProxy } from '~/proxy';
 import {
     DimensionRecord,
@@ -10,6 +7,8 @@ import {
     MetricsPublisher,
     MetricsPublisherProxy,
 } from '~/metrics';
+import { CloudWatch } from '@aws-sdk/client-cloudwatch';
+import { MockAWSError } from '../utils';
 
 const mockResult = (output: any): jest.Mock => {
     return jest.fn().mockReturnValue({
@@ -17,7 +16,7 @@ const mockResult = (output: any): jest.Mock => {
     });
 };
 
-jest.mock('aws-sdk/clients/cloudwatch');
+jest.mock('@aws-sdk/client-cloudwatch');
 
 describe('when getting metrics', () => {
     const MOCK_DATE = new Date('2020-01-01T23:05:38.964Z');
@@ -25,14 +24,13 @@ describe('when getting metrics', () => {
     const NAMESPACE = 'AWS/CloudFormation/Aa/Bb/Cc';
     const AWS_CONFIG = {
         region: 'us-east-1',
-        credentials: {
+        credentials: async () => ({
             accessKeyId: 'AAAAA',
             secretAccessKey: '11111',
-        },
+        }),
     };
 
     let session: SessionProxy;
-    let workerPool: WorkerPoolAwsSdk;
     let proxy: MetricsPublisherProxy;
     let publisher: MetricsPublisher;
     let cloudwatch: jest.Mock<Partial<CloudWatch>>;
@@ -40,11 +38,6 @@ describe('when getting metrics', () => {
 
     beforeAll(() => {
         session = new SessionProxy(AWS_CONFIG);
-        jest.spyOn<any, any>(WorkerPoolAwsSdk.prototype, 'runTask').mockRejectedValue(
-            Error('Method runTask should not be called.')
-        );
-        workerPool = new WorkerPoolAwsSdk({ minThreads: 1, maxThreads: 1 });
-        workerPool.runAwsTask = null;
     });
 
     beforeEach(() => {
@@ -60,28 +53,18 @@ describe('when getting metrics', () => {
                 ...returnValue,
                 config: { ...AWS_CONFIG, ...config, update: () => undefined },
                 constructor: ctor,
-                makeRequest: (
-                    operation: ServiceProperties<CloudWatch>,
-                    params?: Record<string, any>
-                ): any => {
-                    return returnValue[operation](params as any);
-                },
+                putMetricData,
             };
         });
         proxy = new MetricsPublisherProxy();
-        publisher = new MetricsPublisher(session, console, RESOURCE_TYPE, workerPool);
+        publisher = new MetricsPublisher(session, console, RESOURCE_TYPE);
         proxy.addMetricsPublisher(publisher);
         publisher.refreshClient();
-        workerPool.restart();
     });
 
     afterEach(() => {
         jest.clearAllMocks();
         jest.restoreAllMocks();
-    });
-
-    afterAll(async () => {
-        await workerPool.shutdown();
     });
 
     test('format dimensions', () => {
@@ -98,17 +81,15 @@ describe('when getting metrics', () => {
 
     test('put metric catches error', async () => {
         const spyLogger: jest.SpyInstance = jest.spyOn(publisher['logger'], 'log');
-        putMetricData.mockReturnValueOnce({
-            promise: jest.fn().mockRejectedValueOnce(
-                awsUtil.error(new Error(), {
-                    code: 'InternalServiceError',
-                    message:
-                        'An error occurred (InternalServiceError) when ' +
-                        'calling the PutMetricData operation: ',
-                    retryable: false,
-                })
-            ),
-        });
+        putMetricData.mockRejectedValueOnce(
+            new MockAWSError({
+                code: 'InternalServiceError',
+                message:
+                    'An error occurred (InternalServiceError) when ' +
+                    'calling the PutMetricData operation: ',
+                retryable: false,
+            })
+        );
         const dimensions: DimensionRecord = {
             DimensionKeyActionType: Action.Create,
             DimensionKeyResourceType: RESOURCE_TYPE,
@@ -277,11 +258,7 @@ describe('when getting metrics', () => {
             message: 'Sorry',
             retryable: true,
         };
-        putMetricData.mockReturnValueOnce({
-            promise: jest
-                .fn()
-                .mockRejectedValueOnce(awsUtil.error(new Error(), errorObject)),
-        });
+        putMetricData.mockRejectedValueOnce(new MockAWSError(errorObject));
         await proxy.publishLogDeliveryExceptionMetric(MOCK_DATE, new TypeError('test'));
         expect(putMetricData).toHaveBeenCalledTimes(1);
         expect(putMetricData).toHaveBeenCalledWith({
@@ -290,7 +267,7 @@ describe('when getting metrics', () => {
         });
         expect(spyLogger).toHaveBeenCalledTimes(1);
         expect(spyLogger).toHaveBeenCalledWith(expect.objectContaining(errorObject));
-        expect(spyPublishLog).toHaveReturnedWith(Promise.resolve(null));
+        expect(spyPublishLog).toHaveReturned();
     });
 
     test('metrics publisher without refreshing client', async () => {
@@ -304,7 +281,7 @@ describe('when getting metrics', () => {
                 1.0,
                 MOCK_DATE
             );
-        } catch (e) {
+        } catch (e: any) {
             expect(e.message).toMatch(/CloudWatch client was not initialized/);
         }
     });

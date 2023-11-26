@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-empty-function */
 import { deepFreeze, replaceAll } from '~/utils';
 
 describe('when getting utils', () => {

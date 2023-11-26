@@ -1,5 +1,5 @@
-import WorkerPoolAwsSdk from 'worker-pool-aws-sdk';
-
+/* eslint-disable @typescript-eslint/no-empty-function */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import * as exceptions from '~/exceptions';
 import { ProgressEvent, SessionProxy } from '~/proxy';
 import {
@@ -22,42 +22,30 @@ import {
 import { MetricsPublisherProxy } from '~/metrics';
 import { handlerEvent, HandlerSignatures, BaseResource } from '~/resource';
 import { SimpleStateModel } from '../data/sample-model';
+import '@aws-sdk/client-cloudwatch-logs';
 
-jest.mock('aws-sdk');
-jest.mock('aws-sdk/clients/all');
-jest.mock('aws-sdk/clients/cloudwatch');
-jest.mock('aws-sdk/clients/cloudwatchlogs');
-jest.mock('aws-sdk/clients/s3');
-jest.mock('piscina');
-jest.mock('worker_threads');
+jest.mock('@aws-sdk/client-cloudwatch');
+jest.mock('@aws-sdk/client-cloudwatch-logs');
+jest.mock('@aws-sdk/client-s3');
 
 describe('when getting resource', () => {
     let entrypointPayload: any;
     let testEntrypointPayload: any;
     let lambdaContext: any;
-    let workerPool: WorkerPoolAwsSdk;
     let spySession: jest.SpyInstance;
     let spySessionClient: jest.SpyInstance;
     let spyInitializeRuntime: jest.SpyInstance;
     const TYPE_NAME = 'Test::Foo::Bar';
     class MockModel extends SimpleStateModel {
-        ['constructor']: typeof MockModel;
+        declare ['constructor']: typeof MockModel;
         public static readonly TYPE_NAME: string = TYPE_NAME;
     }
     class Resource extends BaseResource<MockModel, MockTypeConfigurationModel> {}
 
     class MockTypeConfigurationModel extends BaseModel {
-        ['constructor']: typeof MockTypeConfigurationModel;
+        declare ['constructor']: typeof MockTypeConfigurationModel;
         public static readonly TYPE_NAME: string = TYPE_NAME;
     }
-
-    beforeAll(() => {
-        jest.spyOn<any, any>(WorkerPoolAwsSdk.prototype, 'runTask').mockRejectedValue(
-            Error('Method runTask should not be called.')
-        );
-        workerPool = new WorkerPoolAwsSdk({ minThreads: 1, maxThreads: 1 });
-        workerPool.runAwsTask = null;
-    });
 
     beforeEach(() => {
         entrypointPayload = {
@@ -124,13 +112,8 @@ describe('when getting resource', () => {
     });
 
     afterEach(() => {
-        workerPool.restart();
         jest.clearAllMocks();
         jest.restoreAllMocks();
-    });
-
-    afterAll(async () => {
-        await workerPool.shutdown();
     });
 
     const getResource = (
@@ -139,7 +122,6 @@ describe('when getting resource', () => {
         const instance = new Resource(
             TYPE_NAME,
             MockModel,
-            workerPool,
             handlers,
             MockTypeConfigurationModel
         );
@@ -169,7 +151,6 @@ describe('when getting resource', () => {
             TYPE_NAME,
             MockModel,
             null,
-            null,
             MockTypeConfigurationModel
         );
         resource.addHandler(Action.Create, mockHandler);
@@ -187,7 +168,6 @@ describe('when getting resource', () => {
         const resource = new Resource(
             TYPE_NAME,
             MockModel,
-            null,
             null,
             MockTypeConfigurationModel
         );
@@ -208,7 +188,6 @@ describe('when getting resource', () => {
         const resource = new Resource(
             TYPE_NAME,
             MockModel,
-            null,
             null,
             MockTypeConfigurationModel
         );
@@ -238,7 +217,6 @@ describe('when getting resource', () => {
         const resource = new Resource(
             TYPE_NAME,
             MockModel,
-            null,
             null,
             MockTypeConfigurationModel
         );
@@ -271,7 +249,6 @@ describe('when getting resource', () => {
             TYPE_NAME,
             MockModel,
             null,
-            null,
             MockTypeConfigurationModel
         );
         entrypointPayload['action'] = 'READ';
@@ -292,7 +269,6 @@ describe('when getting resource', () => {
         const resource = new Resource(
             TYPE_NAME,
             MockModel,
-            null,
             null,
             MockTypeConfigurationModel
         );
@@ -321,7 +297,6 @@ describe('when getting resource', () => {
         const resource = new Resource(
             TYPE_NAME,
             MockModel,
-            null,
             null,
             MockTypeConfigurationModel
         );
@@ -354,7 +329,6 @@ describe('when getting resource', () => {
             TYPE_NAME,
             MockModel,
             null,
-            null,
             MockTypeConfigurationModel
         );
         resource.addHandler(Action.Create, mockHandler);
@@ -381,7 +355,6 @@ describe('when getting resource', () => {
         const resource = new Resource(
             TYPE_NAME,
             MockModel,
-            null,
             null,
             MockTypeConfigurationModel
         );
@@ -410,7 +383,6 @@ describe('when getting resource', () => {
             TYPE_NAME,
             MockModel,
             null,
-            null,
             MockTypeConfigurationModel
         );
         resource.addHandler(Action.Create, mockHandler);
@@ -430,10 +402,8 @@ describe('when getting resource', () => {
         expect(spySessionClient).toBeCalledTimes(4);
         expect(spyPrepareLogStream).toBeCalledTimes(1);
         expect(spyPrepareFolder).toBeCalledTimes(1);
-        expect(spyPrepareFolder).toReturnWith(
-            Promise.resolve(
-                'arn__aws__cloudformation__us-east-1__123456789012__stack/sample-stack/e722ae60-fe62-11e8-9a0e-0ae8cc519968'
-            )
+        expect(await spyPrepareFolder.mock.results[0].value).toEqual(
+            'arn_aws_cloudformation_us-east-1_123456789012_stack/sample-stack/e722ae60-fe62-11e8-9a0e-0ae8cc519968/myBucket'
         );
         expect(resource['providerEventsLogger']).toBeInstanceOf(S3LogPublisher);
         expect(resource['s3LogHelper']).toBeDefined();
@@ -504,7 +474,6 @@ describe('when getting resource', () => {
             TYPE_NAME,
             MockModel,
             null,
-            null,
             MockTypeConfigurationModel
         );
 
@@ -564,7 +533,6 @@ describe('when getting resource', () => {
             TYPE_NAME,
             MockModel,
             null,
-            null,
             MockTypeConfigurationModel
         );
         resource.addHandler(Action.Create, mockHandler);
@@ -586,7 +554,6 @@ describe('when getting resource', () => {
             TYPE_NAME,
             MockModel,
             null,
-            null,
             MockTypeConfigurationModel
         );
         resource.addHandler(Action.Create, mockHandler);
@@ -594,13 +561,14 @@ describe('when getting resource', () => {
             null
         );
         let event = await resource.entrypoint(entrypointPayload, lambdaContext);
-        expect(resource['loggerProxy']['logPublishers'].length).toBe(1);
+        // two publishers - cloudwatch and lambda
+        expect(resource['loggerProxy']['logPublishers'].length).toBe(2);
         expect(event.status).toBe(OperationStatus.Success);
         event = await resource.entrypoint(entrypointPayload, {
             ...lambdaContext,
             awsRequestId: 'd8181a30-302a-11eb-9c27-0aeffe35c30a',
         });
-        expect(resource['loggerProxy']['logPublishers'].length).toBe(1);
+        expect(resource['loggerProxy']['logPublishers'].length).toBe(2);
         expect(event.status).toBe(OperationStatus.Success);
         expect(spyInitializeRuntime).toBeCalledTimes(2);
         expect(mockHandler).toBeCalledTimes(2);
@@ -623,13 +591,7 @@ describe('when getting resource', () => {
             public list(): void {}
         }
         const handlers = new HandlerSignatures<MockModel, MockTypeConfigurationModel>();
-        const resource = new ResourceEventHandler(
-            null,
-            null,
-            workerPool,
-            handlers,
-            null
-        );
+        const resource = new ResourceEventHandler(null, null, handlers, null);
         expect(resource['handlers'].get(Action.Create)).toBe(resource.create);
         expect(resource['handlers'].get(Action.Read)).toBe(resource.read);
         expect(resource['handlers'].get(Action.Update)).toBe(resource.update);
@@ -656,7 +618,6 @@ describe('when getting resource', () => {
         const resource = new ResourceEventHandler(
             TYPE_NAME,
             MockModel,
-            workerPool,
             handlers,
             MockTypeConfigurationModel
         );
@@ -684,7 +645,13 @@ describe('when getting resource', () => {
         const handlers = new HandlerSignatures<MockModel, MockTypeConfigurationModel>();
         handlers.set(Action.Create, mockHandler);
         const resource = getResource(handlers);
-        const session = new SessionProxy({});
+        const session = new SessionProxy({
+            credentials: async () => ({
+                accessKeyId: 'something',
+                secretAccessKey: 'else',
+            }),
+            region: 'us-east-1',
+        });
         const request = new BaseResourceHandlerRequest<MockModel>();
         const typeConf = new MockTypeConfigurationModel();
         const callbackContext = {};
@@ -805,7 +772,6 @@ describe('when getting resource', () => {
             TYPE_NAME,
             MockModel,
             null,
-            null,
             MockTypeConfigurationModel
         );
         const [request, action, callback] = resource['parseTestRequest'](
@@ -823,7 +789,6 @@ describe('when getting resource', () => {
             TYPE_NAME,
             MockModel,
             null,
-            null,
             MockTypeConfigurationModel
         );
         const [request, action, callback] = resource['parseTestRequest'](
@@ -838,7 +803,6 @@ describe('when getting resource', () => {
         const resource = new Resource(
             TYPE_NAME,
             MockModel,
-            null,
             null,
             MockTypeConfigurationModel
         );
@@ -878,7 +842,7 @@ describe('when getting resource', () => {
     });
 
     test('test entrypoint missing model class', async () => {
-        const resource = new Resource(TYPE_NAME, null, workerPool, null);
+        const resource = new Resource(TYPE_NAME, null, null);
         const event = await resource.testEntrypoint({}, null);
         expect(event).toMatchObject({
             message: 'Error: Missing Model class to be used to deserialize JSON data.',
@@ -892,7 +856,6 @@ describe('when getting resource', () => {
         const resource = new Resource(
             TYPE_NAME,
             MockModel,
-            null,
             null,
             MockTypeConfigurationModel
         );

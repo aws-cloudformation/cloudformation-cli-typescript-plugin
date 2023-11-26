@@ -1,12 +1,5 @@
 import 'reflect-metadata';
 import {
-    ClientRequestToken,
-    LogGroupName,
-    LogicalResourceId,
-    NextToken,
-} from 'aws-sdk/clients/cloudformation';
-import { Service } from 'aws-sdk/lib/service';
-import {
     classToPlain,
     ClassTransformOptions,
     Exclude,
@@ -14,23 +7,15 @@ import {
     plainToClass,
 } from 'class-transformer';
 
+type ClientRequestToken = string;
+type LogGroupName = string;
+type LogicalResourceId = string;
+type NextToken = string;
+
 export type Optional<T> = T | undefined | null;
 export type Dict<T = any> = Record<string, T>;
-export type Constructor<T = {}> = new (...args: any[]) => T;
+export type Constructor<T = {}> = new (...args: any) => T;
 export type integer = bigint;
-
-export type InstanceProperties<
-    T extends object = Service,
-    C extends Constructor<T> = Constructor<T>
-> = keyof InstanceType<C>;
-
-export type ServiceProperties<
-    S extends Service = Service,
-    C extends Constructor<S> = Constructor<S>
-> = Exclude<
-    InstanceProperties<S, C>,
-    InstanceProperties<Service, Constructor<Service>>
->;
 
 export type OverloadedArguments<T> = T extends {
     (...args: any[]): any;
@@ -91,7 +76,7 @@ interface IntegerConstructor extends BigIntConstructor {
 /**
  * Wrapper with additional JSON serialization for bigint type
  */
-export const Integer: IntegerConstructor = new Proxy(BigInt, {
+export const Integer: IntegerConstructor = (new Proxy(BigInt, {
     apply(
         target: IntegerConstructor,
         _thisArg: unknown,
@@ -103,8 +88,9 @@ export const Integer: IntegerConstructor = new Proxy(BigInt, {
         const isSafeInteger = (value: unknown): boolean => {
             if (
                 value &&
-                (value < BigInt(Number.MIN_SAFE_INTEGER) ||
-                    value > BigInt(Number.MAX_SAFE_INTEGER))
+                !Number.isNaN(value) &&
+                ((value as bigint) < BigInt(Number.MIN_SAFE_INTEGER) ||
+                    (value as bigint) > BigInt(Number.MAX_SAFE_INTEGER))
             ) {
                 return false;
             }
@@ -117,7 +103,7 @@ export const Integer: IntegerConstructor = new Proxy(BigInt, {
         }
         return value;
     },
-}) as IntegerConstructor;
+}) as unknown) as IntegerConstructor;
 
 export enum Action {
     Create = 'CREATE',
@@ -218,6 +204,7 @@ export abstract class BaseDto {
     }
 
     @Exclude()
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     public toJSON(key?: string): Dict {
         return this.serialize();
     }

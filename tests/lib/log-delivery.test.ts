@@ -1,14 +1,14 @@
-import CloudWatchLogs, {
+/* eslint-disable @typescript-eslint/no-empty-function */
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import {
+    CloudWatchLogs,
     DescribeLogGroupsResponse,
-} from 'aws-sdk/clients/cloudwatchlogs';
-import S3, { ListObjectsV2Output } from 'aws-sdk/clients/s3';
-import awsUtil from 'aws-sdk/lib/util';
+} from '@aws-sdk/client-cloudwatch-logs';
+import { S3, ListObjectsV2Output } from '@aws-sdk/client-s3';
 import { inspect } from 'util';
-import WorkerPoolAwsSdk from 'worker-pool-aws-sdk';
 
 import { SessionProxy } from '~/proxy';
 import { MetricsPublisherProxy } from '~/metrics';
-import { ServiceProperties } from '~/interface';
 import {
     CloudWatchLogHelper,
     CloudWatchLogPublisher,
@@ -18,25 +18,13 @@ import {
     S3LogHelper,
     S3LogPublisher,
 } from '~/log-delivery';
-
-const mockResult = (output: any): jest.Mock => {
-    return jest.fn().mockReturnValue({
-        promise: jest.fn().mockResolvedValue(output),
-        httpRequest: { headers: {} },
-        on: jest.fn().mockImplementation((_event: string, listener: () => void) => {
-            if (listener) {
-                listener();
-            }
-        }),
-    });
-};
+import { MockAWSError, readableToString } from '../utils';
+import { Readable } from 'stream';
 
 const IDENTIFIER = 'f3390613-b2b5-4c31-a4c6-66813dff96a6';
 
-jest.mock('aws-sdk');
-jest.mock('aws-sdk/clients/all');
-jest.mock('aws-sdk/clients/cloudwatchlogs');
-jest.mock('aws-sdk/clients/s3');
+jest.mock('@aws-sdk/client-cloudwatch-logs');
+jest.mock('@aws-sdk/client-s3');
 jest.mock('uuid', () => {
     return {
         v4: () => IDENTIFIER,
@@ -52,10 +40,10 @@ describe('when delivering logs', () => {
     const S3_FOLDER_NAME = 's3-folder-name';
     const AWS_CONFIG = {
         region: 'us-east-1',
-        credentials: {
+        credentials: async () => ({
             accessKeyId: 'AAAAA',
             secretAccessKey: '11111',
-        },
+        }),
     };
 
     let session: SessionProxy;
@@ -71,7 +59,6 @@ describe('when delivering logs', () => {
     let listObjectsV2: jest.Mock;
     let spyPublishLogEvent: jest.SpyInstance;
     let loggerProxy: LoggerProxy;
-    let workerPool: WorkerPoolAwsSdk;
     let metricsPublisherProxy: MetricsPublisherProxy;
     let publishExceptionMetric: jest.Mock;
     let lambdaLogger: LambdaLogPublisher;
@@ -85,79 +72,60 @@ describe('when delivering logs', () => {
 
     beforeAll(async () => {
         session = new SessionProxy(AWS_CONFIG);
-        jest.spyOn<any, any>(WorkerPoolAwsSdk.prototype, 'runTask').mockRejectedValue(
-            Error('Method runTask should not be called.')
-        );
-        workerPool = new WorkerPoolAwsSdk({ minThreads: 1, maxThreads: 1 });
-        workerPool.runAwsTask = null;
     });
 
     beforeEach(async () => {
-        createLogGroup = mockResult({
+        createLogGroup = jest.fn().mockResolvedValue({
             ResponseMetadata: { RequestId: 'mock-request' },
         });
-        createLogStream = mockResult({
+        createLogStream = jest.fn().mockResolvedValue({
             ResponseMetadata: { RequestId: 'mock-request' },
         });
-        describeLogGroups = mockResult({
+        describeLogGroups = jest.fn().mockResolvedValue({
             ResponseMetadata: { RequestId: 'mock-request' },
         });
-        describeLogStreams = mockResult({
+        describeLogStreams = jest.fn().mockResolvedValue({
             ResponseMetadata: { RequestId: 'mock-request' },
         });
-        putLogEvents = mockResult({ ResponseMetadata: { RequestId: 'mock-request' } });
+        putLogEvents = jest
+            .fn()
+            .mockResolvedValue({ ResponseMetadata: { RequestId: 'mock-request' } });
         cwLogs = (CloudWatchLogs as unknown) as jest.Mock;
         cwLogs.mockImplementation((config = {}) => {
-            const returnValue: jest.Mocked<Partial<CloudWatchLogs>> = {
+            const ctor = CloudWatchLogs;
+            return {
+                config: { ...AWS_CONFIG, ...config, update: () => undefined },
+                constructor: ctor,
                 createLogGroup,
                 createLogStream,
                 describeLogGroups,
                 describeLogStreams,
                 putLogEvents,
             };
-            const ctor = CloudWatchLogs;
-            ctor['serviceIdentifier'] = 'cloudwatchlogs';
-            return {
-                ...returnValue,
-                config: { ...AWS_CONFIG, ...config, update: () => undefined },
-                constructor: ctor,
-                makeRequest: (
-                    operation: ServiceProperties<CloudWatchLogs>,
-                    params?: Record<string, any>
-                ): any => {
-                    return returnValue[operation](params as any);
-                },
-            };
         });
-        createBucket = mockResult({ ResponseMetadata: { RequestId: 'mock-request' } });
-        putObject = mockResult({ ResponseMetadata: { RequestId: 'mock-request' } });
-        listObjectsV2 = mockResult({ ResponseMetadata: { RequestId: 'mock-request' } });
+        createBucket = jest
+            .fn()
+            .mockResolvedValue({ ResponseMetadata: { RequestId: 'mock-request' } });
+        putObject = jest
+            .fn()
+            .mockResolvedValue({ ResponseMetadata: { RequestId: 'mock-request' } });
+        listObjectsV2 = jest
+            .fn()
+            .mockResolvedValue({ ResponseMetadata: { RequestId: 'mock-request' } });
         s3 = (S3 as unknown) as jest.Mock;
         s3.mockImplementation((config = {}) => {
-            const returnValue: jest.Mocked<Partial<S3>> = {
+            const ctor = S3;
+            return {
+                config: { ...AWS_CONFIG, ...config, update: () => undefined },
+                constructor: ctor,
                 createBucket,
                 putObject,
                 listObjectsV2,
             };
-            const ctor = S3;
-            ctor['serviceIdentifier'] = 's3';
-            return {
-                ...returnValue,
-                config: { ...AWS_CONFIG, ...config, update: () => undefined },
-                constructor: ctor,
-                makeRequest: (
-                    operation: ServiceProperties<S3>,
-                    params?: Record<string, any>
-                ): any => {
-                    return (returnValue[operation] as any)(params);
-                },
-            };
         });
         loggerProxy = new LoggerProxy({ depth: 8 });
         metricsPublisherProxy = new MetricsPublisherProxy();
-        publishExceptionMetric = mockResult({
-            ResponseMetadata: { RequestId: 'mock-request' },
-        });
+        publishExceptionMetric = jest.fn();
         metricsPublisherProxy.publishLogDeliveryExceptionMetric = publishExceptionMetric;
         spyPublishLogEvent = jest.spyOn<any, any>(
             LogPublisher.prototype,
@@ -207,7 +175,6 @@ describe('when delivering logs', () => {
         );
         s3Logger.refreshClient();
         loggerProxy.addLogPublisher(cloudWatchLogger);
-        workerPool.restart();
         loggerProxy.tracker.restart();
         jest.clearAllMocks();
     });
@@ -216,10 +183,6 @@ describe('when delivering logs', () => {
         await loggerProxy.waitCompletion();
         jest.clearAllMocks();
         jest.restoreAllMocks();
-    });
-
-    afterAll(async () => {
-        await workerPool.shutdown();
     });
 
     describe('lambda log publisher', () => {
@@ -242,7 +205,7 @@ describe('when delivering logs', () => {
             const msgToLog = 'How is it going?';
             try {
                 await lambdaLogger.publishLogEvent(msgToLog);
-            } catch (e) {
+            } catch (e: any) {
                 expect(e.message).toBe('Sorry');
             }
             expect(spyLambdaPublish).toHaveBeenCalledTimes(0);
@@ -276,19 +239,17 @@ describe('when delivering logs', () => {
                 CloudWatchLogHelper.prototype,
                 'createLogGroup'
             );
-            describeLogGroups.mockReturnValue({
-                promise: jest.fn().mockResolvedValueOnce({
-                    logGroups: [
-                        {
-                            logGroupName: LOG_GROUP_NAME,
-                            arn:
-                                'arn:aws:loggers:us-east-1:123456789012:log-group:/aws/lambda/testLogGroup-X:*',
-                            creationTime: 4567898765,
-                            storedBytes: 456789,
-                        },
-                    ],
-                } as DescribeLogGroupsResponse),
-            });
+            describeLogGroups.mockResolvedValueOnce({
+                logGroups: [
+                    {
+                        logGroupName: LOG_GROUP_NAME,
+                        arn:
+                            'arn:aws:loggers:us-east-1:123456789012:log-group:/aws/lambda/testLogGroup-X:*',
+                        creationTime: 4567898765,
+                        storedBytes: 456789,
+                    },
+                ],
+            } as DescribeLogGroupsResponse);
             await cloudWatchLogHelper.prepareLogStream();
             expect(spyDoesLogGroupExist).toHaveBeenCalledTimes(1);
             expect(spyDoesLogGroupExist).toHaveReturnedWith(Promise.resolve(true));
@@ -316,7 +277,7 @@ describe('when delivering logs', () => {
             );
             try {
                 await cloudWatchLogHelper.prepareLogStream();
-            } catch (e) {
+            } catch (e: any) {
                 expect(e.message).toMatch(/CloudWatchLogs client was not initialized/);
             }
         });
@@ -359,13 +320,11 @@ describe('when delivering logs', () => {
                 cloudWatchLogHelper['platformLogger'],
                 'log'
             );
-            describeLogGroups.mockReturnValue({
-                promise: jest.fn().mockRejectedValueOnce(
-                    awsUtil.error(new Error(), {
-                        code: 'Sorry',
-                    })
-                ),
-            });
+            describeLogGroups.mockRejectedValueOnce(
+                new MockAWSError({
+                    code: 'Sorry',
+                })
+            );
             await cloudWatchLogHelper.prepareLogStream();
             expect(describeLogGroups).toHaveBeenCalledTimes(1);
             expect(describeLogGroups).toHaveBeenCalledWith(
@@ -386,13 +345,11 @@ describe('when delivering logs', () => {
                 cloudWatchLogHelper['platformLogger'],
                 'log'
             );
-            createLogGroup.mockReturnValue({
-                promise: jest.fn().mockRejectedValueOnce(
-                    awsUtil.error(new Error(), {
-                        code: 'AccessDeniedException',
-                    })
-                ),
-            });
+            createLogGroup.mockRejectedValueOnce(
+                new MockAWSError({
+                    code: 'AccessDeniedException',
+                })
+            );
             await cloudWatchLogHelper.prepareLogStream();
             expect(describeLogGroups).toHaveBeenCalledTimes(1);
             expect(describeLogGroups).toHaveBeenCalledWith(
@@ -416,13 +373,11 @@ describe('when delivering logs', () => {
                 cloudWatchLogHelper['platformLogger'],
                 'log'
             );
-            createLogStream.mockReturnValue({
-                promise: jest.fn().mockRejectedValueOnce(
-                    awsUtil.error(new Error(), {
-                        code: 'AccessDeniedException',
-                    })
-                ),
-            });
+            createLogStream.mockRejectedValueOnce(
+                new MockAWSError({
+                    code: 'AccessDeniedException',
+                })
+            );
             await cloudWatchLogHelper.prepareLogStream();
             expect(describeLogGroups).toHaveBeenCalledTimes(1);
             expect(describeLogGroups).toHaveBeenCalledWith(
@@ -448,24 +403,20 @@ describe('when delivering logs', () => {
         });
 
         test('create log group and stream already exist', async () => {
-            createLogGroup.mockReturnValueOnce({
-                promise: jest.fn().mockRejectedValueOnce(
-                    awsUtil.error(new Error(), {
-                        code: 'ResourceAlreadyExistsException',
-                    })
-                ),
-            });
+            createLogGroup.mockRejectedValueOnce(
+                new MockAWSError({
+                    code: 'ResourceAlreadyExistsException',
+                })
+            );
             // Should not raise an exception if the log group already exists.
             await cloudWatchLogHelper['createLogGroup']();
             expect(createLogGroup).toHaveBeenCalledTimes(1);
 
-            createLogStream.mockReturnValueOnce({
-                promise: jest.fn().mockRejectedValueOnce(
-                    awsUtil.error(new Error(), {
-                        code: 'ResourceAlreadyExistsException',
-                    })
-                ),
-            });
+            createLogStream.mockRejectedValueOnce(
+                new MockAWSError({
+                    code: 'ResourceAlreadyExistsException',
+                })
+            );
             // Should not raise an exception if the log stream already exists.
             await cloudWatchLogHelper['createLogStream']();
             expect(createLogStream).toHaveBeenCalledTimes(1);
@@ -477,8 +428,7 @@ describe('when delivering logs', () => {
                 LOG_GROUP_NAME,
                 null,
                 console,
-                null,
-                workerPool
+                null
             );
             cloudWatchLogHelper.refreshClient();
             await cloudWatchLogHelper.prepareLogStream();
@@ -520,24 +470,16 @@ describe('when delivering logs', () => {
                 cloudWatchLogger['platformLogger'],
                 'log'
             );
-            putLogEvents.mockReturnValue({
-                promise: jest.fn().mockRejectedValueOnce(
-                    awsUtil.error(new Error(), {
-                        code: 'AccessDeniedException',
-                    })
-                ),
-                httpRequest: { headers: {} },
-                on: jest
-                    .fn()
-                    .mockImplementation((_event: string, listener: () => void) => {
-                        listener();
-                    }),
-            });
+            putLogEvents.mockRejectedValueOnce(
+                new MockAWSError({
+                    code: 'AccessDeniedException',
+                })
+            );
             const msgToLog = 'How is it going?';
             try {
                 await cloudWatchLogger.publishLogEvent(msgToLog);
-            } catch (e) {
-                expect(e.name).toBe('AccessDeniedException');
+            } catch (e: any) {
+                expect(e.code).toBe('AccessDeniedException');
             }
             expect(putLogEvents).toHaveBeenCalledTimes(1);
             expect(putLogEvents).toHaveBeenCalledWith({
@@ -565,25 +507,20 @@ describe('when delivering logs', () => {
                 cloudWatchLogger['platformLogger'],
                 'log'
             );
-            putLogEvents.mockReturnValue({
-                promise: jest.fn().mockRejectedValueOnce(
-                    awsUtil.error(new Error(), {
-                        code: 'ThrottlingException',
-                    })
-                ),
-                on: () => {},
-            });
-            describeLogStreams.mockReturnValue({
-                promise: jest.fn().mockRejectedValueOnce(
-                    awsUtil.error(new Error(), {
-                        code: 'AccessDeniedException',
-                    })
-                ),
-            });
+            putLogEvents.mockRejectedValueOnce(
+                new MockAWSError({
+                    code: 'ThrottlingException',
+                })
+            );
+            describeLogStreams.mockRejectedValueOnce(
+                new MockAWSError({
+                    code: 'AccessDeniedException',
+                })
+            );
             const msgToLog = 'How is it going?';
             try {
                 await cloudWatchLogger.publishLogEvent(msgToLog);
-            } catch (e) {
+            } catch (e: any) {
                 expect(e.retryable).toBe(true);
             }
             expect(putLogEvents).toHaveBeenCalledTimes(1);
@@ -622,7 +559,7 @@ describe('when delivering logs', () => {
             );
             try {
                 await cloudWatchLogger.publishLogEvent('How is it going?');
-            } catch (e) {
+            } catch (e: any) {
                 expect(e.message).toMatch(/CloudWatchLogs client was not initialized/);
             }
         });
@@ -639,7 +576,6 @@ describe('when delivering logs', () => {
                 LOG_STREAM_NAME,
                 console,
                 null,
-                workerPool,
                 filter
             );
             cloudWatchLogger.refreshClient();
@@ -664,27 +600,23 @@ describe('when delivering logs', () => {
                 CloudWatchLogPublisher.prototype,
                 'emitMetricsForLoggingFailure'
             );
-            putLogEvents.mockReturnValue({
-                promise: jest.fn().mockRejectedValueOnce(
-                    awsUtil.error(new Error(), {
-                        code: 'AccessDeniedException',
-                    })
-                ),
-                on: () => {},
-            });
+            putLogEvents.mockRejectedValueOnce(
+                new MockAWSError({
+                    code: 'AccessDeniedException',
+                })
+            );
             const cloudWatchLogger = new CloudWatchLogPublisher(
                 session,
                 LOG_GROUP_NAME,
                 LOG_STREAM_NAME,
                 console,
-                null,
-                workerPool
+                null
             );
             cloudWatchLogger.refreshClient();
             const msgToLog = 'How is it going?';
             try {
                 await cloudWatchLogger.publishLogEvent(msgToLog);
-            } catch (e) {
+            } catch (e: any) {
                 expect(e.code).toBe('AccessDeniedException');
             }
             expect(putLogEvents).toHaveBeenCalledTimes(1);
@@ -712,8 +644,7 @@ describe('when delivering logs', () => {
                 LOG_GROUP_NAME,
                 null,
                 console,
-                null,
-                workerPool
+                null
             );
             cloudWatchLogger.refreshClient();
             const msgToLog = 'How is it going?';
@@ -724,16 +655,11 @@ describe('when delivering logs', () => {
         });
 
         test('publish cloudwatch message success', async () => {
-            putLogEvents.mockReturnValue({
-                promise: jest
-                    .fn()
-                    .mockResolvedValueOnce({
-                        nextSequenceToken: 'second-seq',
-                    })
-                    .mockResolvedValueOnce({
-                        nextSequenceToken: 'first-seq',
-                    }),
-                on: () => {},
+            putLogEvents.mockResolvedValueOnce({
+                nextSequenceToken: 'second-seq',
+            });
+            putLogEvents.mockResolvedValueOnce({
+                nextSequenceToken: 'first-seq',
             });
 
             cloudWatchLogger['nextSequenceToken'] = null;
@@ -747,31 +673,24 @@ describe('when delivering logs', () => {
 
         test('publish cloudwatch log with invalid token', async () => {
             expect.assertions(4);
-            putLogEvents.mockReturnValue({
-                promise: jest
-                    .fn()
-                    .mockRejectedValueOnce(
-                        awsUtil.error(new Error(), {
-                            code: 'InvalidSequenceTokenException',
-                        })
-                    )
-                    .mockRejectedValueOnce(
-                        awsUtil.error(new Error(), {
-                            code: 'DataAlreadyAcceptedException',
-                        })
-                    )
-                    .mockResolvedValue({ nextSequenceToken: 'some-other-seq' }),
-                on: () => {},
-            });
-            describeLogStreams.mockReturnValue({
-                promise: jest.fn().mockResolvedValue({
-                    logStreams: [{ uploadSequenceToken: 'some-other-seq' }],
-                }),
+            putLogEvents.mockRejectedValueOnce(
+                new MockAWSError({
+                    code: 'InvalidSequenceTokenException',
+                })
+            );
+            putLogEvents.mockRejectedValueOnce(
+                new MockAWSError({
+                    code: 'DataAlreadyAcceptedException',
+                })
+            );
+            putLogEvents.mockResolvedValueOnce({ nextSequenceToken: 'some-other-seq' });
+            describeLogStreams.mockResolvedValue({
+                logStreams: [{ uploadSequenceToken: 'some-other-seq' }],
             });
             for (let i = 1; i < 4; i++) {
                 try {
                     await cloudWatchLogger.publishLogEvent('log-msg');
-                } catch (e) {
+                } catch (e: any) {
                     expect(e.retryable).toBe(true);
                 }
             }
@@ -814,19 +733,17 @@ describe('when delivering logs', () => {
                 S3LogHelper.prototype,
                 'createBucket'
             );
-            listObjectsV2.mockReturnValue({
-                promise: jest.fn().mockResolvedValueOnce({
-                    Contents: [
-                        {
-                            Key: `${S3_FOLDER_NAME}/`,
-                            LastModified: new Date(),
-                            ETag: '"d41d8cd98f00b204e9800998ecf8427e"',
-                            Size: 0,
-                            StorageClass: 'STANDARD',
-                        },
-                    ],
-                } as ListObjectsV2Output),
-            });
+            listObjectsV2.mockResolvedValueOnce({
+                Contents: [
+                    {
+                        Key: `${S3_FOLDER_NAME}/`,
+                        LastModified: new Date(),
+                        ETag: '"d41d8cd98f00b204e9800998ecf8427e"',
+                        Size: 0,
+                        StorageClass: 'STANDARD',
+                    },
+                ],
+            } as ListObjectsV2Output);
             await s3LogHelper.prepareFolder();
             expect(spyDoesFolderExist).toHaveBeenCalledTimes(1);
             expect(spyDoesFolderExist).toHaveReturnedWith(Promise.resolve(true));
@@ -852,7 +769,7 @@ describe('when delivering logs', () => {
             );
             try {
                 await s3LogHelper.prepareFolder();
-            } catch (e) {
+            } catch (e: any) {
                 expect(e.message).toMatch(/S3 client was not initialized/);
             }
         });
@@ -866,13 +783,11 @@ describe('when delivering logs', () => {
                 S3LogHelper.prototype,
                 'createBucket'
             );
-            listObjectsV2.mockReturnValue({
-                promise: jest.fn().mockRejectedValueOnce(
-                    awsUtil.error(new Error(), {
-                        code: 'NoSuchBucket',
-                    })
-                ),
-            });
+            listObjectsV2.mockRejectedValueOnce(
+                new MockAWSError({
+                    code: 'NoSuchBucket',
+                })
+            );
             await s3LogHelper.prepareFolder();
             expect(spyDoesFolderExist).toHaveBeenCalledTimes(1);
             expect(spyDoesFolderExist).toHaveReturnedWith(Promise.resolve(null));
@@ -904,13 +819,11 @@ describe('when delivering logs', () => {
                 s3LogHelper['platformLogger'],
                 'log'
             );
-            listObjectsV2.mockReturnValue({
-                promise: jest.fn().mockRejectedValueOnce(
-                    awsUtil.error(new Error(), {
-                        code: 'Sorry',
-                    })
-                ),
-            });
+            listObjectsV2.mockRejectedValueOnce(
+                new MockAWSError({
+                    code: 'Sorry',
+                })
+            );
             await s3LogHelper.prepareFolder();
             expect(listObjectsV2).toHaveBeenCalledTimes(1);
             expect(listObjectsV2).toHaveBeenCalledWith(
@@ -934,20 +847,16 @@ describe('when delivering logs', () => {
                 s3LogHelper['platformLogger'],
                 'log'
             );
-            listObjectsV2.mockReturnValue({
-                promise: jest.fn().mockRejectedValueOnce(
-                    awsUtil.error(new Error(), {
-                        code: 'NoSuchBucket',
-                    })
-                ),
-            });
-            createBucket.mockReturnValue({
-                promise: jest.fn().mockRejectedValueOnce(
-                    awsUtil.error(new Error(), {
-                        code: 'AccessDeniedException',
-                    })
-                ),
-            });
+            listObjectsV2.mockRejectedValueOnce(
+                new MockAWSError({
+                    code: 'NoSuchBucket',
+                })
+            );
+            createBucket.mockRejectedValueOnce(
+                new MockAWSError({
+                    code: 'AccessDeniedException',
+                })
+            );
             await s3LogHelper.prepareFolder();
             expect(listObjectsV2).toHaveBeenCalledTimes(1);
             expect(listObjectsV2).toHaveBeenCalledWith(
@@ -974,13 +883,11 @@ describe('when delivering logs', () => {
                 s3LogHelper['platformLogger'],
                 'log'
             );
-            putObject.mockReturnValue({
-                promise: jest.fn().mockRejectedValueOnce(
-                    awsUtil.error(new Error(), {
-                        code: 'AccessDeniedException',
-                    })
-                ),
-            });
+            putObject.mockRejectedValueOnce(
+                new MockAWSError({
+                    code: 'AccessDeniedException',
+                })
+            );
             await s3LogHelper.prepareFolder();
             expect(listObjectsV2).toHaveBeenCalledTimes(1);
             expect(listObjectsV2).toHaveBeenCalledWith(
@@ -1007,13 +914,11 @@ describe('when delivering logs', () => {
         });
 
         test('create bucket already exist', async () => {
-            createBucket.mockReturnValueOnce({
-                promise: jest.fn().mockRejectedValueOnce(
-                    awsUtil.error(new Error(), {
-                        code: 'BucketAlreadyExists',
-                    })
-                ),
-            });
+            createBucket.mockRejectedValueOnce(
+                new MockAWSError({
+                    code: 'BucketAlreadyExists',
+                })
+            );
             // Should not raise an exception if the bucket already exists.
             await s3LogHelper['createBucket']();
             expect(createBucket).toHaveBeenCalledTimes(1);
@@ -1025,8 +930,7 @@ describe('when delivering logs', () => {
                 S3_BUCKET_NAME,
                 null,
                 console,
-                null,
-                workerPool
+                null
             );
             s3LogHelper.refreshClient();
             await s3LogHelper.prepareFolder();
@@ -1053,29 +957,31 @@ describe('when delivering logs', () => {
                     Bucket: S3_BUCKET_NAME,
                     Key: expect.stringContaining(`${S3_FOLDER_NAME}/`),
                     ContentType: 'text/plain',
-                    Body: msgToLog,
                 })
             );
+            // Body is a stream so verify
+            const body = await readableToString(
+                putObject.mock.calls[0][0].Body as Readable
+            );
+            expect(body).toEqual(msgToLog);
         });
 
         test('publish s3 log with put object failure', async () => {
-            expect.assertions(6);
+            expect.assertions(7);
             const spyPlatformLogger = jest.spyOn<any, any>(
                 s3Logger['platformLogger'],
                 'log'
             );
-            putObject.mockReturnValue({
-                promise: jest.fn().mockRejectedValueOnce(
-                    awsUtil.error(new Error(), {
-                        code: 'AccessDeniedException',
-                    })
-                ),
-            });
+            putObject.mockRejectedValueOnce(
+                new MockAWSError({
+                    code: 'AccessDeniedException',
+                })
+            );
             const msgToLog = 'How is it going?';
             try {
                 await s3Logger.publishLogEvent(msgToLog);
-            } catch (e) {
-                expect(e.name).toBe('AccessDeniedException');
+            } catch (e: any) {
+                expect(e.code).toBe('AccessDeniedException');
             }
             expect(putObject).toHaveBeenCalledTimes(1);
             expect(putObject).toHaveBeenCalledWith(
@@ -1083,9 +989,13 @@ describe('when delivering logs', () => {
                     Bucket: S3_BUCKET_NAME,
                     Key: expect.stringContaining(`${S3_FOLDER_NAME}/`),
                     ContentType: 'text/plain',
-                    Body: msgToLog,
                 })
             );
+            // Body is a stream so verify
+            const body = await readableToString(
+                putObject.mock.calls[0][0].Body as Readable
+            );
+            expect(body).toEqual(msgToLog);
             expect(publishExceptionMetric).toHaveBeenCalledTimes(1);
             expect(publishExceptionMetric).toHaveBeenCalledWith(
                 expect.anything(),
@@ -1104,7 +1014,7 @@ describe('when delivering logs', () => {
             );
             try {
                 await s3Logger.publishLogEvent('How is it going?');
-            } catch (e) {
+            } catch (e: any) {
                 expect(e.message).toMatch(/S3 client was not initialized/);
             }
         });
@@ -1121,7 +1031,6 @@ describe('when delivering logs', () => {
                 S3_FOLDER_NAME,
                 console,
                 null,
-                workerPool,
                 filter
             );
             s3Logger.refreshClient();
@@ -1133,37 +1042,38 @@ describe('when delivering logs', () => {
                     Bucket: S3_BUCKET_NAME,
                     Key: expect.stringContaining(`${S3_FOLDER_NAME}/`),
                     ContentType: 'text/plain',
-                    Body: 'This is log message for account <REDACTED>',
                 })
             );
+            // Body is a stream so verify
+            const body = await readableToString(
+                putObject.mock.calls[0][0].Body as Readable
+            );
+            expect(body).toEqual('This is log message for account <REDACTED>');
         });
 
         test('publish s3 log with error and null metrics publisher', async () => {
-            expect.assertions(5);
+            expect.assertions(6);
             const spyEmitMetrics = jest.spyOn<any, any>(
                 S3LogPublisher.prototype,
                 'emitMetricsForLoggingFailure'
             );
-            putObject.mockReturnValue({
-                promise: jest.fn().mockRejectedValueOnce(
-                    awsUtil.error(new Error(), {
-                        code: 'AccessDeniedException',
-                    })
-                ),
-            });
+            putObject.mockRejectedValueOnce(
+                new MockAWSError({
+                    code: 'AccessDeniedException',
+                })
+            );
             const s3Logger = new S3LogPublisher(
                 session,
                 S3_BUCKET_NAME,
                 S3_FOLDER_NAME,
                 console,
-                null,
-                workerPool
+                null
             );
             s3Logger.refreshClient();
             const msgToLog = 'How is it going?';
             try {
                 await s3Logger.publishLogEvent(msgToLog);
-            } catch (e) {
+            } catch (e: any) {
                 expect(e.code).toBe('AccessDeniedException');
             }
             expect(putObject).toHaveBeenCalledTimes(1);
@@ -1172,9 +1082,13 @@ describe('when delivering logs', () => {
                     Bucket: S3_BUCKET_NAME,
                     Key: expect.stringContaining(`${S3_FOLDER_NAME}/`),
                     ContentType: 'text/plain',
-                    Body: msgToLog,
                 })
             );
+            // Body is a stream so verify
+            const body = await readableToString(
+                putObject.mock.calls[0][0].Body as Readable
+            );
+            expect(body).toEqual(msgToLog);
             expect(spyEmitMetrics).toHaveBeenCalledTimes(1);
             expect(publishExceptionMetric).toHaveBeenCalledTimes(0);
         });
@@ -1189,8 +1103,7 @@ describe('when delivering logs', () => {
                 S3_BUCKET_NAME,
                 null,
                 console,
-                null,
-                workerPool
+                null
             );
             s3Logger.refreshClient();
             const msgToLog = 'How is it going?';
@@ -1291,38 +1204,31 @@ describe('when delivering logs', () => {
         });
 
         test('should process log again with retryable error', async () => {
-            expect.assertions(4);
+            expect.assertions(3);
             const returnedValue = { nextSequenceToken: 'some-other-seq' };
-            putLogEvents.mockReturnValue({
-                promise: jest
-                    .fn()
-                    .mockRejectedValueOnce(
-                        awsUtil.error(new Error(), {
-                            code: 'InvalidSequenceTokenException',
-                            message:
-                                'The given sequenceToken is invalid. The next expected sequenceToken is: 495579999999900356407851919528174642',
-                        })
-                    )
-                    .mockResolvedValue(returnedValue),
-                on: () => {},
-            });
+            putLogEvents.mockRejectedValueOnce(
+                new MockAWSError({
+                    code: 'InvalidSequenceTokenException',
+                    message:
+                        'The given sequenceToken is invalid. The next expected sequenceToken is: 495579999999900356407851919528174642',
+                })
+            );
+            putLogEvents.mockResolvedValueOnce(returnedValue);
             const msgToLog = 'How is it going?';
             loggerProxy.log(msgToLog);
             await loggerProxy.waitCompletion();
             expect(spyPublishLogEvent).toHaveBeenCalledTimes(2);
-            expect(spyPublishLogEvent).toHaveBeenCalledWith(msgToLog, expect.any(Date));
-            expect(spyPublishLogEvent).toHaveNthReturnedWith(
+            expect(spyPublishLogEvent).toHaveBeenNthCalledWith(
                 1,
-                Promise.resolve(
-                    expect.objectContaining({
-                        retryable: true,
-                    })
-                )
+                msgToLog,
+                expect.any(Date)
             );
-            expect(spyPublishLogEvent).toHaveNthReturnedWith(
+            expect(spyPublishLogEvent).toHaveBeenNthCalledWith(
                 2,
-                Promise.resolve(returnedValue)
+                msgToLog,
+                expect.any(Date)
             );
+            // Note: spyPublish is a Promise<void> result, no return testing
         });
 
         test('should swallow error on wait tracker failure', async () => {

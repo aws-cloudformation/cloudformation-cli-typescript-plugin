@@ -7,8 +7,6 @@ import {
 } from '../data/sample-model';
 
 describe('when recasting objects', () => {
-    beforeAll(() => {});
-
     afterEach(() => {
         jest.clearAllMocks();
         jest.restoreAllMocks();

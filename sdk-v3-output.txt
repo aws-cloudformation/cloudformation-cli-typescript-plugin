@@ -1,0 +1,3898 @@
+
+> @amazon-web-services-cloudformation/cloudformation-cli-typescript-lib@1.0.5 test
+> npx jest
+
+PASS tests/lib/exceptions.test.ts
+PASS tests/lib/utils.test.ts
+PASS tests/lib/proxy.test.ts
+PASS tests/lib/metrics.test.ts
+  ● Console
+
+    console.log
+      An error occurred while publishing metrics: An error occurred (InternalServiceError) when calling the PutMetricData operation:
+
+      at console.<anonymous> (node_modules/jest-mock/build/index.js:845:25)
+
+    console.log
+      Response from "putMetricData" {
+        promise: [Function: mockConstructor] {
+          _isMockFunction: true,
+          getMockImplementation: [Function (anonymous)],
+          mock: [Getter/Setter],
+          mockClear: [Function (anonymous)],
+          mockReset: [Function (anonymous)],
+          mockRestore: [Function (anonymous)],
+          mockReturnValueOnce: [Function (anonymous)],
+          mockResolvedValueOnce: [Function (anonymous)],
+          mockRejectedValueOnce: [Function (anonymous)],
+          mockReturnValue: [Function (anonymous)],
+          mockResolvedValue: [Function (anonymous)],
+          mockRejectedValue: [Function (anonymous)],
+          mockImplementationOnce: [Function (anonymous)],
+          mockImplementation: [Function (anonymous)],
+          mockReturnThis: [Function (anonymous)],
+          mockName: [Function (anonymous)],
+          getMockName: [Function (anonymous)]
+        }
+      }
+
+      at MetricsPublisher.log (src/metrics.ts:174:25)
+
+    console.log
+      Response from "putMetricData" {
+        promise: [Function: mockConstructor] {
+          _isMockFunction: true,
+          getMockImplementation: [Function (anonymous)],
+          mock: [Getter/Setter],
+          mockClear: [Function (anonymous)],
+          mockReset: [Function (anonymous)],
+          mockRestore: [Function (anonymous)],
+          mockReturnValueOnce: [Function (anonymous)],
+          mockResolvedValueOnce: [Function (anonymous)],
+          mockRejectedValueOnce: [Function (anonymous)],
+          mockReturnValue: [Function (anonymous)],
+          mockResolvedValue: [Function (anonymous)],
+          mockRejectedValue: [Function (anonymous)],
+          mockImplementationOnce: [Function (anonymous)],
+          mockImplementation: [Function (anonymous)],
+          mockReturnThis: [Function (anonymous)],
+          mockName: [Function (anonymous)],
+          getMockName: [Function (anonymous)]
+        }
+      }
+
+      at MetricsPublisher.log (src/metrics.ts:174:25)
+
+    console.log
+      Response from "putMetricData" {
+        promise: [Function: mockConstructor] {
+          _isMockFunction: true,
+          getMockImplementation: [Function (anonymous)],
+          mock: [Getter/Setter],
+          mockClear: [Function (anonymous)],
+          mockReset: [Function (anonymous)],
+          mockRestore: [Function (anonymous)],
+          mockReturnValueOnce: [Function (anonymous)],
+          mockResolvedValueOnce: [Function (anonymous)],
+          mockRejectedValueOnce: [Function (anonymous)],
+          mockReturnValue: [Function (anonymous)],
+          mockResolvedValue: [Function (anonymous)],
+          mockRejectedValue: [Function (anonymous)],
+          mockImplementationOnce: [Function (anonymous)],
+          mockImplementation: [Function (anonymous)],
+          mockReturnThis: [Function (anonymous)],
+          mockName: [Function (anonymous)],
+          getMockName: [Function (anonymous)]
+        }
+      }
+
+      at MetricsPublisher.log (src/metrics.ts:174:25)
+
+    console.log
+      Response from "putMetricData" {
+        promise: [Function: mockConstructor] {
+          _isMockFunction: true,
+          getMockImplementation: [Function (anonymous)],
+          mock: [Getter/Setter],
+          mockClear: [Function (anonymous)],
+          mockReset: [Function (anonymous)],
+          mockRestore: [Function (anonymous)],
+          mockReturnValueOnce: [Function (anonymous)],
+          mockResolvedValueOnce: [Function (anonymous)],
+          mockRejectedValueOnce: [Function (anonymous)],
+          mockReturnValue: [Function (anonymous)],
+          mockResolvedValue: [Function (anonymous)],
+          mockRejectedValue: [Function (anonymous)],
+          mockImplementationOnce: [Function (anonymous)],
+          mockImplementation: [Function (anonymous)],
+          mockReturnThis: [Function (anonymous)],
+          mockName: [Function (anonymous)],
+          getMockName: [Function (anonymous)]
+        }
+      }
+
+      at MetricsPublisher.log (src/metrics.ts:174:25)
+
+    console.log
+      MockAWSError {
+        code: 'InternalServiceError',
+        message: 'Sorry',
+        retryable: true
+      }
+
+      at console.<anonymous> (node_modules/jest-mock/build/index.js:845:25)
+
+FAIL tests/lib/interface.test.ts
+  ● Test suite failed to run
+
+    "messageParent" can only be used inside a worker
+
+      at messageParent (node_modules/jest-worker/build/workers/messageParent.js:46:11)
+
+FAIL tests/lib/recast.test.ts
+  ● when recasting objects › recast simple object
+
+    expect(received).toMatchObject(expected)
+
+    - Expected  - 4
+    + Received  + 1
+
+    - Object {
+    -   "ABoolean": false,
+    -   "ANumber": 12.54,
+    - }
+    + Object {}
+
+      23 |         };
+      24 |         const model = SimpleResourceModel.deserialize(payload);
+    > 25 |         expect(model.toJSON()).toMatchObject(expected);
+         |                                ^
+      26 |         const serialized = JSON.parse(JSON.stringify(model));
+      27 |         expect(serialized).toMatchObject(expected);
+      28 |     });
+
+      at Object.<anonymous> (tests/lib/recast.test.ts:25:32)
+
+  ● when recasting objects › recast complex object
+
+    TypeError: Cannot destructure property 'value' of 'undefined' as it is undefined.
+
+      114 | 
+      115 |     @Expose({ name: 'DeeperBool' })
+    > 116 |     @Transform(({ value, obj }) => transformValue(Boolean, 'deeperBool', value, obj), {
+          |                   ^
+      117 |         toClassOnly: true,
+      118 |     })
+      119 |     deeperBool?: Optional<boolean>;
+
+      at TransformMetadata.Object.<anonymous>.__decorate.toClassOnly [as transformFn] (tests/data/sample-model.ts:116:19)
+      at node_modules/src/TransformOperationExecutor.ts:383:24
+          at Array.forEach (<anonymous>)
+      at TransformOperationExecutor.applyCustomTransformations (node_modules/src/TransformOperationExecutor.ts:382:15)
+      at TransformOperationExecutor.transform (node_modules/src/TransformOperationExecutor.ts:310:31)
+      at node_modules/src/TransformOperationExecutor.ts:90:30
+          at Array.forEach (<anonymous>)
+      at TransformOperationExecutor.transform (node_modules/src/TransformOperationExecutor.ts:56:24)
+      at TransformOperationExecutor.transform (node_modules/src/TransformOperationExecutor.ts:309:31)
+      at ClassTransformer.plainToClass (node_modules/src/ClassTransformer.ts:66:21)
+
+  ● when recasting objects › recast set type - array with unique items
+
+    expect(received).toMatchObject(expected)
+
+    - Expected  - 8
+    + Received  + 1
+
+    - Object {
+    -   "Tags": Set {
+    -     Object {
+    -       "key": "name",
+    -       "value": "value",
+    -     },
+    -   },
+    - }
+    + Object {}
+
+      114 |         const model = TagsModel.deserialize(payload);
+      115 |         const serialized = JSON.parse(JSON.stringify(model));
+    > 116 |         expect(serialized).toMatchObject(expected);
+          |                            ^
+      117 |         expect(TagsModel.deserialize(serialized).serialize()).toMatchObject(expected);
+      118 |     });
+      119 | 
+
+      at Object.<anonymous> (tests/lib/recast.test.ts:116:28)
+
+PASS tests/lib/log-delivery.test.ts (7.251 s)
+  ● Console
+
+    console.log
+      Response from "describeLogGroups" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Log group with name log-group-name does not exist in resource owner account.
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Creating Log group with name log-group-name.
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Response from "createLogGroup" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Creating Log stream with name log-stream-name for log group log-group-name.
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Response from "createLogStream" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Response from "describeLogStreams" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogPublisher.populateSequenceToken (src/log-delivery.ts:196:33)
+
+    console.log
+      Response from "listObjects" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      S3 folder with name s3-folder-name does not exist in bucket log-group-name-123456789012.
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      Creating folder with name s3-folder-name for bucket log-group-name-123456789012.
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      Response from "putObject" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      How is it going?
+
+      at LambdaLogPublisher.publishMessage (src/log-delivery.ts:80:44)
+
+    console.log
+      Response from "describeLogGroups" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Log group with name log-group-name does not exist in resource owner account.
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Creating Log group with name log-group-name.
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Response from "createLogGroup" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Creating Log stream with name log-stream-name for log group log-group-name.
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Response from "createLogStream" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Response from "describeLogStreams" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogPublisher.populateSequenceToken (src/log-delivery.ts:196:33)
+
+    console.log
+      Response from "listObjects" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      S3 folder with name s3-folder-name does not exist in bucket log-group-name-123456789012.
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      Creating folder with name s3-folder-name for bucket log-group-name-123456789012.
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      Response from "putObject" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      Response from "describeLogGroups" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Log group with name log-group-name does not exist in resource owner account.
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Creating Log group with name log-group-name.
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Response from "createLogGroup" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Creating Log stream with name log-stream-name for log group log-group-name.
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Response from "createLogStream" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Response from "describeLogStreams" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogPublisher.populateSequenceToken (src/log-delivery.ts:196:33)
+
+    console.log
+      Response from "listObjects" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      S3 folder with name s3-folder-name does not exist in bucket log-group-name-123456789012.
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      Creating folder with name s3-folder-name for bucket log-group-name-123456789012.
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      Response from "putObject" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      This is log message for account <REDACTED>
+
+      at LambdaLogPublisher.publishMessage (src/log-delivery.ts:80:44)
+
+    console.log
+      Response from "describeLogGroups" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Log group with name log-group-name does not exist in resource owner account.
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Creating Log group with name log-group-name.
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Response from "createLogGroup" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Creating Log stream with name log-stream-name for log group log-group-name.
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Response from "createLogStream" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Response from "describeLogStreams" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogPublisher.populateSequenceToken (src/log-delivery.ts:196:33)
+
+    console.log
+      Response from "listObjects" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      S3 folder with name s3-folder-name does not exist in bucket log-group-name-123456789012.
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      Creating folder with name s3-folder-name for bucket log-group-name-123456789012.
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      Response from "putObject" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      Response from "describeLogGroups" {
+        logGroups: [
+          {
+            logGroupName: 'log-group-name',
+            arn: 'arn:aws:loggers:us-east-1:123456789012:log-group:/aws/lambda/testLogGroup-X:*',
+            creationTime: 4567898765,
+            storedBytes: 456789
+          }
+        ]
+      }
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Log group with name log-group-name does exist in resource owner account.
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Creating Log stream with name log-stream-name for log group log-group-name.
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Response from "createLogStream" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Response from "describeLogGroups" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Log group with name log-group-name does not exist in resource owner account.
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Creating Log group with name log-group-name.
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Response from "createLogGroup" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Creating Log stream with name log-stream-name for log group log-group-name.
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Response from "createLogStream" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Response from "describeLogStreams" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogPublisher.populateSequenceToken (src/log-delivery.ts:196:33)
+
+    console.log
+      Response from "listObjects" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      S3 folder with name s3-folder-name does not exist in bucket log-group-name-123456789012.
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      Creating folder with name s3-folder-name for bucket log-group-name-123456789012.
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      Response from "putObject" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      Response from "describeLogGroups" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Log group with name log-group-name does not exist in resource owner account.
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Creating Log group with name log-group-name.
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Response from "createLogGroup" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Creating Log stream with name log-stream-name for log group log-group-name.
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Response from "createLogStream" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Response from "describeLogStreams" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogPublisher.populateSequenceToken (src/log-delivery.ts:196:33)
+
+    console.log
+      Response from "listObjects" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      S3 folder with name s3-folder-name does not exist in bucket log-group-name-123456789012.
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      Creating folder with name s3-folder-name for bucket log-group-name-123456789012.
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      Response from "putObject" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      Response from "describeLogGroups" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Log group with name log-group-name does not exist in resource owner account.
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Creating Log group with name log-group-name.
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Response from "createLogGroup" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Creating Log stream with name log-stream-name for log group log-group-name.
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Response from "createLogStream" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Response from "describeLogGroups" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Log group with name log-group-name does not exist in resource owner account.
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Creating Log group with name log-group-name.
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Response from "createLogGroup" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Creating Log stream with name log-stream-name for log group log-group-name.
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Response from "createLogStream" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Response from "describeLogStreams" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogPublisher.populateSequenceToken (src/log-delivery.ts:196:33)
+
+    console.log
+      Response from "listObjects" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      S3 folder with name s3-folder-name does not exist in bucket log-group-name-123456789012.
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      Creating folder with name s3-folder-name for bucket log-group-name-123456789012.
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      Response from "putObject" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      MockAWSError { code: 'Sorry' }
+
+      at console.<anonymous> (node_modules/jest-mock/build/index.js:845:25)
+
+    console.log
+      Log group with name log-group-name does not exist in resource owner account.
+
+      at console.<anonymous> (node_modules/jest-mock/build/index.js:845:25)
+
+    console.log
+      Creating Log group with name log-group-name.
+
+      at console.<anonymous> (node_modules/jest-mock/build/index.js:845:25)
+
+    console.log
+      Response from "createLogGroup" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at console.<anonymous> (node_modules/jest-mock/build/index.js:845:25)
+
+    console.log
+      Creating Log stream with name log-stream-name for log group log-group-name.
+
+      at console.<anonymous> (node_modules/jest-mock/build/index.js:845:25)
+
+    console.log
+      Response from "createLogStream" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at console.<anonymous> (node_modules/jest-mock/build/index.js:845:25)
+
+    console.log
+      Response from "describeLogGroups" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Log group with name log-group-name does not exist in resource owner account.
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Creating Log group with name log-group-name.
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Response from "createLogGroup" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Creating Log stream with name log-stream-name for log group log-group-name.
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Response from "createLogStream" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Response from "describeLogStreams" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogPublisher.populateSequenceToken (src/log-delivery.ts:196:33)
+
+    console.log
+      Response from "listObjects" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      S3 folder with name s3-folder-name does not exist in bucket log-group-name-123456789012.
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      Creating folder with name s3-folder-name for bucket log-group-name-123456789012.
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      Response from "putObject" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      Response from "describeLogGroups" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at console.<anonymous> (node_modules/jest-mock/build/index.js:845:25)
+
+    console.log
+      Log group with name log-group-name does not exist in resource owner account.
+
+      at console.<anonymous> (node_modules/jest-mock/build/index.js:845:25)
+
+    console.log
+      Creating Log group with name log-group-name.
+
+      at console.<anonymous> (node_modules/jest-mock/build/index.js:845:25)
+
+    console.log
+      Initializing logging group setting failed with error: [object Object]
+
+      at console.<anonymous> (node_modules/jest-mock/build/index.js:845:25)
+
+    console.log
+      Response from "describeLogGroups" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Log group with name log-group-name does not exist in resource owner account.
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Creating Log group with name log-group-name.
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Response from "createLogGroup" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Creating Log stream with name log-stream-name for log group log-group-name.
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Response from "createLogStream" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Response from "describeLogStreams" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogPublisher.populateSequenceToken (src/log-delivery.ts:196:33)
+
+    console.log
+      Response from "listObjects" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      S3 folder with name s3-folder-name does not exist in bucket log-group-name-123456789012.
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      Creating folder with name s3-folder-name for bucket log-group-name-123456789012.
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      Response from "putObject" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      Response from "describeLogGroups" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at console.<anonymous> (node_modules/jest-mock/build/index.js:845:25)
+
+    console.log
+      Log group with name log-group-name does not exist in resource owner account.
+
+      at console.<anonymous> (node_modules/jest-mock/build/index.js:845:25)
+
+    console.log
+      Creating Log group with name log-group-name.
+
+      at console.<anonymous> (node_modules/jest-mock/build/index.js:845:25)
+
+    console.log
+      Response from "createLogGroup" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at console.<anonymous> (node_modules/jest-mock/build/index.js:845:25)
+
+    console.log
+      Creating Log stream with name log-stream-name for log group log-group-name.
+
+      at console.<anonymous> (node_modules/jest-mock/build/index.js:845:25)
+
+    console.log
+      Initializing logging group setting failed with error: [object Object]
+
+      at console.<anonymous> (node_modules/jest-mock/build/index.js:845:25)
+
+    console.log
+      Response from "describeLogGroups" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Log group with name log-group-name does not exist in resource owner account.
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Creating Log group with name log-group-name.
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Response from "createLogGroup" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Creating Log stream with name log-stream-name for log group log-group-name.
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Response from "createLogStream" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Response from "describeLogStreams" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogPublisher.populateSequenceToken (src/log-delivery.ts:196:33)
+
+    console.log
+      Response from "listObjects" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      S3 folder with name s3-folder-name does not exist in bucket log-group-name-123456789012.
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      Creating folder with name s3-folder-name for bucket log-group-name-123456789012.
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      Response from "putObject" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      Creating Log group with name log-group-name.
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Creating Log stream with name log-stream-name for log group log-group-name.
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Response from "describeLogGroups" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Log group with name log-group-name does not exist in resource owner account.
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Creating Log group with name log-group-name.
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Response from "createLogGroup" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Creating Log stream with name log-stream-name for log group log-group-name.
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Response from "createLogStream" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Response from "describeLogStreams" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogPublisher.populateSequenceToken (src/log-delivery.ts:196:33)
+
+    console.log
+      Response from "listObjects" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      S3 folder with name s3-folder-name does not exist in bucket log-group-name-123456789012.
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      Creating folder with name s3-folder-name for bucket log-group-name-123456789012.
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      Response from "putObject" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      Response from "describeLogGroups" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Log group with name log-group-name does not exist in resource owner account.
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Creating Log group with name log-group-name.
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Response from "createLogGroup" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Creating Log stream with name f3390613-b2b5-4c31-a4c6-66813dff96a6 for log group log-group-name.
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Response from "createLogStream" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Response from "describeLogGroups" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Log group with name log-group-name does not exist in resource owner account.
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Creating Log group with name log-group-name.
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Response from "createLogGroup" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Creating Log stream with name log-stream-name for log group log-group-name.
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Response from "createLogStream" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Response from "describeLogStreams" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogPublisher.populateSequenceToken (src/log-delivery.ts:196:33)
+
+    console.log
+      Response from "listObjects" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      S3 folder with name s3-folder-name does not exist in bucket log-group-name-123456789012.
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      Creating folder with name s3-folder-name for bucket log-group-name-123456789012.
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      Response from "putObject" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      Response from "putLogEvents" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogPublisher.putLogEvents (src/log-delivery.ts:181:29)
+
+    console.log
+      Response from "describeLogGroups" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Log group with name log-group-name does not exist in resource owner account.
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Creating Log group with name log-group-name.
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Response from "createLogGroup" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Creating Log stream with name log-stream-name for log group log-group-name.
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Response from "createLogStream" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Response from "describeLogStreams" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogPublisher.populateSequenceToken (src/log-delivery.ts:196:33)
+
+    console.log
+      Response from "listObjects" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      S3 folder with name s3-folder-name does not exist in bucket log-group-name-123456789012.
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      Creating folder with name s3-folder-name for bucket log-group-name-123456789012.
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      Response from "putObject" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      Error from "putLogEvents" with sequence token null {"code":"AccessDeniedException"}
+
+      at console.<anonymous> (node_modules/jest-mock/build/index.js:845:25)
+
+    console.log
+      An error occurred while putting log events [How is it going?] to resource owner account, with error: [object Object]
+
+      at console.<anonymous> (node_modules/jest-mock/build/index.js:845:25)
+
+    console.log
+      Response from "describeLogGroups" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Log group with name log-group-name does not exist in resource owner account.
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Creating Log group with name log-group-name.
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Response from "createLogGroup" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Creating Log stream with name log-stream-name for log group log-group-name.
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Response from "createLogStream" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Response from "describeLogStreams" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogPublisher.populateSequenceToken (src/log-delivery.ts:196:33)
+
+    console.log
+      Response from "listObjects" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      S3 folder with name s3-folder-name does not exist in bucket log-group-name-123456789012.
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      Creating folder with name s3-folder-name for bucket log-group-name-123456789012.
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      Response from "putObject" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      Error from "putLogEvents" with sequence token null {"code":"ThrottlingException"}
+
+      at console.<anonymous> (node_modules/jest-mock/build/index.js:845:25)
+
+    console.log
+      Error from "describeLogStreams" MockAWSError { code: 'AccessDeniedException' }
+
+      at console.<anonymous> (node_modules/jest-mock/build/index.js:845:25)
+
+    console.log
+      Response from "describeLogGroups" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Log group with name log-group-name does not exist in resource owner account.
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Creating Log group with name log-group-name.
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Response from "createLogGroup" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Creating Log stream with name log-stream-name for log group log-group-name.
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Response from "createLogStream" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Response from "describeLogStreams" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogPublisher.populateSequenceToken (src/log-delivery.ts:196:33)
+
+    console.log
+      Response from "listObjects" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      S3 folder with name s3-folder-name does not exist in bucket log-group-name-123456789012.
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      Creating folder with name s3-folder-name for bucket log-group-name-123456789012.
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      Response from "putObject" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      Response from "describeLogGroups" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Log group with name log-group-name does not exist in resource owner account.
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Creating Log group with name log-group-name.
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Response from "createLogGroup" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Creating Log stream with name log-stream-name for log group log-group-name.
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Response from "createLogStream" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Response from "describeLogStreams" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogPublisher.populateSequenceToken (src/log-delivery.ts:196:33)
+
+    console.log
+      Response from "listObjects" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      S3 folder with name s3-folder-name does not exist in bucket log-group-name-123456789012.
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      Creating folder with name s3-folder-name for bucket log-group-name-123456789012.
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      Response from "putObject" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      Response from "putLogEvents" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogPublisher.putLogEvents (src/log-delivery.ts:181:29)
+
+    console.log
+      Response from "describeLogGroups" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Log group with name log-group-name does not exist in resource owner account.
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Creating Log group with name log-group-name.
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Response from "createLogGroup" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Creating Log stream with name log-stream-name for log group log-group-name.
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Response from "createLogStream" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Response from "describeLogStreams" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogPublisher.populateSequenceToken (src/log-delivery.ts:196:33)
+
+    console.log
+      Response from "listObjects" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      S3 folder with name s3-folder-name does not exist in bucket log-group-name-123456789012.
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      Creating folder with name s3-folder-name for bucket log-group-name-123456789012.
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      Response from "putObject" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      Error from "putLogEvents" with sequence token null {"code":"AccessDeniedException"}
+
+      at Object.promise (src/log-delivery.ts:137:37)
+
+    console.log
+      An error occurred while putting log events [How is it going?] to resource owner account, with error: [object Object]
+
+      at Object.promise (src/log-delivery.ts:159:41)
+
+    console.log
+      Response from "describeLogGroups" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Log group with name log-group-name does not exist in resource owner account.
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Creating Log group with name log-group-name.
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Response from "createLogGroup" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Creating Log stream with name log-stream-name for log group log-group-name.
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Response from "createLogStream" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Response from "describeLogStreams" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogPublisher.populateSequenceToken (src/log-delivery.ts:196:33)
+
+    console.log
+      Response from "listObjects" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      S3 folder with name s3-folder-name does not exist in bucket log-group-name-123456789012.
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      Creating folder with name s3-folder-name for bucket log-group-name-123456789012.
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      Response from "putObject" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      Response from "describeLogGroups" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Log group with name log-group-name does not exist in resource owner account.
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Creating Log group with name log-group-name.
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Response from "createLogGroup" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Creating Log stream with name log-stream-name for log group log-group-name.
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Response from "createLogStream" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Response from "describeLogStreams" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogPublisher.populateSequenceToken (src/log-delivery.ts:196:33)
+
+    console.log
+      Response from "listObjects" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      S3 folder with name s3-folder-name does not exist in bucket log-group-name-123456789012.
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      Creating folder with name s3-folder-name for bucket log-group-name-123456789012.
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      Response from "putObject" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      Response from "putLogEvents" { nextSequenceToken: 'second-seq' }
+
+      at CloudWatchLogPublisher.putLogEvents (src/log-delivery.ts:181:29)
+
+    console.log
+      Response from "putLogEvents" { nextSequenceToken: 'first-seq' }
+
+      at CloudWatchLogPublisher.putLogEvents (src/log-delivery.ts:181:29)
+
+    console.log
+      Response from "describeLogGroups" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Log group with name log-group-name does not exist in resource owner account.
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Creating Log group with name log-group-name.
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Response from "createLogGroup" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Creating Log stream with name log-stream-name for log group log-group-name.
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Response from "createLogStream" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Response from "describeLogStreams" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogPublisher.populateSequenceToken (src/log-delivery.ts:196:33)
+
+    console.log
+      Response from "listObjects" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      S3 folder with name s3-folder-name does not exist in bucket log-group-name-123456789012.
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      Creating folder with name s3-folder-name for bucket log-group-name-123456789012.
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      Response from "putObject" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      Error from "putLogEvents" with sequence token null {"code":"InvalidSequenceTokenException"}
+
+      at Object.promise (src/log-delivery.ts:137:37)
+
+    console.log
+      Response from "describeLogStreams" { logStreams: [ { uploadSequenceToken: 'some-other-seq' } ] }
+
+      at CloudWatchLogPublisher.populateSequenceToken (src/log-delivery.ts:196:33)
+
+    console.log
+      Error from "putLogEvents" with sequence token some-other-seq {"code":"DataAlreadyAcceptedException"}
+
+      at Object.promise (src/log-delivery.ts:137:37)
+
+    console.log
+      Response from "describeLogStreams" { logStreams: [ { uploadSequenceToken: 'some-other-seq' } ] }
+
+      at CloudWatchLogPublisher.populateSequenceToken (src/log-delivery.ts:196:33)
+
+    console.log
+      Response from "putLogEvents" { nextSequenceToken: 'some-other-seq' }
+
+      at CloudWatchLogPublisher.putLogEvents (src/log-delivery.ts:181:29)
+
+    console.log
+      Response from "describeLogGroups" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Log group with name log-group-name does not exist in resource owner account.
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Creating Log group with name log-group-name.
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Response from "createLogGroup" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Creating Log stream with name log-stream-name for log group log-group-name.
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Response from "createLogStream" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Response from "describeLogStreams" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogPublisher.populateSequenceToken (src/log-delivery.ts:196:33)
+
+    console.log
+      Response from "listObjects" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      S3 folder with name s3-folder-name does not exist in bucket log-group-name-123456789012.
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      Creating folder with name s3-folder-name for bucket log-group-name-123456789012.
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      Response from "putObject" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      Response from "listObjects" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      S3 folder with name s3-folder-name does not exist in bucket log-group-name-123456789012.
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      Creating folder with name s3-folder-name for bucket log-group-name-123456789012.
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      Response from "putObject" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      Response from "describeLogGroups" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Log group with name log-group-name does not exist in resource owner account.
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Creating Log group with name log-group-name.
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Response from "createLogGroup" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Creating Log stream with name log-stream-name for log group log-group-name.
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Response from "createLogStream" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Response from "describeLogStreams" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogPublisher.populateSequenceToken (src/log-delivery.ts:196:33)
+
+    console.log
+      Response from "listObjects" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      S3 folder with name s3-folder-name does not exist in bucket log-group-name-123456789012.
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      Creating folder with name s3-folder-name for bucket log-group-name-123456789012.
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      Response from "putObject" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      Response from "listObjects" {
+        Contents: [
+          {
+            Key: 's3-folder-name/',
+            LastModified: 2023-11-26T20:12:52.602Z,
+            ETag: '"d41d8cd98f00b204e9800998ecf8427e"',
+            Size: 0,
+            StorageClass: 'STANDARD'
+          }
+        ]
+      }
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      S3 folder with name s3-folder-name does exist in bucket log-group-name-123456789012.
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      Response from "describeLogGroups" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Log group with name log-group-name does not exist in resource owner account.
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Creating Log group with name log-group-name.
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Response from "createLogGroup" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Creating Log stream with name log-stream-name for log group log-group-name.
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Response from "createLogStream" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Response from "describeLogStreams" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogPublisher.populateSequenceToken (src/log-delivery.ts:196:33)
+
+    console.log
+      Response from "listObjects" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      S3 folder with name s3-folder-name does not exist in bucket log-group-name-123456789012.
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      Creating folder with name s3-folder-name for bucket log-group-name-123456789012.
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      Response from "putObject" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      Response from "describeLogGroups" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Log group with name log-group-name does not exist in resource owner account.
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Creating Log group with name log-group-name.
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Response from "createLogGroup" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Creating Log stream with name log-stream-name for log group log-group-name.
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Response from "createLogStream" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Response from "describeLogStreams" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogPublisher.populateSequenceToken (src/log-delivery.ts:196:33)
+
+    console.log
+      Response from "listObjects" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      S3 folder with name s3-folder-name does not exist in bucket log-group-name-123456789012.
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      Creating folder with name s3-folder-name for bucket log-group-name-123456789012.
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      Response from "putObject" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      S3 bucket with name log-group-name-123456789012 does exist in resource owner account.
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      MockAWSError { code: 'NoSuchBucket' }
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      Creating S3 bucket with name log-group-name-123456789012.
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      Response from "createBucket" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      Creating folder with name s3-folder-name for bucket log-group-name-123456789012.
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      Response from "putObject" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      Response from "describeLogGroups" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Log group with name log-group-name does not exist in resource owner account.
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Creating Log group with name log-group-name.
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Response from "createLogGroup" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Creating Log stream with name log-stream-name for log group log-group-name.
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Response from "createLogStream" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Response from "describeLogStreams" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogPublisher.populateSequenceToken (src/log-delivery.ts:196:33)
+
+    console.log
+      Response from "listObjects" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      S3 folder with name s3-folder-name does not exist in bucket log-group-name-123456789012.
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      Creating folder with name s3-folder-name for bucket log-group-name-123456789012.
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      Response from "putObject" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      MockAWSError { code: 'Sorry' }
+
+      at console.<anonymous> (node_modules/jest-mock/build/index.js:845:25)
+
+    console.log
+      Creating S3 bucket with name log-group-name-123456789012.
+
+      at console.<anonymous> (node_modules/jest-mock/build/index.js:845:25)
+
+    console.log
+      Response from "createBucket" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at console.<anonymous> (node_modules/jest-mock/build/index.js:845:25)
+
+    console.log
+      Creating folder with name s3-folder-name for bucket log-group-name-123456789012.
+
+      at console.<anonymous> (node_modules/jest-mock/build/index.js:845:25)
+
+    console.log
+      Response from "putObject" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at console.<anonymous> (node_modules/jest-mock/build/index.js:845:25)
+
+    console.log
+      Response from "describeLogGroups" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Log group with name log-group-name does not exist in resource owner account.
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Creating Log group with name log-group-name.
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Response from "createLogGroup" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Creating Log stream with name log-stream-name for log group log-group-name.
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Response from "createLogStream" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Response from "describeLogStreams" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogPublisher.populateSequenceToken (src/log-delivery.ts:196:33)
+
+    console.log
+      Response from "listObjects" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      S3 folder with name s3-folder-name does not exist in bucket log-group-name-123456789012.
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      Creating folder with name s3-folder-name for bucket log-group-name-123456789012.
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      Response from "putObject" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      S3 bucket with name log-group-name-123456789012 does exist in resource owner account.
+
+      at console.<anonymous> (node_modules/jest-mock/build/index.js:845:25)
+
+    console.log
+      MockAWSError { code: 'NoSuchBucket' }
+
+      at console.<anonymous> (node_modules/jest-mock/build/index.js:845:25)
+
+    console.log
+      Creating S3 bucket with name log-group-name-123456789012.
+
+      at console.<anonymous> (node_modules/jest-mock/build/index.js:845:25)
+
+    console.log
+      Initializing S3 bucket and folder failed with error: [object Object]
+
+      at console.<anonymous> (node_modules/jest-mock/build/index.js:845:25)
+
+    console.log
+      Response from "describeLogGroups" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Log group with name log-group-name does not exist in resource owner account.
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Creating Log group with name log-group-name.
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Response from "createLogGroup" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Creating Log stream with name log-stream-name for log group log-group-name.
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Response from "createLogStream" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Response from "describeLogStreams" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogPublisher.populateSequenceToken (src/log-delivery.ts:196:33)
+
+    console.log
+      Response from "listObjects" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      S3 folder with name s3-folder-name does not exist in bucket log-group-name-123456789012.
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      Creating folder with name s3-folder-name for bucket log-group-name-123456789012.
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      Response from "putObject" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      Response from "listObjects" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at console.<anonymous> (node_modules/jest-mock/build/index.js:845:25)
+
+    console.log
+      S3 folder with name s3-folder-name does not exist in bucket log-group-name-123456789012.
+
+      at console.<anonymous> (node_modules/jest-mock/build/index.js:845:25)
+
+    console.log
+      Creating folder with name s3-folder-name for bucket log-group-name-123456789012.
+
+      at console.<anonymous> (node_modules/jest-mock/build/index.js:845:25)
+
+    console.log
+      Initializing S3 bucket and folder failed with error: [object Object]
+
+      at console.<anonymous> (node_modules/jest-mock/build/index.js:845:25)
+
+    console.log
+      Response from "describeLogGroups" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Log group with name log-group-name does not exist in resource owner account.
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Creating Log group with name log-group-name.
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Response from "createLogGroup" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Creating Log stream with name log-stream-name for log group log-group-name.
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Response from "createLogStream" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Response from "describeLogStreams" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogPublisher.populateSequenceToken (src/log-delivery.ts:196:33)
+
+    console.log
+      Response from "listObjects" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      S3 folder with name s3-folder-name does not exist in bucket log-group-name-123456789012.
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      Creating folder with name s3-folder-name for bucket log-group-name-123456789012.
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      Response from "putObject" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      Creating S3 bucket with name log-group-name-123456789012.
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      Response from "describeLogGroups" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Log group with name log-group-name does not exist in resource owner account.
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Creating Log group with name log-group-name.
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Response from "createLogGroup" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Creating Log stream with name log-stream-name for log group log-group-name.
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Response from "createLogStream" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Response from "describeLogStreams" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogPublisher.populateSequenceToken (src/log-delivery.ts:196:33)
+
+    console.log
+      Response from "listObjects" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      S3 folder with name s3-folder-name does not exist in bucket log-group-name-123456789012.
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      Creating folder with name s3-folder-name for bucket log-group-name-123456789012.
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      Response from "putObject" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      Response from "listObjects" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      S3 folder with name f3390613-b2b5-4c31-a4c6-66813dff96a6 does not exist in bucket log-group-name-123456789012.
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      Creating folder with name f3390613-b2b5-4c31-a4c6-66813dff96a6 for bucket log-group-name-123456789012.
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      Response from "putObject" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      Response from "describeLogGroups" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Log group with name log-group-name does not exist in resource owner account.
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Creating Log group with name log-group-name.
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Response from "createLogGroup" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Creating Log stream with name log-stream-name for log group log-group-name.
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Response from "createLogStream" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Response from "describeLogStreams" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogPublisher.populateSequenceToken (src/log-delivery.ts:196:33)
+
+    console.log
+      Response from "listObjects" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      S3 folder with name s3-folder-name does not exist in bucket log-group-name-123456789012.
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      Creating folder with name s3-folder-name for bucket log-group-name-123456789012.
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      Response from "putObject" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      Response from "putObject" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at S3LogPublisher.publishMessage (src/log-delivery.ts:387:33)
+
+    console.log
+      Response from "describeLogGroups" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Log group with name log-group-name does not exist in resource owner account.
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Creating Log group with name log-group-name.
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Response from "createLogGroup" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Creating Log stream with name log-stream-name for log group log-group-name.
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Response from "createLogStream" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Response from "describeLogStreams" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogPublisher.populateSequenceToken (src/log-delivery.ts:196:33)
+
+    console.log
+      Response from "listObjects" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      S3 folder with name s3-folder-name does not exist in bucket log-group-name-123456789012.
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      Creating folder with name s3-folder-name for bucket log-group-name-123456789012.
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      Response from "putObject" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      An error occurred while putting log events [How is it going?] to resource owner account, with error: [object Object]
+
+      at console.<anonymous> (node_modules/jest-mock/build/index.js:845:25)
+
+    console.log
+      Response from "describeLogGroups" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Log group with name log-group-name does not exist in resource owner account.
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Creating Log group with name log-group-name.
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Response from "createLogGroup" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Creating Log stream with name log-stream-name for log group log-group-name.
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Response from "createLogStream" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Response from "describeLogStreams" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogPublisher.populateSequenceToken (src/log-delivery.ts:196:33)
+
+    console.log
+      Response from "listObjects" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      S3 folder with name s3-folder-name does not exist in bucket log-group-name-123456789012.
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      Creating folder with name s3-folder-name for bucket log-group-name-123456789012.
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      Response from "putObject" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      Response from "describeLogGroups" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Log group with name log-group-name does not exist in resource owner account.
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Creating Log group with name log-group-name.
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Response from "createLogGroup" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Creating Log stream with name log-stream-name for log group log-group-name.
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Response from "createLogStream" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Response from "describeLogStreams" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogPublisher.populateSequenceToken (src/log-delivery.ts:196:33)
+
+    console.log
+      Response from "listObjects" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      S3 folder with name s3-folder-name does not exist in bucket log-group-name-123456789012.
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      Creating folder with name s3-folder-name for bucket log-group-name-123456789012.
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      Response from "putObject" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      Response from "putObject" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at S3LogPublisher.publishMessage (src/log-delivery.ts:387:33)
+
+    console.log
+      Response from "describeLogGroups" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Log group with name log-group-name does not exist in resource owner account.
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Creating Log group with name log-group-name.
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Response from "createLogGroup" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Creating Log stream with name log-stream-name for log group log-group-name.
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Response from "createLogStream" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Response from "describeLogStreams" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogPublisher.populateSequenceToken (src/log-delivery.ts:196:33)
+
+    console.log
+      Response from "listObjects" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      S3 folder with name s3-folder-name does not exist in bucket log-group-name-123456789012.
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      Creating folder with name s3-folder-name for bucket log-group-name-123456789012.
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      Response from "putObject" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      An error occurred while putting log events [How is it going?] to resource owner account, with error: [object Object]
+
+      at S3LogPublisher.publishMessage (src/log-delivery.ts:390:33)
+
+    console.log
+      Response from "describeLogGroups" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Log group with name log-group-name does not exist in resource owner account.
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Creating Log group with name log-group-name.
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Response from "createLogGroup" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Creating Log stream with name log-stream-name for log group log-group-name.
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Response from "createLogStream" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Response from "describeLogStreams" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogPublisher.populateSequenceToken (src/log-delivery.ts:196:33)
+
+    console.log
+      Response from "listObjects" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      S3 folder with name s3-folder-name does not exist in bucket log-group-name-123456789012.
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      Creating folder with name s3-folder-name for bucket log-group-name-123456789012.
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      Response from "putObject" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      Response from "describeLogGroups" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Log group with name log-group-name does not exist in resource owner account.
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Creating Log group with name log-group-name.
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Response from "createLogGroup" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Creating Log stream with name log-stream-name for log group log-group-name.
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Response from "createLogStream" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Response from "describeLogStreams" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogPublisher.populateSequenceToken (src/log-delivery.ts:196:33)
+
+    console.log
+      Response from "listObjects" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      S3 folder with name s3-folder-name does not exist in bucket log-group-name-123456789012.
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      Creating folder with name s3-folder-name for bucket log-group-name-123456789012.
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      Response from "putObject" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.error
+      [Function (anonymous)]
+
+      594 |                     this.tracker.addCompleted();
+      595 |                 } catch (err: any) {
+    > 596 |                     console.error(err);
+          |                             ^
+      597 |                     if (err.retryable === true) {
+      598 |                         try {
+      599 |                             await logPublisher.publishLogEvent(formatted, eventTime);
+
+      at src/log-delivery.ts:596:29
+
+    console.log
+      Response from "describeLogGroups" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Log group with name log-group-name does not exist in resource owner account.
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Creating Log group with name log-group-name.
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Response from "createLogGroup" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Creating Log stream with name log-stream-name for log group log-group-name.
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Response from "createLogStream" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Response from "describeLogStreams" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogPublisher.populateSequenceToken (src/log-delivery.ts:196:33)
+
+    console.log
+      Response from "listObjects" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      S3 folder with name s3-folder-name does not exist in bucket log-group-name-123456789012.
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      Creating folder with name s3-folder-name for bucket log-group-name-123456789012.
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      Response from "putObject" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      This is log message for account <REDACTED>
+
+      at LambdaLogPublisher.publishMessage (src/log-delivery.ts:80:44)
+
+    console.log
+      Response from "putLogEvents" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogPublisher.putLogEvents (src/log-delivery.ts:181:29)
+
+    console.log
+      Response from "describeLogGroups" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Log group with name log-group-name does not exist in resource owner account.
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Creating Log group with name log-group-name.
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Response from "createLogGroup" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Creating Log stream with name log-stream-name for log group log-group-name.
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Response from "createLogStream" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Response from "describeLogStreams" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogPublisher.populateSequenceToken (src/log-delivery.ts:196:33)
+
+    console.log
+      Response from "listObjects" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      S3 folder with name s3-folder-name does not exist in bucket log-group-name-123456789012.
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      Creating folder with name s3-folder-name for bucket log-group-name-123456789012.
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      Response from "putObject" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      count: [5.12]
+
+      at LambdaLogPublisher.publishMessage (src/log-delivery.ts:80:44)
+
+    console.log
+      timestamp: [2020-01-01T00:00:00.000Z]
+
+      at LambdaLogPublisher.publishMessage (src/log-delivery.ts:80:44)
+
+    console.log
+      timestamp: [2020-01-02T00:00:00.000Z]
+
+      at LambdaLogPublisher.publishMessage (src/log-delivery.ts:80:44)
+
+    console.log
+      timestamp: [2020-01-03T00:00:00.000Z]
+
+      at LambdaLogPublisher.publishMessage (src/log-delivery.ts:80:44)
+
+    console.log
+      timestamp: [2020-01-04T00:00:00.000Z]
+
+      at LambdaLogPublisher.publishMessage (src/log-delivery.ts:80:44)
+
+    console.log
+      Response from "putObject" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at S3LogPublisher.publishMessage (src/log-delivery.ts:387:33)
+
+    console.log
+      Response from "putObject" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at S3LogPublisher.publishMessage (src/log-delivery.ts:387:33)
+
+    console.log
+      Response from "putObject" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at S3LogPublisher.publishMessage (src/log-delivery.ts:387:33)
+
+    console.log
+      Response from "putObject" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at S3LogPublisher.publishMessage (src/log-delivery.ts:387:33)
+
+    console.log
+      Response from "putObject" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at S3LogPublisher.publishMessage (src/log-delivery.ts:387:33)
+
+    console.log
+      Response from "putLogEvents" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogPublisher.putLogEvents (src/log-delivery.ts:181:29)
+
+    console.log
+      Response from "putLogEvents" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogPublisher.putLogEvents (src/log-delivery.ts:181:29)
+
+    console.log
+      Response from "putLogEvents" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogPublisher.putLogEvents (src/log-delivery.ts:181:29)
+
+    console.log
+      Response from "putLogEvents" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogPublisher.putLogEvents (src/log-delivery.ts:181:29)
+
+    console.log
+      Response from "putLogEvents" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogPublisher.putLogEvents (src/log-delivery.ts:181:29)
+
+    console.log
+      Response from "describeLogGroups" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Log group with name log-group-name does not exist in resource owner account.
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Creating Log group with name log-group-name.
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Response from "createLogGroup" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Creating Log stream with name log-stream-name for log group log-group-name.
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Response from "createLogStream" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Response from "describeLogStreams" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogPublisher.populateSequenceToken (src/log-delivery.ts:196:33)
+
+    console.log
+      Response from "listObjects" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      S3 folder with name s3-folder-name does not exist in bucket log-group-name-123456789012.
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      Creating folder with name s3-folder-name for bucket log-group-name-123456789012.
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      Response from "putObject" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      Error from "putLogEvents" with sequence token null {"code":"InvalidSequenceTokenException","message":"The given sequenceToken is invalid. The next expected sequenceToken is: 495579999999900356407851919528174642"}
+
+      at Object.promise (src/log-delivery.ts:137:37)
+
+    console.error
+      MockAWSError {
+        code: 'InvalidSequenceTokenException',
+        message: 'Publishing this log event should be retried. The given sequenceToken is invalid. The next expected sequenceToken is: 495579999999900356407851919528174642',
+        retryable: true
+      }
+
+      594 |                     this.tracker.addCompleted();
+      595 |                 } catch (err: any) {
+    > 596 |                     console.error(err);
+          |                             ^
+      597 |                     if (err.retryable === true) {
+      598 |                         try {
+      599 |                             await logPublisher.publishLogEvent(formatted, eventTime);
+
+      at src/log-delivery.ts:596:29
+
+    console.log
+      Response from "putLogEvents" { nextSequenceToken: 'some-other-seq' }
+
+      at CloudWatchLogPublisher.putLogEvents (src/log-delivery.ts:181:29)
+
+    console.log
+      Response from "describeLogGroups" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Log group with name log-group-name does not exist in resource owner account.
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Creating Log group with name log-group-name.
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Response from "createLogGroup" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Creating Log stream with name log-stream-name for log group log-group-name.
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Response from "createLogStream" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogHelper.log (src/log-delivery.ts:330:33)
+
+    console.log
+      Response from "describeLogStreams" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogPublisher.populateSequenceToken (src/log-delivery.ts:196:33)
+
+    console.log
+      Response from "listObjects" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      S3 folder with name s3-folder-name does not exist in bucket log-group-name-123456789012.
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      Creating folder with name s3-folder-name for bucket log-group-name-123456789012.
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.log
+      Response from "putObject" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at S3LogHelper.log (src/log-delivery.ts:532:33)
+
+    console.error
+      some random error
+
+      579 |             await this.tracker.waitCompletion();
+      580 |         } catch (err) {
+    > 581 |             console.error(err);
+          |                     ^
+      582 |         }
+      583 |         return Promise.resolve(true);
+      584 |     }
+
+      at LoggerProxy.waitCompletion (src/log-delivery.ts:581:21)
+      at Object.<anonymous> (tests/lib/log-delivery.test.ts:1239:28)
+
+    console.log
+      Response from "putLogEvents" { ResponseMetadata: { RequestId: 'mock-request' } }
+
+      at CloudWatchLogPublisher.putLogEvents (src/log-delivery.ts:181:29)
+
+FAIL tests/lib/resource.test.ts (24.819 s)
+  ● Console
+
+    console.log
+      Handler error: Error: Event data is missing required property "awsAccountId". (Error) InvalidRequest [Error]: 
+          at Resource.entrypoint (/Users/justin.hanselman/cloudformation-cli-typescript-plugin/src/resource.ts:600:28)
+          at Resource.descriptor.value (/Users/justin.hanselman/cloudformation-cli-typescript-plugin/src/resource.ts:83:69)
+          at Object.<anonymous> (/Users/justin.hanselman/cloudformation-cli-typescript-plugin/tests/lib/resource.test.ts:133:38)
+          at Promise.then.completed (/Users/justin.hanselman/cloudformation-cli-typescript-plugin/node_modules/jest-circus/build/utils.js:276:28)
+          at new Promise (<anonymous>)
+          at callAsyncCircusFn (/Users/justin.hanselman/cloudformation-cli-typescript-plugin/node_modules/jest-circus/build/utils.js:216:10)
+          at _callCircusTest (/Users/justin.hanselman/cloudformation-cli-typescript-plugin/node_modules/jest-circus/build/run.js:212:40)
+          at processTicksAndRejections (node:internal/process/task_queues:95:5)
+          at _runTest (/Users/justin.hanselman/cloudformation-cli-typescript-plugin/node_modules/jest-circus/build/run.js:149:3)
+          at _runTestsForDescribeBlock (/Users/justin.hanselman/cloudformation-cli-typescript-plugin/node_modules/jest-circus/build/run.js:63:9)
+      Error: Error: Event data is missing required property "awsAccountId". (Error)
+          at Function.Object.<anonymous>.BaseResource.parseRequest (/Users/justin.hanselman/cloudformation-cli-typescript-plugin/src/resource.ts:449:19)
+          at Resource.entrypoint (/Users/justin.hanselman/cloudformation-cli-typescript-plugin/src/resource.ts:523:30)
+          at Resource.descriptor.value (/Users/justin.hanselman/cloudformation-cli-typescript-plugin/src/resource.ts:83:69)
+          at Object.<anonymous> (/Users/justin.hanselman/cloudformation-cli-typescript-plugin/tests/lib/resource.test.ts:133:38)
+          at Promise.then.completed (/Users/justin.hanselman/cloudformation-cli-typescript-plugin/node_modules/jest-circus/build/utils.js:276:28)
+          at new Promise (<anonymous>)
+          at callAsyncCircusFn (/Users/justin.hanselman/cloudformation-cli-typescript-plugin/node_modules/jest-circus/build/utils.js:216:10)
+          at _callCircusTest (/Users/justin.hanselman/cloudformation-cli-typescript-plugin/node_modules/jest-circus/build/run.js:212:40)
+          at processTicksAndRejections (node:internal/process/task_queues:95:5)
+          at _runTest (/Users/justin.hanselman/cloudformation-cli-typescript-plugin/node_modules/jest-circus/build/run.js:149:3) {
+        errorCode: 'InvalidRequest'
+      }
+
+      at LambdaLogPublisher.publishMessage (src/log-delivery.ts:80:44)
+
+    console.log
+      END RequestId: undefined
+
+      at LambdaLogPublisher.publishMessage (src/log-delivery.ts:80:44)
+
+    console.log
+      REPORT RequestId: undefined	Duration: null ms	Memory Size: undefined MB
+
+      at LambdaLogPublisher.publishMessage (src/log-delivery.ts:80:44)
+
+    console.log
+      Waiting for logger proxy processes to finish...
+
+      at LambdaLogPublisher.publishMessage (src/log-delivery.ts:80:44)
+
+    console.log
+      Log delivery completed.
+
+      at LambdaLogPublisher.publishMessage (src/log-delivery.ts:80:44)
+
+    console.log
+      Handler error: Missing Model class to be used to deserialize JSON data. InternalFailure [Error]: 
+          at Resource.entrypoint (/Users/justin.hanselman/cloudformation-cli-typescript-plugin/src/resource.ts:600:28)
+          at Resource.descriptor.value (/Users/justin.hanselman/cloudformation-cli-typescript-plugin/src/resource.ts:83:69)
+          at Object.<anonymous> (/Users/justin.hanselman/cloudformation-cli-typescript-plugin/tests/lib/resource.test.ts:140:38)
+          at Promise.then.completed (/Users/justin.hanselman/cloudformation-cli-typescript-plugin/node_modules/jest-circus/build/utils.js:276:28)
+          at new Promise (<anonymous>)
+          at callAsyncCircusFn (/Users/justin.hanselman/cloudformation-cli-typescript-plugin/node_modules/jest-circus/build/utils.js:216:10)
+          at _callCircusTest (/Users/justin.hanselman/cloudformation-cli-typescript-plugin/node_modules/jest-circus/build/run.js:212:40)
+          at _runTest (/Users/justin.hanselman/cloudformation-cli-typescript-plugin/node_modules/jest-circus/build/run.js:149:3)
+          at _runTestsForDescribeBlock (/Users/justin.hanselman/cloudformation-cli-typescript-plugin/node_modules/jest-circus/build/run.js:63:9)
+          at _runTestsForDescribeBlock (/Users/justin.hanselman/cloudformation-cli-typescript-plugin/node_modules/jest-circus/build/run.js:57:9)
+      Error: Missing Model class to be used to deserialize JSON data.
+          at Resource.entrypoint (/Users/justin.hanselman/cloudformation-cli-typescript-plugin/src/resource.ts:518:23)
+          at Resource.descriptor.value (/Users/justin.hanselman/cloudformation-cli-typescript-plugin/src/resource.ts:83:69)
+          at Object.<anonymous> (/Users/justin.hanselman/cloudformation-cli-typescript-plugin/tests/lib/resource.test.ts:140:38)
+          at Promise.then.completed (/Users/justin.hanselman/cloudformation-cli-typescript-plugin/node_modules/jest-circus/build/utils.js:276:28)
+          at new Promise (<anonymous>)
+          at callAsyncCircusFn (/Users/justin.hanselman/cloudformation-cli-typescript-plugin/node_modules/jest-circus/build/utils.js:216:10)
+          at _callCircusTest (/Users/justin.hanselman/cloudformation-cli-typescript-plugin/node_modules/jest-circus/build/run.js:212:40)
+          at _runTest (/Users/justin.hanselman/cloudformation-cli-typescript-plugin/node_modules/jest-circus/build/run.js:149:3)
+          at _runTestsForDescribeBlock (/Users/justin.hanselman/cloudformation-cli-typescript-plugin/node_modules/jest-circus/build/run.js:63:9)
+          at _runTestsForDescribeBlock (/Users/justin.hanselman/cloudformation-cli-typescript-plugin/node_modules/jest-circus/build/run.js:57:9) {
+        errorCode: 'InternalFailure'
+      }
+
+      at LambdaLogPublisher.publishMessage (src/log-delivery.ts:80:44)
+
+    console.log
+      END RequestId: undefined
+
+      at LambdaLogPublisher.publishMessage (src/log-delivery.ts:80:44)
+
+    console.log
+      REPORT RequestId: undefined	Duration: null ms	Memory Size: undefined MB
+
+      at LambdaLogPublisher.publishMessage (src/log-delivery.ts:80:44)
+
+    console.log
+      Waiting for logger proxy processes to finish...
+
+      at LambdaLogPublisher.publishMessage (src/log-delivery.ts:80:44)
+
+    console.log
+      Log delivery completed.
+
+      at LambdaLogPublisher.publishMessage (src/log-delivery.ts:80:44)
+
+    console.log
+      Response from "listObjects" undefined
+
+      at LambdaLogPublisher.publishMessage (src/log-delivery.ts:80:44)
+
+    console.log
+      TypeError: Cannot read properties of undefined (reading 'Contents')
+          at S3LogHelper.doesFolderExist (/Users/justin.hanselman/cloudformation-cli-typescript-plugin/src/log-delivery.ts:472:26)
+          at S3LogHelper.prepareFolder (/Users/justin.hanselman/cloudformation-cli-typescript-plugin/src/log-delivery.ts:446:34)
+          at Resource.initializeRuntime (/Users/justin.hanselman/cloudformation-cli-typescript-plugin/src/resource.ts:191:32)
+          at Resource.entrypoint (/Users/justin.hanselman/cloudformation-cli-typescript-plugin/src/resource.ts:536:13)
+          at Resource.descriptor.value (/Users/justin.hanselman/cloudformation-cli-typescript-plugin/src/resource.ts:83:48)
+          at Object.<anonymous> (/Users/justin.hanselman/cloudformation-cli-typescript-plugin/tests/lib/resource.test.ts:157:23)
+
+      at LambdaLogPublisher.publishMessage (src/log-delivery.ts:80:44)
+
+    console.log
+      Response from "putMetricData" undefined
+
+      at LambdaLogPublisher.publishMessage (src/log-delivery.ts:80:44)
+
+    console.log
+      Creating S3 bucket with name provider-logging-group-name-123456789012.
+
+      at LambdaLogPublisher.publishMessage (src/log-delivery.ts:80:44)
+
+    console.log
+      Response from "createBucket" undefined
+
+      at LambdaLogPublisher.publishMessage (src/log-delivery.ts:80:44)
+
+    console.log
+      Creating folder with name arn_aws_cloudformation_us-east-1_123456789012_stack/sample-stack/e722ae60-fe62-11e8-9a0e-0ae8cc519968/myBucket for bucket provider-logging-group-name-123456789012.
+
+      at LambdaLogPublisher.publishMessage (src/log-delivery.ts:80:44)
+
+    console.log
+      Response from "putObject" undefined
+
+      at LambdaLogPublisher.publishMessage (src/log-delivery.ts:80:44)
+
+    console.log
+      Response from "describeLogGroups" undefined
+
+      at LambdaLogPublisher.publishMessage (src/log-delivery.ts:80:44)
+
+    console.log
+      TypeError: Cannot read properties of undefined (reading 'logGroups')
+          at CloudWatchLogHelper.doesLogGroupExist (/Users/justin.hanselman/cloudformation-cli-typescript-plugin/src/log-delivery.ts:276:26)
+          at CloudWatchLogHelper.prepareLogStream (/Users/justin.hanselman/cloudformation-cli-typescript-plugin/src/log-delivery.ts:256:19)
+          at Resource.initializeRuntime (/Users/justin.hanselman/cloudformation-cli-typescript-plugin/src/resource.ts:213:39)
+          at Resource.entrypoint (/Users/justin.hanselman/cloudformation-cli-typescript-plugin/src/resource.ts:536:13)
+          at Resource.descriptor.value (/Users/justin.hanselman/cloudformation-cli-typescript-plugin/src/resource.ts:83:48)
+          at Object.<anonymous> (/Users/justin.hanselman/cloudformation-cli-typescript-plugin/tests/lib/resource.test.ts:157:23)
+          at _callCircusTest (/Users/justin.hanselman/cloudformation-cli-typescript-plugin/node_modules/jest-circus/build/run.js:212:5)
+          at _runTest (/Users/justin.hanselman/cloudformation-cli-typescript-plugin/node_modules/jest-circus/build/run.js:149:3)
+          at _runTestsForDescribeBlock (/Users/justin.hanselman/cloudformation-cli-typescript-plugin/node_modules/jest-circus/build/run.js:63:9)
+          at _runTestsForDescribeBlock (/Users/justin.hanselman/cloudformation-cli-typescript-plugin/node_modules/jest-circus/build/run.js:57:9)
+
+      at LambdaLogPublisher.publishMessage (src/log-delivery.ts:80:44)
+
+    console.log
+      Response from "putMetricData" undefined
+
+      at LambdaLogPublisher.publishMessage (src/log-delivery.ts:80:44)
+
+    console.log
+      Log group with name provider-logging-group-name does not exist in resource owner account.
+
+      at LambdaLogPublisher.publishMessage (src/log-delivery.ts:80:44)
+
+    console.log
+      Creating Log group with name provider-logging-group-name.
+
+      at LambdaLogPublisher.publishMessage (src/log-delivery.ts:80:44)
+
+    console.log
+      Response from "createLogGroup" undefined
+
+      at LambdaLogPublisher.publishMessage (src/log-delivery.ts:80:44)
+
+    console.log
+      Creating Log stream with name arn__aws__cloudformation__us-east-1__123456789012__stack/sample-stack/e722ae60-fe62-11e8-9a0e-0ae8cc519968/myBucket for log group provider-logging-group-name.
+
+      at LambdaLogPublisher.publishMessage (src/log-delivery.ts:80:44)
+
+    console.log
+      Response from "createLogStream" undefined
+
+      at LambdaLogPublisher.publishMessage (src/log-delivery.ts:80:44)
+
+    console.log
+      Response from "describeLogStreams" undefined
+
+      at LambdaLogPublisher.publishMessage (src/log-delivery.ts:80:44)
+
+    console.log
+      Error from "describeLogStreams" TypeError: Cannot read properties of undefined (reading 'logStreams')
+          at CloudWatchLogPublisher.populateSequenceToken (/Users/justin.hanselman/cloudformation-cli-typescript-plugin/src/log-delivery.ts:197:26)
+          at Resource.initializeRuntime (/Users/justin.hanselman/cloudformation-cli-typescript-plugin/src/resource.ts:226:17)
+          at Resource.entrypoint (/Users/justin.hanselman/cloudformation-cli-typescript-plugin/src/resource.ts:536:13)
+          at Resource.descriptor.value (/Users/justin.hanselman/cloudformation-cli-typescript-plugin/src/resource.ts:83:48)
+          at Object.<anonymous> (/Users/justin.hanselman/cloudformation-cli-typescript-plugin/tests/lib/resource.test.ts:157:23)
+          at _callCircusTest (/Users/justin.hanselman/cloudformation-cli-typescript-plugin/node_modules/jest-circus/build/run.js:212:5)
+          at _runTest (/Users/justin.hanselman/cloudformation-cli-typescript-plugin/node_modules/jest-circus/build/run.js:149:3)
+          at _runTestsForDescribeBlock (/Users/justin.hanselman/cloudformation-cli-typescript-plugin/node_modules/jest-circus/build/run.js:63:9)
+          at _runTestsForDescribeBlock (/Users/justin.hanselman/cloudformation-cli-typescript-plugin/node_modules/jest-circus/build/run.js:57:9)
+          at run (/Users/justin.hanselman/cloudformation-cli-typescript-plugin/node_modules/jest-circus/build/run.js:25:3)
+
+      at LambdaLogPublisher.publishMessage (src/log-delivery.ts:80:44)
+
+    console.log
+      START RequestId: undefined Version: undefined
+
+      at LambdaLogPublisher.publishMessage (src/log-delivery.ts:80:44)
+
+    console.log
+      Response from "putObject" undefined
+
+      at LambdaLogPublisher.publishMessage (src/log-delivery.ts:80:44)
+
+    console.log
+      Response from "putMetricData" undefined
+
+      at LambdaLogPublisher.publishMessage (src/log-delivery.ts:80:44)
+
+    console.log
+      [CREATE] invoking handler...
+
+      at LambdaLogPublisher.publishMessage (src/log-delivery.ts:80:44)
+
+    console.log
+      Response from "putObject" undefined
+
+      at LambdaLogPublisher.publishMessage (src/log-delivery.ts:80:44)
+
+    console.log
+      [CREATE] handler invoked
+
+      at LambdaLogPublisher.publishMessage (src/log-delivery.ts:80:44)
+
+    console.log
+      Handler returned SUCCESS
+
+      at LambdaLogPublisher.publishMessage (src/log-delivery.ts:80:44)
+
+    console.log
+      Response from "putObject" undefined
+
+      at LambdaLogPublisher.publishMessage (src/log-delivery.ts:80:44)
+
+    console.log
+      Response from "putObject" undefined
+
+      at LambdaLogPublisher.publishMessage (src/log-delivery.ts:80:44)
+
+    console.log
+      Response from "putMetricData" undefined
+
+      at LambdaLogPublisher.publishMessage (src/log-delivery.ts:80:44)
+
+    console.log
+      END RequestId: undefined
+
+      at LambdaLogPublisher.publishMessage (src/log-delivery.ts:80:44)
+
+    console.log
+      REPORT RequestId: undefined	Duration: 3 ms	Memory Size: undefined MB
+
+      at LambdaLogPublisher.publishMessage (src/log-delivery.ts:80:44)
+
+    console.log
+      Waiting for logger proxy processes to finish...
+
+      at LambdaLogPublisher.publishMessage (src/log-delivery.ts:80:44)
+
+    console.log
+      Response from "putObject" undefined
+
+      at LambdaLogPublisher.publishMessage (src/log-delivery.ts:80:44)
+
+    console.log
+      Response from "putObject" undefined
+
+      at LambdaLogPublisher.publishMessage (src/log-delivery.ts:80:44)
+
+    console.log
+      Response from "putObject" undefined
+
+      at LambdaLogPublisher.publishMessage (src/log-delivery.ts:80:44)
+
+    console.log
+      Response from "putLogEvents" undefined
+
+      at LambdaLogPublisher.publishMessage (src/log-delivery.ts:80:44)
+
+    console.log
+      Response from "putLogEvents" undefined
+
+      at LambdaLogPublisher.publishMessage (src/log-delivery.ts:80:44)
+
+    console.log
+      Response from "putLogEvents" undefined
+
+      at LambdaLogPublisher.publishMessage (src/log-delivery.ts:80:44)
+
+    console.log
+      Response from "putLogEvents" undefined
+
+      at LambdaLogPublisher.publishMessage (src/log-delivery.ts:80:44)
+
+    console.log
+      Response from "putLogEvents" undefined
+
+      at LambdaLogPublisher.publishMessage (src/log-delivery.ts:80:44)
+
+    console.log
+      Response from "putLogEvents" undefined
+
+      at LambdaLogPublisher.publishMessage (src/log-delivery.ts:80:44)
+
+    console.log
+      Response from "putLogEvents" undefined
+
+      at LambdaLogPublisher.publishMessage (src/log-delivery.ts:80:44)
+
+    console.log
+      Log delivery completed.
+
+      at LambdaLogPublisher.publishMessage (src/log-delivery.ts:80:44)
+
+    console.log
+      Response from "putObject" undefined
+
+      at LambdaLogPublisher.publishMessage (src/log-delivery.ts:80:44)
+
+    console.log
+      Response from "listObjects" undefined
+
+      at LambdaLogPublisher.publishMessage (src/log-delivery.ts:80:44)
+
+    console.log
+      TypeError: Cannot read properties of undefined (reading 'Contents')
+          at S3LogHelper.doesFolderExist (/Users/justin.hanselman/cloudformation-cli-typescript-plugin/src/log-delivery.ts:472:26)
+          at processTicksAndRejections (node:internal/process/task_queues:95:5)
+          at S3LogHelper.prepareFolder (/Users/justin.hanselman/cloudformation-cli-typescript-plugin/src/log-delivery.ts:446:34)
+          at Resource.initializeRuntime (/Users/justin.hanselman/cloudformation-cli-typescript-plugin/src/resource.ts:191:32)
+          at Resource.entrypoint (/Users/justin.hanselman/cloudformation-cli-typescript-plugin/src/resource.ts:536:13)
+          at Resource.descriptor.value (/Users/justin.hanselman/cloudformation-cli-typescript-plugin/src/resource.ts:83:48)
+          at Object.<anonymous> (/Users/justin.hanselman/cloudformation-cli-typescript-plugin/tests/lib/resource.test.ts:203:23)
+
+      at LambdaLogPublisher.publishMessage (src/log-delivery.ts:80:44)
+
+    console.log
+      Response from "putMetricData" undefined
+
+      at LambdaLogPublisher.publishMessage (src/log-delivery.ts:80:44)
+
+    console.log
+      Creating S3 bucket with name provider-logging-group-name-123456789012.
+
+      at LambdaLogPublisher.publishMessage (src/log-delivery.ts:80:44)
+
+    console.log
+      Response from "createBucket" undefined
+
+      at LambdaLogPublisher.publishMessage (src/log-delivery.ts:80:44)
+
+    console.log
+      Creating folder with name arn_aws_cloudformation_us-east-1_123456789012_stack/sample-stack/e722ae60-fe62-11e8-9a0e-0ae8cc519968/myBucket for bucket provider-logging-group-name-123456789012.
+
+      at LambdaLogPublisher.publishMessage (src/log-delivery.ts:80:44)
+
+    console.log
+      Response from "putObject" undefined
+
+      at LambdaLogPublisher.publishMessage (src/log-delivery.ts:80:44)
+
+    console.log
+      Response from "describeLogGroups" undefined
+
+      at LambdaLogPublisher.publishMessage (src/log-delivery.ts:80:44)
+
+    console.log
+      TypeError: Cannot read properties of undefined (reading 'logGroups')
+          at CloudWatchLogHelper.doesLogGroupExist (/Users/justin.hanselman/cloudformation-cli-typescript-plugin/src/log-delivery.ts:276:26)
+          at processTicksAndRejections (node:internal/process/task_queues:95:5)
+          at CloudWatchLogHelper.prepareLogStream (/Users/justin.hanselman/cloudformation-cli-typescript-plugin/src/log-delivery.ts:256:19)
+          at Resource.initializeRuntime (/Users/justin.hanselman/cloudformation-cli-typescript-plugin/src/resource.ts:213:39)
+          at Resource.entrypoint (/Users/justin.hanselman/cloudformation-cli-typescript-plugin/src/resource.ts:536:13)
+          at Resource.descriptor.value (/Users/justin.hanselman/cloudformation-cli-typescript-plugin/src/resource.ts:83:48)
+          at Object.<anonymous> (/Users/justin.hanselman/cloudformation-cli-typescript-plugin/tests/lib/resource.test.ts:203:23)
+          at _callCircusTest (/Users/justin.hanselman/cloudformation-cli-typescript-plugin/node_modules/jest-circus/build/run.js:212:5)
+          at _runTest (/Users/justin.hanselman/cloudformation-cli-typescript-plugin/node_modules/jest-circus/build/run.js:149:3)
+          at _runTestsForDescribeBlock (/Users/justin.hanselman/cloudformation-cli-typescript-plugin/node_modules/jest-circus/build/run.js:63:9)
+
+      at LambdaLogPublisher.publishMessage (src/log-delivery.ts:80:44)
+
+    console.log
+      Response from "putMetricData" undefined
+
+      at LambdaLogPublisher.publishMessage (src/log-delivery.ts:80:44)
+
+    console.log
+      Log group with name provider-logging-group-name does not exist in resource owner account.
+
+      at LambdaLogPublisher.publishMessage (src/log-delivery.ts:80:44)
+
+    console.log
+      Creating Log group with name provider-logging-group-name.
+
+      at LambdaLogPublisher.publishMessage (src/log-delivery.ts:80:44)
+
+    console.log
+      Response from "createLogGroup" undefined
+
+      at LambdaLogPublisher.publishMessage (src/log-delivery.ts:80:44)
+
+    console.log
+      Creating Log stream with name arn__aws__cloudformation__us-east-1__123456789012__stack/sample-stack/e722ae60-fe62-11e8-9a0e-0ae8cc519968/myBucket for log group provider-logging-group-name.
+
+      at LambdaLogPublisher.publishMessage (src/log-delivery.ts:80:44)
+
+    console.log
+      Response from "createLogStream" undefined
+
+      at LambdaLogPublisher.publishMessage (src/log-delivery.ts:80:44)
+
+    console.log
+      Response from "describeLogStreams" undefined
+
+      at LambdaLogPublisher.publishMessage (src/log-delivery.ts:80:44)
+
+    console.log
+      Error from "describeLogStreams" TypeError: Cannot read properties of undefined (reading 'logStreams')
+          at CloudWatchLogPublisher.populateSequenceToken (/Users/justin.hanselman/cloudformation-cli-typescript-plugin/src/log-delivery.ts:197:26)
+          at processTicksAndRejections (node:internal/process/task_queues:95:5)
+          at Resource.initializeRuntime (/Users/justin.hanselman/cloudformation-cli-typescript-plugin/src/resource.ts:226:17)
+          at Resource.entrypoint (/Users/justin.hanselman/cloudformation-cli-typescript-plugin/src/resource.ts:536:13)
+          at Resource.descriptor.value (/Users/justin.hanselman/cloudformation-cli-typescript-plugin/src/resource.ts:83:48)
+          at Object.<anonymous> (/Users/justin.hanselman/cloudformation-cli-typescript-plugin/tests/lib/resource.test.ts:203:23)
+          at _callCircusTest (/Users/justin.hanselman/cloudformation-cli-typescript-plugin/node_modules/jest-circus/build/run.js:212:5)
+          at _runTest (/Users/justin.hanselman/cloudformation-cli-typescript-plugin/node_modules/jest-circus/build/run.js:149:3)
+          at _runTestsForDescribeBlock (/Users/justin.hanselman/cloudformation-cli-typescript-plugin/node_modules/jest-circus/build/run.js:63:9)
+          at _runTestsForDescribeBlock (/Users/justin.hanselman/cloudformation-cli-typescript-plugin/node_modules/jest-circus/build/run.js:57:9)
+
+      at LambdaLogPublisher.publishMessage (src/log-delivery.ts:80:44)
+
+    console.log
+      START RequestId: undefined Version: undefined
+
+      at LambdaLogPublisher.publishMessage (src/log-delivery.ts:80:44)
+
+    console.log
+      Response from "putObject" undefined
+
+      at LambdaLogPublisher.publishMessage (src/log-delivery.ts:80:44)
+
+    console.log
+      Response from "putMetricData" undefined
+
+      at LambdaLogPublisher.publishMessage (src/log-delivery.ts:80:44)
+
+    console.log
+      Response from "putMetricData" undefined
+
+      at LambdaLogPublisher.publishMessage (src/log-delivery.ts:80:44)
+
+    console.log
+      Handler error: handler failed InvalidRequest [Error]: 
+          at Resource.entrypoint (/Users/justin.hanselman/cloudformation-cli-typescript-plugin/src/resource.ts:600:28)
+          at processTicksAndRejections (node:internal/process/task_queues:95:5)
+          at Resource.descriptor.value (/Users/justin.hanselman/cloudformation-cli-typescript-plugin/src/resource.ts:83:48)
+          at Object.<anonymous> (/Users/justin.hanselman/cloudformation-cli-typescript-plugin/tests/lib/resource.test.ts:203:23)
+          at _callCircusTest (/Users/justin.hanselman/cloudformation-cli-typescript-plugin/node_modules/jest-circus/build/run.js:212:5)
+          at _runTest (/Users/justin.hanselman/cloudformation-cli-typescript-plugin/node_modules/jest-circus/build/run.js:149:3)
+          at _runTestsForDescribeBlock (/Users/justin.hanselman/cloudformation-cli-typescript-plugin/node_modules/jest-circus/build/run.js:63:9)
+          at _runTestsForDescribeBlock (/Users/justin.hanselman/cloudformation-cli-typescript-plugin/node_modules/jest-circus/build/run.js:57:9)
+          at run (/Users/justin.hanselman/cloudformation-cli-typescript-plugin/node_modules/jest-circus/build/run.js:25:3)
+          at runAndTransformResultsToJestFormat (/Users/justin.hanselman/cloudformation-cli-typescript-plugin/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapterInit.js:176:21)
+      Error: handler failed
+          at Resource.<anonymous> (/Users/justin.hanselman/cloudformation-cli-typescript-plugin/tests/lib/resource.test.ts:201:19)
+          at /Users/justin.hanselman/cloudformation-cli-typescript-plugin/node_modules/jest-mock/build/index.js:444:39
+          at Resource.<anonymous> (/Users/justin.hanselman/cloudformation-cli-typescript-plugin/node_modules/jest-mock/build/index.js:452:13)
+          at Resource.mockConstructor [as invokeHandler] (/Users/justin.hanselman/cloudformation-cli-typescript-plugin/node_modules/jest-mock/build/index.js:166:19)
+          at Resource.entrypoint (/Users/justin.hanselman/cloudformation-cli-typescript-plugin/src/resource.ts:575:39)
+          at processTicksAndRejections (node:internal/process/task_queues:95:5)
+          at Resource.descriptor.value (/Users/justin.hanselman/cloudformation-cli-typescript-plugin/src/resource.ts:83:48)
+          at Object.<anonymous> (/Users/justin.hanselman/cloudformation-cli-typescript-plugin/tests/lib/resource.test.ts:203:23)
+          at _callCircusTest (/Users/justin.hanselman/cloudformation-cli-typescript-plugin/node_modules/jest-circus/build/run.js:212:5)
+          at _runTest (/Users/justin.hanselman/cloudformation-cli-typescript-plugin/node_modules/jest-circus/build/run.js:149:3) {
+        errorCode: 'InvalidRequest'
+      }
+
+      at LambdaLogPublisher.publishMessage (src/log-delivery.ts:80:44)
+
+    console.log
+      END RequestId: undefined
+
+      at LambdaLogPublisher.publishMessage (src/log-delivery.ts:80:44)
+
+    console.log
+      REPORT RequestId: undefined	Duration: 1 ms	Memory Size: undefined MB
+
+      at LambdaLogPublisher.publishMessage (src/log-delivery.ts:80:44)
+
+    console.log
+      Waiting for logger proxy processes to finish...
+
+      at LambdaLogPublisher.publishMessage (src/log-delivery.ts:80:44)
+
+    console.log
+      Response from "putObject" undefined
+
+      at LambdaLogPublisher.publishMessage (src/log-delivery.ts:80:44)
+
+    console.log
+      Response from "putObject" undefined
+
+      at LambdaLogPublisher.publishMessage (src/log-delivery.ts:80:44)
+
+    console.log
+      Response from "putObject" undefined
+
+      at LambdaLogPublisher.publishMessage (src/log-delivery.ts:80:44)
+
+    console.log
+      Response from "putObject" undefined
+
+      at LambdaLogPublisher.publishMessage (src/log-delivery.ts:80:44)
+
+    console.log
+      Response from "putLogEvents" undefined
+
+      at LambdaLogPublisher.publishMessage (src/log-delivery.ts:80:44)
+
+    console.log
+      Response from "putLogEvents" undefined
+
+      at LambdaLogPublisher.publishMessage (src/log-delivery.ts:80:44)
+
+    console.log
+      Response from "putLogEvents" undefined
+
+      at LambdaLogPublisher.publishMessage (src/log-delivery.ts:80:44)
+
+    console.log
+      Response from "putLogEvents" undefined
+
+      at LambdaLogPublisher.publishMessage (src/log-delivery.ts:80:44)
+
+    console.log
+      Response from "putLogEvents" undefined
+
+      at LambdaLogPublisher.publishMessage (src/log-delivery.ts:80:44)
+
+    console.log
+      Response from "putLogEvents" undefined
+
+      at LambdaLogPublisher.publishMessage (src/log-delivery.ts:80:44)
+
+    console.log
+      Log delivery completed.
+
+      at LambdaLogPublisher.publishMessage (src/log-delivery.ts:80:44)
+
+    console.log
+      Response from "putObject" undefined
+
+      at LambdaLogPublisher.publishMessage (src/log-delivery.ts:80:44)
+
+    console.log
+      Response from "listObjects" undefined
+
+      at LambdaLogPublisher.publishMessage (src/log-delivery.ts:80:44)
+
+    console.log
+      TypeError: Cannot read properties of undefined (reading 'Contents')
+          at S3LogHelper.doesFolderExist (/Users/justin.hanselman/cloudformation-cli-typescript-plugin/src/log-delivery.ts:472:26)
+          at processTicksAndRejections (node:internal/process/task_queues:95:5)
+          at S3LogHelper.prepareFolder (/Users/justin.hanselman/cloudformation-cli-typescript-plugin/src/log-delivery.ts:446:34)
+          at Resource.initializeRuntime (/Users/justin.hanselman/cloudformation-cli-typescript-plugin/src/resource.ts:191:32)
+          at Resource.entrypoint (/Users/justin.hanselman/cloudformation-cli-typescript-plugin/src/resource.ts:536:13)
+          at Resource.descriptor.value (/Users/justin.hanselman/cloudformation-cli-typescript-plugin/src/resource.ts:83:48)
+          at Object.<anonymous> (/Users/justin.hanselman/cloudformation-cli-typescript-plugin/tests/lib/resource.test.ts:224:9)
+
+      at LambdaLogPublisher.publishMessage (src/log-delivery.ts:80:44)
+
+    console.log
+      Response from "putMetricData" undefined
+
+      at LambdaLogPublisher.publishMessage (src/log-delivery.ts:80:44)
+
+    console.log
+      Creating S3 bucket with name provider-logging-group-name-123456789012.
+
+      at LambdaLogPublisher.publishMessage (src/log-delivery.ts:80:44)
+
+    console.log
+      Response from "createBucket" undefined
+
+      at LambdaLogPublisher.publishMessage (src/log-delivery.ts:80:44)
+
+    console.log
+      Creating folder with name arn_aws_cloudformation_us-east-1_123456789012_stack/sample-stack/e722ae60-fe62-11e8-9a0e-0ae8cc519968/myBucket for bucket provider-logging-group-name-123456789012.
+
+      at LambdaLogPublisher.publishMessage (src/log-delivery.ts:80:44)
+
+    console.log
+      Response from "putObject" undefined
+
+      at LambdaLogPublisher.publishMessage (src/log-delivery.ts:80:44)
+
+    console.log
+      Response from "describeLogGroups" undefined
+
+      at LambdaLogPublisher.publishMessage (src/log-delivery.ts:80:44)
+
+    console.log
+      TypeError: Cannot read properties of undefined (reading 'logGroups')
+          at CloudWatchLogHelper.doesLogGroupExist (/Users/justin.hanselman/cloudformation-cli-typescript-plugin/src/log-delivery.ts:276:26)
+          at processTicksAndRejections (node:internal/process/task_queues:95:5)
+          at CloudWatchLogHelper.prepareLogStream (/Users/justin.hanselman/cloudformation-cli-typescript-plugin/src/log-delivery.ts:256:19)
+          at Resource.initializeRuntime (/Users/justin.hanselman/cloudformation-cli-typescript-plugin/src/resource.ts:213:39)
+          at Resource.entrypoint (/Users/justin.hanselman/cloudformation-cli-typescript-plugin/src/resource.ts:536:13)
+          at Resource.descriptor.value (/Users/justin.hanselman/cloudformation-cli-typescript-plugin/src/resource.ts:83:48)
+          at Object.<anonymous> (/Users/justin.hanselman/cloudformation-cli-typescript-plugin/tests/lib/resource.test.ts:224:9)
+          at _callCircusTest (/Users/justin.hanselman/cloudformation-cli-typescript-plugin/node_modules/jest-circus/build/run.js:212:5)
+          at _runTest (/Users/justin.hanselman/cloudformation-cli-typescript-plugin/node_modules/jest-circus/build/run.js:149:3)
+          at _runTestsForDescribeBlock (/Users/justin.hanselman/cloudformation-cli-typescript-plugin/node_modules/jest-circus/build/run.js:63:9)
+
+      at LambdaLogPublisher.publishMessage (src/log-delivery.ts:80:44)
+
+    console.log
+      Response from "putMetricData" undefined
+
+      at LambdaLogPublisher.publishMessage (src/log-delivery.ts:80:44)
+
+    console.log
+      Log group with name provider-logging-group-name does not exist in resource owner account.
+
+      at LambdaLogPublisher.publishMessage (src/log-delivery.ts:80:44)
+
+    console.log
+      Creating Log group with name provider-logging-group-name.
+
+      at LambdaLogPublisher.publishMessage (src/log-delivery.ts:80:44)
+
+    console.log
+      Response from "createLogGroup" undefined
+
+      at LambdaLogPublisher.publishMessage (src/log-delivery.ts:80:44)
+
+    console.log
+      Creating Log stream with name arn__aws__cloudformation__us-east-1__123456789012__stack/sample-stack/e722ae60-fe62-11e8-9a0e-0ae8cc519968/myBucket for log group provider-logging-group-name.
+
+      at LambdaLogPublisher.publishMessage (src/log-delivery.ts:80:44)
+
+    console.log
+      Response from "createLogStream" undefined
+
+      at LambdaLogPublisher.publishMessage (src/log-delivery.ts:80:44)
+
+    console.log
+      Response from "describeLogStreams" undefined
+
+      at LambdaLogPublisher.publishMessage (src/log-delivery.ts:80:44)
+
+    console.log
+      Error from "describeLogStreams" TypeError: Cannot read properties of undefined (reading 'logStreams')
+          at CloudWatchLogPublisher.populateSequenceToken (/Users/justin.hanselman/cloudformation-cli-typescript-plugin/src/log-delivery.ts:197:26)
+          at processTicksAndRejections (node:internal/process/task_queues:95:5)
+          at Resource.initializeRuntime (/Users/justin.hanselman/cloudformation-cli-typescript-plugin/src/resource.ts:226:17)
+          at Resource.entrypoint (/Users/justin.hanselman/cloudformation-cli-typescript-plugin/src/resource.ts:536:13)
+          at Resource.descriptor.value (/Users/justin.hanselman/cloudformation-cli-typescript-plugin/src/resource.ts:83:48)
+          at Object.<anonymous> (/Users/justin.hanselman/cloudformation-cli-typescript-plugin/tests/lib/resource.test.ts:224:9)
+          at _callCircusTest (/Users/justin.hanselman/cloudformation-cli-typescript-plugin/node_modules/jest-circus/build/run.js:212:5)
+          at _runTest (/Users/justin.hanselman/cloudformation-cli-typescript-plugin/node_modules/jest-circus/build/run.js:149:3)
+          at _runTestsForDescribeBlock (/Users/justin.hanselman/cloudformation-cli-typescript-plugin/node_modules/jest-circus/build/run.js:63:9)
+          at _runTestsForDescribeBlock (/Users/justin.hanselman/cloudformation-cli-typescript-plugin/node_modules/jest-circus/build/run.js:57:9)
+
+      at LambdaLogPublisher.publishMessage (src/log-delivery.ts:80:44)
+
+    console.log
+      START RequestId: undefined Version: undefined
+
+      at LambdaLogPublisher.publishMessage (src/log-delivery.ts:80:44)
+
+    console.log
+      Response from "putObject" undefined
+
+      at LambdaLogPublisher.publishMessage (src/log-delivery.ts:80:44)
+
+    console.log
+      Response from "putMetricData" undefined
+
+      at LambdaLogPublisher.publishMessage (src/log-delivery.ts:80:44)
+
+    console.log
+      Response from "putMetricData" undefined
+
+      at LambdaLogPublisher.publishMessage (src/log-delivery.ts:80:44)
+
+    console.log
+      Exception caught: Unknown action READ Error: 
+          at Resource.entrypoint (/Users/justin.hanselman/cloudformation-cli-typescript-plugin/src/resource.ts:600:28)
+          at processTicksAndRejections (node:internal/process/task_queues:95:5)
+          at Resource.descriptor.value (/Users/justin.hanselman/cloudformation-cli-typescript-plugin/src/resource.ts:83:48)
+          at Object.<anonymous> (/Users/justin.hanselman/cloudformation-cli-typescript-plugin/tests/lib/resource.test.ts:224:9)
+          at _callCircusTest (/Users/justin.hanselman/cloudformation-cli-typescript-plugin/node_modules/jest-circus/build/run.js:212:5)
+          at _runTest (/Users/justin.hanselman/cloudformation-cli-typescript-plugin/node_modules/jest-circus/build/run.js:149:3)
+          at _runTestsForDescribeBlock (/Users/justin.hanselman/cloudformation-cli-typescript-plugin/node_modules/jest-circus/build/run.js:63:9)
+          at _runTestsForDescribeBlock (/Users/justin.hanselman/cloudformation-cli-typescript-plugin/node_modules/jest-circus/build/run.js:57:9)
+          at run (/Users/justin.hanselman/cloudformation-cli-typescript-plugin/node_modules/jest-circus/build/run.js:25:3)
+          at runAndTransformResultsToJestFormat (/Users/justin.hanselman/cloudformation-cli-typescript-plugin/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapterInit.js:176:21)
+      Error: Unknown action READ
+          at Resource.BaseResource.invokeHandler (/Users/justin.hanselman/cloudformation-cli-typescript-plugin/src/resource.ts:314:19)
+          at Resource.entrypoint (/Users/justin.hanselman/cloudformation-cli-typescript-plugin/src/resource.ts:575:39)
+          at processTicksAndRejections (node:internal/process/task_queues:95:5)
+          at Resource.descriptor.value (/Users/justin.hanselman/cloudformation-cli-typescript-plugin/src/resource.ts:83:48)
+          at Object.<anonymous> (/Users/justin.hanselman/cloudformation-cli-typescript-plugin/tests/lib/resource.test.ts:224:9)
+          at _callCircusTest (/Users/justin.hanselman/cloudformation-cli-typescript-plugin/node_modules/jest-circus/build/run.js:212:5)
+          at _runTest (/Users/justin.hanselman/cloudformation-cli-typescript-plugin/node_modules/jest-circus/build/run.js:149:3)
+          at _runTestsForDescribeBlock (/Users/justin.hanselman/cloudformation-cli-typescript-plugin/node_modules/jest-circus/build/run.js:63:9)
+          at _runTestsForDescribeBlock (/Users/justin.hanselman/cloudformation-cli-typescript-plugin/node_modules/jest-circus/build/run.js:57:9)
+          at run (/Users/justin.hanselman/cloudformation-cli-typescript-plugin/node_modules/jest-circus/build/run.js:25:3)
+
+      at LambdaLogPublisher.publishMessage (src/log-delivery.ts:80:44)
+
+    console.log
+      END RequestId: undefined
+
+      at LambdaLogPublisher.publishMessage (src/log-delivery.ts:80:44)
+
+    console.log
+      REPORT RequestId: undefined	Duration: 0 ms	Memory Size: undefined MB
+
+      at LambdaLogPublisher.publishMessage (src/log-delivery.ts:80:44)
+
+    console.log
+      Waiting for logger proxy processes to finish...
+
+      at LambdaLogPublisher.publishMessage (src/log-delivery.ts:80:44)
+
+    console.log
+      Response from "putObject" undefined
+
+      at LambdaLogPublisher.publishMessage (src/log-delivery.ts:80:44)
+
+    console.log
+      Response from "putObject" undefined
+
+      at LambdaLogPublisher.publishMessage (src/log-delivery.ts:80:44)
+
+    console.log
+      Response from "putObject" undefined
+
+      at LambdaLogPublisher.publishMessage (src/log-delivery.ts:80:44)
+
+    console.log
+      Response from "putObject" undefined
+
+      at LambdaLogPublisher.publishMessage (src/log-delivery.ts:80:44)
+
+    console.log
+      Response from "putLogEvents" undefined
+
+      at LambdaLogPublisher.publishMessage (src/log-delivery.ts:80:44)
+
+    console.log
+      Response from "putLogEvents" undefined
+
+      at LambdaLogPublisher.publishMessage (src/log-delivery.ts:80:44)
+
+    console.log
+      Response from "putLogEvents" undefined
+
+      at LambdaLogPublisher.publishMessage (src/log-delivery.ts:80:44)
+
+    console.log
+      Response from "putLogEvents" undefined
+
+      at LambdaLogPublisher.publishMessage (src/log-delivery.ts:80:44)
+
+    console.log
+      Response from "putLogEvents" undefined
+
+      at LambdaLogPublisher.publishMessage (src/log-delivery.ts:80:44)
+
+    console.log
+      Response from "putLogEvents" undefined
+
+      at LambdaLogPublisher.publishMessage (src/log-delivery.ts:80:44)
+
+    console.log
+      Log delivery completed.
+
+      at LambdaLogPublisher.publishMessage (src/log-delivery.ts:80:44)
+
+    console.log
+      Response from "putObject" undefined
+
+      at LambdaLogPublisher.publishMessage (src/log-delivery.ts:80:44)
+
+    console.log
+      {
+        message: 'Not allowed to submit a new task after progress tracker has been closed'
+      }
+
+      at Resource.entrypoint (src/resource.ts:619:31)
+
+  ● when getting resource › parse request valid request and cast resource request
+
+    expect(received).toMatchObject(expected)
+
+    - Expected  - 2
+    + Received  + 2
+
+    @@ -1,18 +1,18 @@
+      Object {
+        "awsAccountId": "123456789012",
+        "awsPartition": "aws",
+        "clientRequestToken": "e722ae60-fe62-11e8-9a0e-0ae8cc519968",
+        "desiredResourceState": Object {
+    -     "state": "state1",
+    +     "state": undefined,
+        },
+        "desiredResourceTags": Object {
+          "tag1": "abc",
+        },
+        "logicalResourceIdentifier": "myBucket",
+        "previousResourceState": Object {
+    -     "state": "state2",
+    +     "state": undefined,
+        },
+        "previousResourceTags": Object {
+          "tag1": "def",
+        },
+        "region": "us-east-1",
+
+      487 |         expect(spyDeserialize).nthCalledWith(1, { state: 'state1' });
+      488 |         expect(spyDeserialize).nthCalledWith(2, { state: 'state2' });
+    > 489 |         expect(modeledRequest).toMatchObject({
+          |                                ^
+      490 |             clientRequestToken: request.bearerToken,
+      491 |             desiredResourceState: { state: 'state1' },
+      492 |             previousResourceState: { state: 'state2' },
+
+      at Object.<anonymous> (tests/lib/resource.test.ts:489:32)
+
+  ● when getting resource › parse test request valid request
+
+    expect(received).toMatchObject(expected)
+
+    - Expected  - 2
+    + Received  + 2
+
+      Object {
+        "clientRequestToken": "ecba020e-b2e6-4742-a7d0-8a06ae7c4b2b",
+        "desiredResourceState": Object {
+    -     "state": "state1",
+    +     "state": undefined,
+        },
+        "logicalResourceIdentifier": null,
+        "previousResourceState": Object {
+    -     "state": "state2",
+    +     "state": undefined,
+        },
+      }
+
+      801 |             resource['parseTestRequest'](testEntrypointPayload);
+      802 | 
+    > 803 |         expect(request).toMatchObject({
+          |                         ^
+      804 |             clientRequestToken: 'ecba020e-b2e6-4742-a7d0-8a06ae7c4b2b',
+      805 |             desiredResourceState: { state: 'state1' },
+      806 |             previousResourceState: { state: 'state2' },
+
+      at Object.<anonymous> (tests/lib/resource.test.ts:803:25)
+
+------------------|---------|----------|---------|---------|----------------------------------
+File              | % Stmts | % Branch | % Funcs | % Lines | Uncovered Line #s                
+------------------|---------|----------|---------|---------|----------------------------------
+All files         |   94.74 |    81.98 |   94.34 |   94.65 |                                  
+ src              |   94.71 |    81.98 |   94.23 |   94.62 |                                  
+  builder.ts      |     100 |       75 |     100 |     100 | 49                               
+  exceptions.ts   |     100 |      100 |     100 |     100 |                                  
+  index.ts        |     100 |      100 |     100 |     100 |                                  
+  interface.ts    |   88.28 |       60 |      75 |   88.19 | 85-104,184,228,296,299           
+  log-delivery.ts |   98.69 |    88.17 |     100 |   98.69 | 183,602-603                      
+  metrics.ts      |     100 |    91.67 |     100 |     100 | 173                              
+  proxy.ts        |     100 |       70 |      90 |     100 | 145-158,174                      
+  recast.ts       |   63.41 |    78.18 |      40 |   61.54 | 31,34,57-61,63-66,68-69,74,88-91 
+  resource.ts     |   96.96 |    85.06 |     100 |   96.94 | 75,486-491,497-498,657           
+  utils.ts        |   93.59 |    93.55 |   96.55 |   93.06 | 64,91,147-149                    
+ tests/utils      |     100 |      100 |     100 |     100 |                                  
+  index.ts        |     100 |      100 |     100 |     100 |                                  
+------------------|---------|----------|---------|---------|----------------------------------
+Test Suites: 3 failed, 5 passed, 8 total
+Tests:       5 failed, 1 skipped, 110 passed, 116 total
+Snapshots:   0 total
+Time:        25.087 s
+Ran all test suites.

@@ -2,7 +2,7 @@ import { BaseModel, HandlerErrorCode } from './interface';
 import { ProgressEvent } from './proxy';
 
 export abstract class BaseHandlerException extends Error {
-    static serialVersionUID = -1646136434112354328;
+    static serialVersionUID = -1646136434112354328n;
 
     public errorCode: HandlerErrorCode;
 

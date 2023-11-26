@@ -1,15 +1,16 @@
 import { format, inspect, InspectOptions } from 'util';
-import CloudWatchLogs, {
-    LogStream,
+import {
+    CloudWatchLogs,
     InputLogEvent,
-} from 'aws-sdk/clients/cloudwatchlogs';
-import { ServiceConfigurationOptions } from 'aws-sdk/lib/service';
-import S3, { PutObjectRequest } from 'aws-sdk/clients/s3';
+    LogStream,
+} from '@aws-sdk/client-cloudwatch-logs';
+import { S3, PutObjectRequest } from '@aws-sdk/client-s3';
 import { v4 as uuidv4 } from 'uuid';
 
-import { AwsTaskWorkerPool, ExtendedClient, SessionProxy } from './proxy';
+import { SessionProxy } from './proxy';
 import { MetricsPublisherProxy } from './metrics';
 import { delay, ProgressTracker, Queue } from './utils';
+import { Readable } from 'stream';
 
 type Console = globalThis.Console;
 export type LambdaLogger = Partial<Console>;
@@ -31,10 +32,7 @@ export interface LogFilter {
 export abstract class LogPublisher {
     private logFilters: LogFilter[];
 
-    constructor(
-        protected readonly workerPool?: AwsTaskWorkerPool,
-        ...filters: readonly LogFilter[]
-    ) {
+    constructor(...filters: readonly LogFilter[]) {
         this.logFilters = Array.from(filters);
     }
 
@@ -75,7 +73,7 @@ export class LambdaLogPublisher extends LogPublisher {
         private readonly logger: LambdaLogger,
         ...logFilters: readonly LogFilter[]
     ) {
-        super(null, ...logFilters);
+        super(...logFilters);
     }
 
     protected async publishMessage(message: string): Promise<void> {
@@ -90,7 +88,7 @@ export class LambdaLogPublisher extends LogPublisher {
  *   * logs:PutLogEvents
  */
 export class CloudWatchLogPublisher extends LogPublisher {
-    private client: ExtendedClient<CloudWatchLogs>;
+    private client: CloudWatchLogs;
     private queue = new Queue();
 
     // Note: PutLogEvents returns a result that includes a sequence number.
@@ -105,14 +103,13 @@ export class CloudWatchLogPublisher extends LogPublisher {
         private readonly logStreamName: string,
         private readonly platformLogger: Logger,
         private readonly metricsPublisherProxy?: MetricsPublisherProxy,
-        protected readonly workerPool?: AwsTaskWorkerPool,
         ...logFilters: readonly LogFilter[]
     ) {
-        super(workerPool, ...logFilters);
+        super(...logFilters);
     }
 
-    public refreshClient(options?: ServiceConfigurationOptions): void {
-        this.client = this.session.client(CloudWatchLogs, options, this.workerPool);
+    public refreshClient(options?: ConstructorParameters<typeof CloudWatchLogs>): void {
+        this.client = this.session.client(CloudWatchLogs, options);
     }
 
     protected async publishMessage(message: string, eventTime: Date): Promise<void> {
@@ -135,7 +132,7 @@ export class CloudWatchLogPublisher extends LogPublisher {
                     this.nextSequenceToken
                 );
                 return;
-            } catch (err) {
+            } catch (err: any) {
                 const errorCode = err.code || err.name;
                 this.platformLogger.log(
                     `Error from "putLogEvents" with sequence token ${this.nextSequenceToken}`,
@@ -175,16 +172,12 @@ export class CloudWatchLogPublisher extends LogPublisher {
     ): Promise<string> {
         // Delay to avoid throttling
         await delay(0.25);
-        const response = await this.client.makeRequestPromise(
-            'putLogEvents',
-            {
-                logGroupName: this.logGroupName,
-                logStreamName: this.logStreamName,
-                logEvents: [record],
-                sequenceToken,
-            },
-            { 'X-Amzn-Logs-Format': 'json/emf' }
-        );
+        const response = await this.client.putLogEvents({
+            logGroupName: this.logGroupName,
+            logStreamName: this.logStreamName,
+            logEvents: [record],
+            sequenceToken,
+        });
         this.platformLogger.log('Response from "putLogEvents"', response);
         if (response?.rejectedLogEventsInfo) {
             throw new Error(JSON.stringify(response.rejectedLogEventsInfo));
@@ -195,14 +188,11 @@ export class CloudWatchLogPublisher extends LogPublisher {
     async populateSequenceToken(): Promise<string> {
         this.nextSequenceToken = null;
         try {
-            const response = await this.client.makeRequestPromise(
-                'describeLogStreams',
-                {
-                    logGroupName: this.logGroupName,
-                    logStreamNamePrefix: this.logStreamName,
-                    limit: 1,
-                }
-            );
+            const response = await this.client.describeLogStreams({
+                logGroupName: this.logGroupName,
+                logStreamNamePrefix: this.logStreamName,
+                limit: 1,
+            });
             this.platformLogger.log('Response from "describeLogStreams"', response);
             if (response.logStreams?.length) {
                 const logStream = response.logStreams[0] as LogStream;
@@ -236,15 +226,14 @@ export class CloudWatchLogPublisher extends LogPublisher {
  *   * logs:DescribeLogGroups
  */
 export class CloudWatchLogHelper {
-    private client: ExtendedClient<CloudWatchLogs>;
+    private client: CloudWatchLogs;
 
     constructor(
         private readonly session: SessionProxy,
         private logGroupName: string,
         private logStreamName: string,
         private readonly platformLogger: Logger,
-        private readonly metricsPublisherProxy?: MetricsPublisherProxy,
-        protected readonly workerPool?: AwsTaskWorkerPool
+        private readonly metricsPublisherProxy?: MetricsPublisherProxy
     ) {
         if (!this.logStreamName) {
             this.logStreamName = uuidv4();
@@ -253,8 +242,8 @@ export class CloudWatchLogHelper {
         }
     }
 
-    public refreshClient(options?: ServiceConfigurationOptions): void {
-        this.client = this.session.client(CloudWatchLogs, options, this.workerPool);
+    public refreshClient(options?: ConstructorParameters<typeof CloudWatchLogs>): void {
+        this.client = this.session.client(CloudWatchLogs, options);
     }
 
     public async prepareLogStream(): Promise<string | null> {
@@ -268,7 +257,7 @@ export class CloudWatchLogHelper {
                 await this.createLogGroup();
             }
             return await this.createLogStream();
-        } catch (err) {
+        } catch (err: any) {
             this.log(
                 `Initializing logging group setting failed with error: ${err.toString()}`
             );
@@ -280,7 +269,7 @@ export class CloudWatchLogHelper {
     private async doesLogGroupExist(): Promise<boolean> {
         let logGroupExists = false;
         try {
-            const response = await this.client.makeRequestPromise('describeLogGroups', {
+            const response = await this.client.describeLogGroups({
                 logGroupNamePrefix: this.logGroupName,
             });
             this.log('Response from "describeLogGroups"', response);
@@ -289,7 +278,7 @@ export class CloudWatchLogHelper {
                     return logGroup.logGroupName === this.logGroupName;
                 });
             }
-        } catch (err) {
+        } catch (err: any) {
             this.log(err);
             await this.emitMetricsForLoggingFailure(err);
         }
@@ -304,11 +293,11 @@ export class CloudWatchLogHelper {
     private async createLogGroup(): Promise<string> {
         try {
             this.log(`Creating Log group with name ${this.logGroupName}.`);
-            const response = await this.client.makeRequestPromise('createLogGroup', {
+            const response = await this.client.createLogGroup({
                 logGroupName: this.logGroupName,
             });
             this.log('Response from "createLogGroup"', response);
-        } catch (err) {
+        } catch (err: any) {
             const errorCode = err.code || err.name;
             if (errorCode !== 'ResourceAlreadyExistsException') {
                 throw err;
@@ -322,12 +311,12 @@ export class CloudWatchLogHelper {
             this.log(
                 `Creating Log stream with name ${this.logStreamName} for log group ${this.logGroupName}.`
             );
-            const response = await this.client.makeRequestPromise('createLogStream', {
+            const response = await this.client.createLogStream({
                 logGroupName: this.logGroupName,
                 logStreamName: this.logStreamName,
             });
             this.log('Response from "createLogStream"', response);
-        } catch (err) {
+        } catch (err: any) {
             const errorCode = err.code || err.name;
             if (errorCode !== 'ResourceAlreadyExistsException') {
                 throw err;
@@ -358,7 +347,7 @@ export class CloudWatchLogHelper {
  *   * s3:PutObject
  */
 export class S3LogPublisher extends LogPublisher {
-    private client: ExtendedClient<S3>;
+    private client: S3;
 
     constructor(
         private readonly session: SessionProxy,
@@ -366,14 +355,13 @@ export class S3LogPublisher extends LogPublisher {
         private readonly folderName: string,
         private readonly platformLogger: Logger,
         private readonly metricsPublisherProxy?: MetricsPublisherProxy,
-        protected readonly workerPool?: AwsTaskWorkerPool,
         ...logFilters: readonly LogFilter[]
     ) {
-        super(workerPool, ...logFilters);
+        super(...logFilters);
     }
 
-    public refreshClient(options?: ServiceConfigurationOptions): void {
-        this.client = this.session.client(S3, options, this.workerPool);
+    public refreshClient(options?: ConstructorParameters<typeof S3>): void {
+        this.client = this.session.client(S3, options);
     }
 
     protected async publishMessage(message: string, eventTime: Date): Promise<void> {
@@ -393,15 +381,12 @@ export class S3LogPublisher extends LogPublisher {
                     Math.random() * 100
                 )}.log`,
                 ContentType: 'text/plain',
-                Body: message,
+                Body: Readable.from(message),
             };
-            const response = await this.client.makeRequestPromise(
-                'putObject',
-                putObjectParams
-            );
+            const response = await this.client.putObject(putObjectParams);
             this.platformLogger.log('Response from "putObject"', response);
             return;
-        } catch (err) {
+        } catch (err: any) {
             this.platformLogger.log(
                 `An error occurred while putting log events [${message}] to resource owner account, with error: ${err.toString()}`
             );
@@ -432,15 +417,14 @@ export class S3LogPublisher extends LogPublisher {
  *   * s3:ListBucket
  */
 export class S3LogHelper {
-    private client: ExtendedClient<S3>;
+    private client: S3;
 
     constructor(
         private readonly session: SessionProxy,
         private bucketName: string,
         private folderName: string,
         private readonly platformLogger: Logger,
-        private readonly metricsPublisherProxy?: MetricsPublisherProxy,
-        protected readonly workerPool?: AwsTaskWorkerPool
+        private readonly metricsPublisherProxy?: MetricsPublisherProxy
     ) {
         if (!this.folderName) {
             this.folderName = uuidv4();
@@ -448,8 +432,8 @@ export class S3LogHelper {
         this.folderName = this.folderName.replace(/[^a-z0-9!_'.*()/-]/gi, '_');
     }
 
-    public refreshClient(options?: ServiceConfigurationOptions): void {
-        this.client = this.session.client(S3, options, this.workerPool);
+    public refreshClient(options?: ConstructorParameters<typeof S3>): void {
+        this.client = this.session.client(S3, options);
     }
 
     public async prepareFolder(): Promise<string | null> {
@@ -468,7 +452,7 @@ export class S3LogHelper {
             } else {
                 return await this.createFolder();
             }
-        } catch (err) {
+        } catch (err: any) {
             this.log(
                 `Initializing S3 bucket and folder failed with error: ${err.toString()}`
             );
@@ -480,7 +464,7 @@ export class S3LogHelper {
     private async doesFolderExist(): Promise<boolean | null> {
         let folderExists = false;
         try {
-            const response = await this.client.makeRequestPromise('listObjectsV2', {
+            const response = await this.client.listObjectsV2({
                 Bucket: this.bucketName,
                 Prefix: `${this.folderName}/`,
             });
@@ -494,7 +478,7 @@ export class S3LogHelper {
                 } exist in bucket ${this.bucketName}.`
             );
             return Promise.resolve(folderExists);
-        } catch (err) {
+        } catch (err: any) {
             const errorCode = err.code || err.name;
             if (errorCode === 'NoSuchBucket') {
                 this.log(
@@ -510,11 +494,11 @@ export class S3LogHelper {
     private async createBucket(): Promise<string> {
         try {
             this.log(`Creating S3 bucket with name ${this.bucketName}.`);
-            const response = await this.client.makeRequestPromise('createBucket', {
+            const response = await this.client.createBucket({
                 Bucket: this.bucketName,
             });
             this.log('Response from "createBucket"', response);
-        } catch (err) {
+        } catch (err: any) {
             const errorCode = err.code || err.name;
             if (
                 errorCode !== 'BucketAlreadyOwnedByYou' &&
@@ -531,7 +515,7 @@ export class S3LogHelper {
             this.log(
                 `Creating folder with name ${this.folderName} for bucket ${this.bucketName}.`
             );
-            const response = await this.client.makeRequestPromise('putObject', {
+            const response = await this.client.putObject({
                 Bucket: this.bucketName,
                 Key: `${this.folderName}/`,
                 ContentLength: 0,
@@ -608,7 +592,7 @@ export class LoggerProxy implements Logger {
                 try {
                     await logPublisher.publishLogEvent(formatted, eventTime);
                     this.tracker.addCompleted();
-                } catch (err) {
+                } catch (err: any) {
                     console.error(err);
                     if (err.retryable === true) {
                         try {

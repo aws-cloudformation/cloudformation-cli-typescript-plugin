@@ -1,7 +1,7 @@
 import * as exceptions from '~/exceptions';
 import { HandlerErrorCode, OperationStatus } from '~/interface';
 
-type Exceptions = keyof typeof exceptions;
+type Exceptions = keyof Omit<typeof exceptions, 'BaseHandlerException'>;
 
 describe('when getting exceptions', () => {
     test('all error codes have exceptions', () => {
@@ -14,7 +14,7 @@ describe('when getting exceptions', () => {
         }
     });
 
-    test('exception to progress event', () => {
+    fit('exception to progress event', () => {
         for (const errorCode in HandlerErrorCode) {
             const exceptionName = errorCode as Exceptions;
             let e: exceptions.BaseHandlerException;

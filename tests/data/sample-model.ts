@@ -5,15 +5,16 @@ import { BaseModel, integer, Integer, Optional, transformValue } from '../../src
 import { Exclude, Expose, Transform, Type } from 'class-transformer';
 
 export class ResourceModel extends BaseModel {
-    ['constructor']: typeof ResourceModel;
+    declare ['constructor']: typeof ResourceModel;
 
     @Exclude()
     public static readonly TYPE_NAME: string = 'Organization::Service::ComplexResource';
 
     @Expose({ name: 'ListListAny' })
     @Transform(
-        (value, obj) =>
-            transformValue(Object, 'listListAny', value, obj, [Array, Array]),
+        (value, obj) => {
+            return transformValue(Object, 'listListAny', value, obj, [Array, Array]);
+        },
         {
             toClassOnly: true,
         }
@@ -87,7 +88,7 @@ export class ResourceModel extends BaseModel {
 }
 
 export class NestedList extends BaseModel {
-    ['constructor']: typeof NestedList;
+    declare ['constructor']: typeof NestedList;
 
     @Expose({ name: 'NestedListBool' })
     @Transform((value, obj) => transformValue(Boolean, 'nestedListBool', value, obj), {
@@ -102,7 +103,7 @@ export class NestedList extends BaseModel {
 }
 
 export class AList extends BaseModel {
-    ['constructor']: typeof AList;
+    declare ['constructor']: typeof AList;
 
     @Expose({ name: 'DeeperBool' })
     @Transform((value, obj) => transformValue(Boolean, 'deeperBool', value, obj), {
@@ -123,7 +124,7 @@ export class AList extends BaseModel {
 }
 
 export class DeeperDictInList extends BaseModel {
-    ['constructor']: typeof DeeperDictInList;
+    declare ['constructor']: typeof DeeperDictInList;
 
     @Expose({ name: 'DeepestBool' })
     @Transform((value, obj) => transformValue(Boolean, 'deepestBool', value, obj), {
@@ -141,7 +142,7 @@ export class DeeperDictInList extends BaseModel {
 }
 
 export class ADict extends BaseModel {
-    ['constructor']: typeof ADict;
+    declare ['constructor']: typeof ADict;
 
     @Expose({ name: 'DeepBool' })
     @Transform((value, obj) => transformValue(Boolean, 'deepBool', value, obj), {
@@ -162,7 +163,7 @@ export class ADict extends BaseModel {
 }
 
 export class DeepDict extends BaseModel {
-    ['constructor']: typeof DeepDict;
+    declare ['constructor']: typeof DeepDict;
 
     @Expose({ name: 'DeeperBool' })
     @Transform((value, obj) => transformValue(Boolean, 'deeperBool', value, obj), {
@@ -183,7 +184,7 @@ export class DeepDict extends BaseModel {
 }
 
 export class DeeperDict extends BaseModel {
-    ['constructor']: typeof DeeperDict;
+    declare ['constructor']: typeof DeeperDict;
 
     @Expose({ name: 'DeepestBool' })
     @Transform((value, obj) => transformValue(Boolean, 'deepestBool', value, obj), {
@@ -201,7 +202,7 @@ export class DeeperDict extends BaseModel {
 }
 
 export class TagsModel extends BaseModel {
-    ['constructor']: typeof TagsModel;
+    declare ['constructor']: typeof TagsModel;
 
     @Expose({ name: 'Tags' })
     @Transform((value, obj) => transformValue(Tag, 'tags', value, obj, [Set]), {
@@ -211,7 +212,7 @@ export class TagsModel extends BaseModel {
 }
 
 class Tag extends BaseModel {
-    ['constructor']: typeof Tag;
+    declare ['constructor']: typeof Tag;
 
     @Expose({ name: 'Name' })
     name: string;
@@ -220,7 +221,7 @@ class Tag extends BaseModel {
 }
 
 export class SimpleResourceModel extends BaseModel {
-    ['constructor']: typeof SimpleResourceModel;
+    declare ['constructor']: typeof SimpleResourceModel;
 
     @Exclude()
     public static readonly TYPE_NAME: string = 'Organization::Service::SimpleResource';
@@ -238,7 +239,7 @@ export class SimpleResourceModel extends BaseModel {
 }
 
 export class SimpleStateModel extends BaseModel {
-    ['constructor']: typeof SimpleStateModel;
+    declare ['constructor']: typeof SimpleStateModel;
 
     @Exclude()
     public static readonly TYPE_NAME: string = 'Organization::Service::SimpleState';
@@ -251,7 +252,7 @@ export class SimpleStateModel extends BaseModel {
 }
 
 export class SerializableModel extends BaseModel {
-    ['constructor']: typeof SerializableModel;
+    declare ['constructor']: typeof SerializableModel;
     public static readonly TYPE_NAME: string = 'Organization::Service::Serializable';
 
     @Expose() somekey?: Optional<string>;

@@ -24,10 +24,10 @@ export async function delay(seconds: number): Promise<void> {
  * so that we know when they are all finished.
  */
 export class ProgressTracker extends EventEmitter {
-    #tasksSubmitted: number;
-    #tasksCompleted: number;
-    #tasksFailed: number;
-    #done: boolean;
+    private _tasksSubmitted: number;
+    private _tasksCompleted: number;
+    private _tasksFailed: number;
+    private _done: boolean;
 
     constructor() {
         super();
@@ -41,22 +41,22 @@ export class ProgressTracker extends EventEmitter {
     }
 
     get done(): boolean {
-        return this.#done;
+        return this._done;
     }
 
     set done(value: boolean) {
-        this.#done = !!value;
+        this._done = !!value;
     }
 
     end(): void {
-        this.#done = true;
+        this._done = true;
     }
 
     restart(): void {
-        this.#tasksSubmitted = 0;
-        this.#tasksCompleted = 0;
-        this.#tasksFailed = 0;
-        this.#done = false;
+        this._tasksSubmitted = 0;
+        this._tasksCompleted = 0;
+        this._tasksFailed = 0;
+        this._done = false;
     }
 
     addSubmitted(): void {
@@ -65,33 +65,33 @@ export class ProgressTracker extends EventEmitter {
                 'Not allowed to submit a new task after progress tracker has been closed.'
             );
         }
-        this.#tasksSubmitted++;
+        this._tasksSubmitted++;
         process.nextTick(() => this.emit('include', 'submitted'));
     }
 
     addCompleted(): void {
-        this.#tasksCompleted++;
+        this._tasksCompleted++;
         process.nextTick(() => this.emit('include', 'completed'));
     }
 
     addFailed(): void {
-        this.#tasksFailed++;
+        this._tasksFailed++;
         process.nextTick(() => this.emit('include', 'failed'));
     }
 
     get completed(): number {
-        return this.#tasksCompleted + this.#tasksFailed;
+        return this._tasksCompleted + this._tasksFailed;
     }
 
     get isFinished(): boolean {
-        return this.done && this.completed === this.#tasksSubmitted;
+        return this.done && this.completed === this._tasksSubmitted;
     }
 
     get message(): string {
         return (
-            `${this.#tasksCompleted} of ${this.#tasksSubmitted} completed` +
-            ` ${((this.#tasksCompleted / this.#tasksSubmitted) * 100).toFixed(2)}%` +
-            ` [${this.#tasksFailed} failed]`
+            `${this._tasksCompleted} of ${this._tasksSubmitted} completed` +
+            ` ${((this._tasksCompleted / this._tasksSubmitted) * 100).toFixed(2)}%` +
+            ` [${this._tasksFailed} failed]`
         );
     }
 
@@ -108,12 +108,12 @@ export class ProgressTracker extends EventEmitter {
 }
 
 export class Queue {
-    #queue: QueueItem[] = [];
-    #pendingPromise = false;
+    private _queue: QueueItem[] = [];
+    private _pendingPromise = false;
 
     public enqueue(promise: PromiseFunction): Promise<any> {
         return new Promise((resolve, reject) => {
-            this.#queue.push({
+            this._queue.push({
                 promise,
                 resolve,
                 reject,
@@ -123,28 +123,28 @@ export class Queue {
     }
 
     private dequeue(): boolean {
-        if (this.#pendingPromise) {
+        if (this._pendingPromise) {
             return false;
         }
-        const item = this.#queue.shift();
+        const item = this._queue.shift();
         if (!item) {
             return false;
         }
         try {
-            this.#pendingPromise = true;
+            this._pendingPromise = true;
             item.promise()
                 .then((value) => {
-                    this.#pendingPromise = false;
+                    this._pendingPromise = false;
                     item.resolve(value);
                     this.dequeue();
                 })
                 .catch((err) => {
-                    this.#pendingPromise = false;
+                    this._pendingPromise = false;
                     item.reject(err);
                     this.dequeue();
                 });
         } catch (err) {
-            this.#pendingPromise = false;
+            this._pendingPromise = false;
             item.reject(err);
             this.dequeue();
         }

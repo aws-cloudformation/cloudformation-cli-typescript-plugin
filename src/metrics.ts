@@ -1,14 +1,14 @@
-import CloudWatch, { Dimension, DimensionName } from 'aws-sdk/clients/cloudwatch';
-import { ServiceConfigurationOptions } from 'aws-sdk/lib/service';
+import { CloudWatch, Dimension } from '@aws-sdk/client-cloudwatch';
 
 import { Logger } from './log-delivery';
-import { AwsTaskWorkerPool, ExtendedClient, SessionProxy } from './proxy';
+import { SessionProxy } from './proxy';
 import { Action, MetricTypes, StandardUnit } from './interface';
 import { BaseHandlerException } from './exceptions';
 import { Queue } from './utils';
 
 const METRIC_NAMESPACE_ROOT = 'AWS/CloudFormation';
 
+type DimensionName = string;
 export type DimensionRecord = Record<DimensionName, string>;
 
 export function formatDimensions(dimensions: DimensionRecord): Array<Dimension> {
@@ -32,19 +32,18 @@ export function formatDimensions(dimensions: DimensionRecord): Array<Dimension> 
  */
 export class MetricsPublisher {
     private resourceNamespace: string;
-    private client: ExtendedClient<CloudWatch>;
+    private client: CloudWatch;
 
     constructor(
         private readonly session: SessionProxy,
         private readonly logger: Logger,
-        private readonly resourceType: string,
-        protected readonly workerPool?: AwsTaskWorkerPool
+        private readonly resourceType: string
     ) {
         this.resourceNamespace = resourceType.replace(/::/g, '/');
     }
 
-    public refreshClient(options?: ServiceConfigurationOptions): void {
-        this.client = this.session.client(CloudWatch, options, this.workerPool);
+    public refreshClient(options?: ConstructorParameters<typeof CloudWatch>): void {
+        this.client = this.session.client(CloudWatch, options);
     }
 
     async publishMetric(
@@ -60,7 +59,7 @@ export class MetricsPublisher {
             );
         }
         try {
-            const metric = await this.client.makeRequestPromise('putMetricData', {
+            const metric = await this.client.putMetricData({
                 Namespace: `${METRIC_NAMESPACE_ROOT}/${this.resourceNamespace}`,
                 MetricData: [
                     {
@@ -73,11 +72,11 @@ export class MetricsPublisher {
                 ],
             });
             this.log('Response from "putMetricData"', metric);
-        } catch (err) {
+        } catch (err: any) {
             if (err.retryable) {
                 throw err;
             } else {
-                this.log(`An error occurred while publishing metrics: ${err.message}`);
+                this.log(`An error occurred while publishing metrics: ${err?.message}`);
             }
         }
     }

@@ -1,3 +1,13 @@
+let reporters = ['default'];
+if (process.env.HTML_REPORT === 'true') {
+    reporters.push([
+        'jest-html-reporters',
+        {
+            openReport: true,
+        },
+    ]);
+}
+
 module.exports = {
     preset: 'ts-jest',
     testEnvironment: 'node',
@@ -22,4 +32,5 @@ module.exports = {
     moduleNameMapper: {
         '^~/(.*)$': '<rootDir>/src/$1',
     },
+    reporters,
 };

@@ -1,201 +1,68 @@
-import { AWSError } from 'aws-sdk';
-import Aws from 'aws-sdk/clients/all';
-import { NextToken } from 'aws-sdk/clients/cloudformation';
-import { CredentialsOptions } from 'aws-sdk/lib/credentials';
-import { PromiseResult } from 'aws-sdk/lib/request';
-import { Service, ServiceConfigurationOptions } from 'aws-sdk/lib/service';
-import { EventEmitter } from 'events';
-import { builder, IBuilder } from '@org-formation/tombok';
+import type {
+    AwsCredentialIdentity,
+    MemoizedProvider,
+    EndpointV2,
+} from '@smithy/types';
+import { builder, IBuilder } from './builder';
 import { Exclude, Expose } from 'class-transformer';
 
 import {
     BaseDto,
     BaseResourceHandlerRequest,
     BaseModel,
-    Constructor,
     Dict,
     HandlerErrorCode,
     OperationStatus,
-    OverloadedArguments,
-    ServiceProperties,
 } from './interface';
 
-type ClientMap = typeof Aws;
-export type ClientName = keyof ClientMap;
-export type Client = InstanceType<ClientMap[ClientName]>;
+type NextToken = string;
 
-export type Result<T> = T extends (...args: any) => infer R ? R : any;
-export type Input<T> = T extends (...args: infer P) => any ? P : never;
-export type ServiceOptions<S extends Service = Service> = ConstructorParameters<
-    Constructor<S>
->[0];
-export type ServiceOperation<
-    S extends Service = Service,
-    C extends Constructor<S> = Constructor<S>,
-    O extends ServiceProperties<S, C> = ServiceProperties<S, C>,
-    E extends Error = AWSError
-> = InstanceType<C>[O] & {
-    promise(): Promise<PromiseResult<any, E>>;
-};
-export type InferredResult<
-    S extends Service = Service,
-    C extends Constructor<S> = Constructor<S>,
-    O extends ServiceProperties<S, C> = ServiceProperties<S, C>,
-    E extends Error = AWSError,
-    N extends ServiceOperation<S, C, O, E> = ServiceOperation<S, C, O, E>
-> = Input<Input<Result<Result<N>['promise']>['then']>[0]>[0];
-
-type AwsTaskSignature = <
-    S extends Service = Service,
-    C extends Constructor<S> = Constructor<S>,
-    O extends ServiceProperties<S, C> = ServiceProperties<S, C>,
-    E extends Error = AWSError,
-    N extends ServiceOperation<S, C, O, E> = ServiceOperation<S, C, O, E>
->(
-    params: any
-) => Promise<InferredResult<S, C, O, E, N>>;
-
-/**
- * Promise final result Type from a AWS Service Function
- *
- * @param S Type of the AWS Service
- * @param C Type of the constructor function of the AWS Service
- * @param O Names of the operations (method) within the service
- * @param E Type of the error thrown by the service function
- * @param N Type of the service function inferred by the given operation name
- */
-export type ExtendedClient<S extends Service = Service> = S & {
-    serviceIdentifier?: string;
-    makeRequestPromise?: <
-        C extends Constructor<S> = Constructor<S>,
-        O extends ServiceProperties<S, C> = ServiceProperties<S, C>,
-        E extends Error = AWSError,
-        N extends ServiceOperation<S, C, O, E> = ServiceOperation<S, C, O, E>
-    >(
-        operation: O,
-        input?: OverloadedArguments<N>,
-        headers?: Record<string, string>
-    ) => Promise<InferredResult<S, C, O, E, N>>;
-};
-export interface AwsTaskWorkerPool extends EventEmitter {
-    runAwsTask: AwsTaskSignature;
-    shutdown: (doDestroy?: boolean) => Promise<boolean>;
-    completed?: number;
-    duration?: number;
+// Base Client Config properties that we reuse for easier client instantiation
+interface BaseAwsClientConfig {
+    credentials: MemoizedProvider<AwsCredentialIdentity>;
+    endpoint?: EndpointV2;
+    region: string;
 }
+
+type ConstructorReturnType<T> = T extends new (...args: any) => infer R ? R : never;
+
 export interface Session {
-    client: <S extends Service>(
-        service: ClientName | S | Constructor<S>,
-        options?: ServiceConfigurationOptions
-    ) => ExtendedClient<S>;
+    client: <ClientConstructor extends new (...args: any) => any>(
+        _ClientConstructor: ClientConstructor,
+        clientOptions?: ConstructorParameters<typeof _ClientConstructor>[0]
+    ) => ConstructorReturnType<ClientConstructor>;
 }
 
-export class SessionProxy implements Session {
-    constructor(private options: ServiceConfigurationOptions) {}
+export class SessionProxy {
+    constructor(private options: BaseAwsClientConfig) {}
 
-    private extendAwsClient<
-        S extends Service = Service,
-        C extends Constructor<S> = Constructor<S>,
-        O extends ServiceProperties<S, C> = ServiceProperties<S, C>,
-        E extends Error = AWSError,
-        N extends ServiceOperation<S, C, O, E> = ServiceOperation<S, C, O, E>
-    >(
-        service: S,
-        options?: ServiceConfigurationOptions,
-        workerPool?: AwsTaskWorkerPool
-    ): ExtendedClient<S> {
-        const client: ExtendedClient<S> = new Proxy(service, {
-            get(obj: ExtendedClient<S>, prop: string) {
-                if ('makeRequestPromise' === prop) {
-                    // Extend AWS client with promisified make request method
-                    // that can be used with worker pool
-                    return async (
-                        operation: O,
-                        input?: OverloadedArguments<N>,
-                        headers?: Record<string, string>
-                    ): Promise<InferredResult<S, C, O, E, N>> => {
-                        if (workerPool && workerPool.runAwsTask) {
-                            try {
-                                const result = await workerPool.runAwsTask<
-                                    S,
-                                    C,
-                                    O,
-                                    E,
-                                    N
-                                >({
-                                    name: obj.serviceIdentifier,
-                                    options,
-                                    operation,
-                                    input,
-                                    headers,
-                                });
-                                return result;
-                            } catch (err) {
-                                console.log(err);
-                            }
-                        }
-                        const request = obj.makeRequest(operation as string, input);
-                        const headerEntries = Object.entries(headers || {});
-                        if (headerEntries.length) {
-                            request.on('build', () => {
-                                for (const [key, value] of headerEntries) {
-                                    request.httpRequest.headers[key] = value;
-                                }
-                            });
-                        }
-                        return await request.promise();
-                    };
-                }
-                return obj[prop];
-            },
+    public client<ClientConstructor extends new (...args: any) => any>(
+        _ClientConstructor: ClientConstructor,
+        clientOptions?: ConstructorParameters<typeof _ClientConstructor>[0]
+    ): ConstructorReturnType<ClientConstructor> {
+        // There's too many dissociating types in the sdk, we will just cast
+        return new _ClientConstructor({
+            ...this.options,
+            ...clientOptions,
         });
-        if (client.config && client.config.update) {
-            client.config.update(options);
-        }
-        return client;
     }
 
-    public client<S extends Service = Service>(
-        service: ClientName | S | Constructor<S>,
-        options?: ServiceConfigurationOptions,
-        workerPool?: AwsTaskWorkerPool
-    ): ExtendedClient<S> {
-        const updatedConfig = { ...this.options, ...options };
-        let ctor: Constructor<S>;
-        let client: ExtendedClient<S>;
-        if (typeof service === 'string') {
-            // Kept for backward compatibility
-            const clients: { [K in ClientName]: ClientMap[K] } = Aws;
-            ctor = (clients[service] as unknown) as Constructor<S>;
-        } else if (typeof service === 'function') {
-            ctor = service as Constructor<S>;
-        } else {
-            client = this.extendAwsClient(service, updatedConfig, workerPool);
-        }
-        if (!client) {
-            client = this.extendAwsClient(
-                new ctor(updatedConfig),
-                updatedConfig,
-                workerPool
-            );
-        }
-        return client;
-    }
-
-    get configuration(): ServiceConfigurationOptions {
+    get configuration(): BaseAwsClientConfig {
         return this.options;
     }
 
     public static getSession(
-        credentials?: CredentialsOptions,
-        region?: string
+        credentials?: AwsCredentialIdentity,
+        region?: string,
+        endpoint?: EndpointV2
     ): SessionProxy | null {
         if (!credentials) {
             return null;
         }
         return new SessionProxy({
-            credentials,
+            credentials: () => Promise.resolve(credentials),
             region,
+            endpoint,
         });
     }
 }
@@ -262,6 +129,7 @@ export class ProgressEvent<
 
     // TODO: remove workaround when decorator mutation implemented: https://github.com/microsoft/TypeScript/issues/4881
     @Exclude()
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     public static builder<T extends ProgressEvent>(template?: Partial<T>): IBuilder<T> {
         /* istanbul ignore next */
         return null;

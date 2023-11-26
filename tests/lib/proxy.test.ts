@@ -1,23 +1,25 @@
-import STS from 'aws-sdk/clients/sts';
-import WorkerPoolAwsSdk from 'worker-pool-aws-sdk';
-
 import { ProgressEvent, SessionProxy } from '~/proxy';
 import { BaseModel, HandlerErrorCode, OperationStatus, Optional } from '~/interface';
+import { CloudWatch } from '@aws-sdk/client-cloudwatch';
+import { STS } from '@aws-sdk/client-sts';
 
-jest.mock('aws-sdk/clients/sts');
-jest.mock('worker-pool-aws-sdk');
-
-const mockResult = (output: any): jest.Mock => {
-    return jest.fn().mockReturnValue({
-        promise: jest.fn().mockResolvedValue(output),
-        httpRequest: { headers: {} },
-        on: jest.fn().mockImplementation((_event: string, listener: () => void) => {
-            if (listener) {
-                listener();
-            }
-        }),
-    });
+/* eslint-disable no-var */
+var mockSTS: {
+    getCallerIdentity: jest.Mock;
 };
+var mockSTSConst: jest.Mock;
+/* eslint-enable no-var */
+jest.mock('@aws-sdk/client-sts', () => {
+    const actual = jest.requireActual('@aws-sdk/client-sts');
+    mockSTS = {
+        getCallerIdentity: jest.fn(),
+    };
+    mockSTSConst = jest.fn().mockReturnValue(mockSTS);
+    return {
+        ...actual,
+        STS: mockSTSConst,
+    };
+});
 
 describe('when getting session proxy', () => {
     class ResourceModel extends BaseModel {
@@ -33,62 +35,35 @@ describe('when getting session proxy', () => {
     });
 
     describe('session proxy', () => {
+        const AWS_CREDS = {
+            accessKeyId: 'AAAAA',
+            secretAccessKey: '11111',
+        };
         const AWS_CONFIG = {
             region: 'us-east-1',
-            credentials: {
-                accessKeyId: 'AAAAA',
-                secretAccessKey: '11111',
-            },
+            credentials: async () => AWS_CREDS,
         };
 
-        test('should return modified client with worker pool', async () => {
-            const workerPool = new WorkerPoolAwsSdk({ minThreads: 1, maxThreads: 1 });
-            workerPool.runTask = null;
-            workerPool.runAwsTask = jest.fn().mockResolvedValue(true);
+        test('should return client with base arguments and options overrides', async () => {
             const proxy = new SessionProxy(AWS_CONFIG);
-            const client = proxy.client(new STS(), null, workerPool);
+            const modifiedConfig = { region: 'us-east-2' };
+            const client = proxy.client(STS, modifiedConfig);
             expect(proxy).toBeInstanceOf(SessionProxy);
-            expect(proxy.configuration).toMatchObject(AWS_CONFIG);
-            const result = await client.makeRequestPromise('getCallerIdentity', {});
-            expect(result).toBe(true);
-            expect(workerPool.runAwsTask).toHaveBeenCalledTimes(1);
-        });
-
-        test('should return modified client with service instance input', async () => {
-            const workerPool = new WorkerPoolAwsSdk({ minThreads: 1, maxThreads: 1 });
-            workerPool.runTask = null;
-            workerPool.runAwsTask = jest.fn().mockRejectedValue(null);
-            const proxy = new SessionProxy(AWS_CONFIG);
-            const modifiedConfig = { ...AWS_CONFIG, region: 'us-east-2' };
-            const mockMakeRequest = mockResult(true);
-            ((STS as unknown) as jest.Mock).mockImplementation(() => {
-                const ctor = STS;
-                ctor['serviceIdentifier'] = 'sts';
-                return {
-                    config: { ...modifiedConfig, update: () => modifiedConfig },
-                    constructor: ctor,
-                    makeRequest: mockMakeRequest,
-                };
+            expect(mockSTSConst).toBeCalledWith({
+                ...AWS_CONFIG,
+                ...modifiedConfig,
             });
-            const client = proxy.client(new STS(), modifiedConfig, workerPool);
-            expect(proxy).toBeInstanceOf(SessionProxy);
-            expect(client.config).toMatchObject(modifiedConfig);
-            const result = await client.makeRequestPromise(
-                'getCallerIdentity',
-                {},
-                { 'X-Dummy-Header': 'DUMMY HEADER' }
-            );
-            expect(result).toBe(true);
-            expect(mockMakeRequest).toHaveBeenCalledTimes(1);
+            client.getCallerIdentity({});
+            expect(mockSTS.getCallerIdentity).toHaveBeenCalledTimes(1);
         });
 
-        test('should return proxy with get session credentials argument', () => {
-            const proxy = SessionProxy.getSession(
-                AWS_CONFIG.credentials,
-                AWS_CONFIG.region
-            );
+        test('should return proxy with get session credentials argument', async () => {
+            const proxy = SessionProxy.getSession(AWS_CREDS, AWS_CONFIG.region);
             expect(proxy).toBeInstanceOf(SessionProxy);
-            expect(proxy.client('CloudWatch')).toBeDefined();
+            const cloudwatch = proxy.client(CloudWatch);
+            expect(cloudwatch).toBeDefined();
+            expect(await cloudwatch.config.credentials()).toEqual(AWS_CREDS);
+            expect(await cloudwatch.config.region()).toBe(AWS_CONFIG.region);
         });
 
         test('should return null with get session null argument', () => {
