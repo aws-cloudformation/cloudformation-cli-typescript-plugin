@@ -38,7 +38,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python: [3.6]
+        python: [3.8]
     steps:
       - uses: actions/checkout@v3
       - name: Setup Python ${{ matrix.python }}
@@ -65,10 +65,10 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: package-npm
-      - name: Download Python 3.6 Artifacts
+      - name: Download Python 3.8 Artifacts
         uses: actions/download-artifact@v3
         with:
-          name: dist-py3.6
+          name: dist-py3.8
           path: dist/
       - name: List Artifacts
         run: |
