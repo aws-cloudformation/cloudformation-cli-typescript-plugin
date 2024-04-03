@@ -17,7 +17,7 @@ If you are using this package to build resource providers for CloudFormation, in
 
 **Prerequisites**
 
-- Python version 3.6 or above
+- Python version 3.8 or above
 - [SAM CLI](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/serverless-sam-cli-install.html)
 - Your choice of TypeScript IDE
 
