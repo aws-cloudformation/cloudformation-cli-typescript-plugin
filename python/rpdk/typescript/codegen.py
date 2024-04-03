@@ -166,10 +166,15 @@ class TypescriptLanguagePlugin(LanguagePlugin):
             "Runtime": project.runtime,
             "CodeUri": self.CODE_URI,
         }
+        test_handler_params = {
+            **handler_params,
+            "Handler": project.test_entrypoint,
+        }
         _render_template(
             project.root / "template.yml",
             resource_type=project.type_name,
-            params=handler_params,
+            handler_params=handler_params,
+            test_handler_params=test_handler_params,
         )
 
         LOG.debug("Init complete")

@@ -16,7 +16,7 @@ jobs:
     strategy:
       matrix:
         os: [ ubuntu-latest, macos-latest ]
-        python: [ 3.8, 3.9 ]
+        python: [ "3.8", "3.9", "3.10", "3.11"]
         node: [ 20 ]
     env:
       SAM_CLI_TELEMETRY: "0"

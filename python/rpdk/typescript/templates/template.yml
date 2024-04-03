@@ -11,14 +11,14 @@ Resources:
   TestEntrypoint:
     Type: AWS::Serverless::Function
     Properties:
-      {% for key, value in params.items() %}
+      {% for key, value in test_handler_params.items() %}
       {{ key }}: {{ value }}
       {% endfor %}
 
   TypeFunction:
     Type: AWS::Serverless::Function
     Properties:
-      {% for key, value in params.items() %}
+      {% for key, value in handler_params.items() %}
       {{ key }}: {{ value }}
       {% endfor %}
     Metadata:
