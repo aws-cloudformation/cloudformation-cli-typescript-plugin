@@ -17,7 +17,7 @@ jobs:
       matrix:
         os: [ ubuntu-latest, macos-latest ]
         python: [ 3.8, 3.9 ]
-        node: [ 18 ]
+        node: [ 20 ]
     env:
       SAM_CLI_TELEMETRY: "0"
       AWS_REGION: "us-east-1"
