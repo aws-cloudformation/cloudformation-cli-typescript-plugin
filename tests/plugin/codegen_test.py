@@ -193,6 +193,7 @@ def test_initialize(project_no_docker_use_docker_values):
         f"{os.path.join('example_inputs', 'inputs_1_create.json')}",
         f"{os.path.join('example_inputs', 'inputs_1_invalid.json')}",
         f"{os.path.join('example_inputs', 'inputs_1_update.json')}",
+        "Makefile",
         "package.json",
         "README.md",
         "sam-tests",
@@ -215,6 +216,7 @@ def test_initialize(project_no_docker_use_docker_values):
     assert "models.ts" in readme
 
     assert project_value.entrypoint in files["template.yml"].read_text()
+    assert "BuildMethod: makefile" in files["template.yml"].read_text()
 
 
 def test_generate(project: Project):

@@ -24,7 +24,7 @@ repos:
           - --indent=4
           - --no-sort-keys
       - id: check-merge-conflict
-      - id: check-yaml
+      # - id: check-yaml  # have jinja yml templates so skipping this
   - repo: https://github.com/pycqa/flake8
     rev: "5.0.4"
     hooks:

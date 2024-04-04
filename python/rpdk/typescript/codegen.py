@@ -37,7 +37,7 @@ def validate_no(value):
 class TypescriptLanguagePlugin(LanguagePlugin):
     MODULE_NAME = __name__
     NAME = "typescript"
-    RUNTIME = "nodejs18.x"
+    RUNTIME = "nodejs20.x"
     ENTRY_POINT = "dist/handlers.entrypoint"
     TEST_ENTRY_POINT = "dist/handlers.testEntrypoint"
     CODE_URI = "./"
@@ -156,20 +156,25 @@ class TypescriptLanguagePlugin(LanguagePlugin):
             lib_name=SUPPORT_LIB_NAME,
         )
 
+        _render_template(
+            project.root / "Makefile",
+        )
+
         # CloudFormation/SAM template for handler lambda
         handler_params = {
             "Handler": project.entrypoint,
             "Runtime": project.runtime,
             "CodeUri": self.CODE_URI,
         }
-        handler_function = {
-            "TestEntrypoint": {**handler_params, "Handler": project.test_entrypoint},
+        test_handler_params = {
+            **handler_params,
+            "Handler": project.test_entrypoint,
         }
-        handler_function[MAIN_HANDLER_FUNCTION] = handler_params
         _render_template(
             project.root / "template.yml",
             resource_type=project.type_name,
-            functions=handler_function,
+            handler_params=handler_params,
+            test_handler_params=test_handler_params,
         )
 
         LOG.debug("Init complete")
