@@ -8,7 +8,7 @@
         "allowJs": true,
         "declaration": true,
         "removeComments": true,
-        "sourceMap": false,
+        "sourceMap": true,
         "experimentalDecorators": true,
         "emitDecoratorMetadata": true,
         "outDir": "dist",
@@ -17,10 +17,10 @@
             "~/*": [
                 "src/*"
             ]
-        }
+        },
     },
     "include": [
-        "src/**/*.ts"
+        "src/**/*.ts",
     ],
     "exclude": [
         "node_modules"

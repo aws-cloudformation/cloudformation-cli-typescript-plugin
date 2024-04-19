@@ -7,11 +7,12 @@ import {
 } from 'aws-sdk/clients/cloudformation';
 import { Service } from 'aws-sdk/lib/service';
 import {
-    classToPlain,
     ClassTransformOptions,
     Exclude,
     Expose,
+    instanceToPlain,
     plainToClass,
+    plainToInstance,
 } from 'class-transformer';
 
 export type Optional<T> = T | undefined | null;
@@ -66,6 +67,7 @@ export interface Callable<R extends Array<any>, T> {
     (...args: R): T;
 }
 
+
 interface Integer extends BigInt {
     /**
      * Defines the default JSON representation of
@@ -78,14 +80,14 @@ interface Integer extends BigInt {
 }
 
 interface IntegerConstructor extends BigIntConstructor {
-    (value?: unknown): integer;
+    (value?: bigint | boolean | number | string): integer;
     readonly prototype: Integer;
     /**
      * Returns true if the value passed is a safe integer
      * to be parsed as number.
      * @param value An integer value.
      */
-    isSafeInteger(value: unknown): boolean;
+    isSafeInteger(value: integer): boolean;
 }
 
 /**
@@ -100,7 +102,7 @@ export const Integer: IntegerConstructor = new Proxy(BigInt, {
         target.prototype.toJSON = function (): number {
             return Number(this.valueOf());
         };
-        const isSafeInteger = (value: unknown): boolean => {
+        const isSafeInteger = (value: bigint): boolean => {
             if (
                 value &&
                 (value < BigInt(Number.MIN_SAFE_INTEGER) ||
@@ -111,6 +113,7 @@ export const Integer: IntegerConstructor = new Proxy(BigInt, {
             return true;
         };
         target.isSafeInteger = isSafeInteger;
+        // @ts-expect-error argArray is unknown
         const value = target(...argArray);
         if (value && !isSafeInteger(value)) {
             throw new RangeError(`Value is not a safe integer: ${value.toString()}`);
@@ -175,6 +178,9 @@ export interface Credentials {
  */
 export abstract class BaseDto {
     constructor(partial?: unknown) {
+        if (partial === undefined) {
+            return this;
+        }
         if (partial) {
             Object.assign(this, partial);
         }
@@ -182,13 +188,13 @@ export abstract class BaseDto {
 
     @Exclude()
     static serializer = {
-        classToPlain,
-        plainToClass,
+        instanceToPlain,
+        plainToInstance,
     };
 
     @Exclude()
     public serialize(removeNull = true): Dict {
-        const data: Dict = JSON.parse(JSON.stringify(classToPlain(this)));
+        const data: Dict = JSON.parse(JSON.stringify(instanceToPlain(this)));
         // To match Java serialization, which drops 'null' values, and the
         // contract tests currently expect this also.
         if (removeNull) {
@@ -210,7 +216,7 @@ export abstract class BaseDto {
         if (jsonData == null) {
             return null;
         }
-        return plainToClass(this, jsonData, {
+        return plainToInstance(this, jsonData, {
             enableImplicitConversion: false,
             excludeExtraneousValues: true,
             ...options,
@@ -231,7 +237,12 @@ export interface RequestContext<T> {
 }
 
 export class BaseModel extends BaseDto {
-    ['constructor']: typeof BaseModel;
+    constructor(partial?: unknown) {
+        super();
+        if (partial) {
+            Object.assign(this, partial);
+        }
+    }
 
     @Exclude()
     protected static readonly TYPE_NAME?: string;

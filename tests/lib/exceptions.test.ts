@@ -19,8 +19,10 @@ describe('when getting exceptions', () => {
             const exceptionName = errorCode as Exceptions;
             let e: exceptions.BaseHandlerException;
             try {
+                // @ts-expect-error resolve later
                 e = new exceptions[exceptionName](null, null);
             } catch (err) {
+                // @ts-expect-error resolve later
                 e = new exceptions[exceptionName](
                     'Foo::Bar::Baz',
                     errorCode as HandlerErrorCode

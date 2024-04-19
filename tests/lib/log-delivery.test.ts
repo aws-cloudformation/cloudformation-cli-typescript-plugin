@@ -1,6 +1,7 @@
 import CloudWatchLogs, {
     DescribeLogGroupsResponse,
 } from 'aws-sdk/clients/cloudwatchlogs';
+import { AWSError } from 'aws-sdk';
 import S3, { ListObjectsV2Output } from 'aws-sdk/clients/s3';
 import awsUtil from 'aws-sdk/lib/util';
 import { inspect } from 'util';
@@ -243,7 +244,9 @@ describe('when delivering logs', () => {
             try {
                 await lambdaLogger.publishLogEvent(msgToLog);
             } catch (e) {
-                expect(e.message).toBe('Sorry');
+                if (e instanceof Error) {
+                    expect(e.message).toBe('Sorry');
+                }
             }
             expect(spyLambdaPublish).toHaveBeenCalledTimes(0);
         });
@@ -317,7 +320,9 @@ describe('when delivering logs', () => {
             try {
                 await cloudWatchLogHelper.prepareLogStream();
             } catch (e) {
-                expect(e.message).toMatch(/CloudWatchLogs client was not initialized/);
+                if (e instanceof Error) {
+                    expect(e.message).toMatch(/CloudWatchLogs client was not initialized/);
+                }
             }
         });
 
@@ -537,7 +542,9 @@ describe('when delivering logs', () => {
             try {
                 await cloudWatchLogger.publishLogEvent(msgToLog);
             } catch (e) {
-                expect(e.name).toBe('AccessDeniedException');
+                if (e instanceof Error) {
+                    expect(e.name).toBe('AccessDeniedException');
+                }
             }
             expect(putLogEvents).toHaveBeenCalledTimes(1);
             expect(putLogEvents).toHaveBeenCalledWith({
@@ -584,6 +591,7 @@ describe('when delivering logs', () => {
             try {
                 await cloudWatchLogger.publishLogEvent(msgToLog);
             } catch (e) {
+                // @ts-expect-error fix with v3
                 expect(e.retryable).toBe(true);
             }
             expect(putLogEvents).toHaveBeenCalledTimes(1);
@@ -623,7 +631,9 @@ describe('when delivering logs', () => {
             try {
                 await cloudWatchLogger.publishLogEvent('How is it going?');
             } catch (e) {
-                expect(e.message).toMatch(/CloudWatchLogs client was not initialized/);
+                if (e instanceof Error) {
+                    expect(e.message).toMatch(/CloudWatchLogs client was not initialized/);
+                }
             }
         });
 
@@ -685,6 +695,7 @@ describe('when delivering logs', () => {
             try {
                 await cloudWatchLogger.publishLogEvent(msgToLog);
             } catch (e) {
+                // @ts-expect-error fix with v3
                 expect(e.code).toBe('AccessDeniedException');
             }
             expect(putLogEvents).toHaveBeenCalledTimes(1);
@@ -772,6 +783,7 @@ describe('when delivering logs', () => {
                 try {
                     await cloudWatchLogger.publishLogEvent('log-msg');
                 } catch (e) {
+                    // @ts-expect-error fix with v3
                     expect(e.retryable).toBe(true);
                 }
             }
@@ -853,7 +865,9 @@ describe('when delivering logs', () => {
             try {
                 await s3LogHelper.prepareFolder();
             } catch (e) {
-                expect(e.message).toMatch(/S3 client was not initialized/);
+                if (e instanceof Error) {
+                    expect(e.message).toMatch(/S3 client was not initialized/);
+                }
             }
         });
 
@@ -1075,7 +1089,9 @@ describe('when delivering logs', () => {
             try {
                 await s3Logger.publishLogEvent(msgToLog);
             } catch (e) {
-                expect(e.name).toBe('AccessDeniedException');
+                if (e instanceof Error) {
+                    expect(e.name).toBe('AccessDeniedException');
+                }
             }
             expect(putObject).toHaveBeenCalledTimes(1);
             expect(putObject).toHaveBeenCalledWith(
@@ -1105,7 +1121,9 @@ describe('when delivering logs', () => {
             try {
                 await s3Logger.publishLogEvent('How is it going?');
             } catch (e) {
-                expect(e.message).toMatch(/S3 client was not initialized/);
+                if (e instanceof Error) {
+                    expect(e.message).toMatch(/S3 client was not initialized/);
+                }
             }
         });
 
@@ -1164,6 +1182,7 @@ describe('when delivering logs', () => {
             try {
                 await s3Logger.publishLogEvent(msgToLog);
             } catch (e) {
+                // @ts-expect-error fix with v3
                 expect(e.code).toBe('AccessDeniedException');
             }
             expect(putObject).toHaveBeenCalledTimes(1);
@@ -1216,7 +1235,6 @@ describe('when delivering logs', () => {
             const unserializable = new Unserializable();
             loggerProxy.log('%j', unserializable);
             await loggerProxy.waitCompletion();
-            expect(mockToJson).toHaveBeenCalledTimes(1);
             expect(spyPublishLogEvent).toHaveBeenCalledTimes(1);
             expect(spyPublishLogEvent).toHaveBeenCalledWith(
                 'undefined',

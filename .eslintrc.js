@@ -3,10 +3,15 @@ module.exports = {
         jest: true,
         node: true,
     },
-    plugins: ['@typescript-eslint', 'prettier', 'import', 'prefer-arrow'],
+    plugins: [
+        '@typescript-eslint',
+        'prettier',
+        'import',
+        'prefer-arrow'
+    ],
     parser: '@typescript-eslint/parser',
     parserOptions: {
-        ecmaVersion: 2017,
+        ecmaVersion: 'latest',
         sourceType: 'module',
         project: './tsconfig.eslint.json',
     },
@@ -34,13 +39,16 @@ module.exports = {
         '@typescript-eslint/no-empty-function': ['warn'],
         '@typescript-eslint/no-explicit-any': ['warn'],
 
+        '@typescript-eslint/no-unused-vars': ['warn'],
+        '@typescript-eslint/no-loss-of-precision': ['warn'],
+
         // Require all imported dependencies are actually declared in package.json
         'import/no-extraneous-dependencies': ['error'],
         'import/no-unresolved': ['error'],
     },
     overrides: [
         {
-            files: ['*.js', '*.jsx'],
+            files: ['*.js', '*.jsx', '*.cjs'],
             rules: {
                 '@typescript-eslint/explicit-function-return-type': 'off',
                 '@typescript-eslint/no-unused-vars': 'off',

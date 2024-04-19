@@ -6,7 +6,7 @@ import { PromiseResult } from 'aws-sdk/lib/request';
 import { Service, ServiceConfigurationOptions } from 'aws-sdk/lib/service';
 import { EventEmitter } from 'events';
 import { builder, IBuilder } from '@org-formation/tombok';
-import { Exclude, Expose } from 'class-transformer';
+import { Exclude, Expose, Type } from 'class-transformer';
 
 import {
     BaseDto,

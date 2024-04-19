@@ -74,9 +74,11 @@ export class MetricsPublisher {
             });
             this.log('Response from "putMetricData"', metric);
         } catch (err) {
+            // @ts-expect-error fix in aws sdk v3
             if (err.retryable) {
                 throw err;
             } else {
+                // @ts-expect-error fix in aws sdk v3
                 this.log(`An error occurred while publishing metrics: ${err.message}`);
             }
         }

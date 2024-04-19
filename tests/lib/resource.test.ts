@@ -41,13 +41,11 @@ describe('when getting resource', () => {
     let spyInitializeRuntime: jest.SpyInstance;
     const TYPE_NAME = 'Test::Foo::Bar';
     class MockModel extends SimpleStateModel {
-        ['constructor']: typeof MockModel;
         public static readonly TYPE_NAME: string = TYPE_NAME;
     }
     class Resource extends BaseResource<MockModel, MockTypeConfigurationModel> {}
 
     class MockTypeConfigurationModel extends BaseModel {
-        ['constructor']: typeof MockTypeConfigurationModel;
         public static readonly TYPE_NAME: string = TYPE_NAME;
     }
 
@@ -542,7 +540,7 @@ describe('when getting resource', () => {
     test('entrypoint uncaught exception', async () => {
         const mockParseRequest = jest.spyOn<any, any>(BaseResource, 'parseRequest');
         mockParseRequest.mockImplementationOnce(() => {
-            throw { message: 'exception' };
+            throw Error('exception');
         });
         const resource = getResource();
         const event = await resource.entrypoint({}, null);
@@ -869,7 +867,7 @@ describe('when getting resource', () => {
         const resource = getResource();
         const mockParseRequest = jest.spyOn<any, any>(resource, 'parseTestRequest');
         mockParseRequest.mockImplementationOnce(() => {
-            throw { message: 'exception' };
+            throw Error('exception');
         });
         const event = await resource.testEntrypoint({}, null);
         expect(event.status).toBe(OperationStatus.Failed);

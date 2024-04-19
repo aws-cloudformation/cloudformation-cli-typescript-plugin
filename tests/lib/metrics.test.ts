@@ -305,7 +305,9 @@ describe('when getting metrics', () => {
                 MOCK_DATE
             );
         } catch (e) {
-            expect(e.message).toMatch(/CloudWatch client was not initialized/);
+            if (e instanceof Error) {
+                expect(e.message).toMatch(/CloudWatch client was not initialized/);
+            }
         }
     });
 

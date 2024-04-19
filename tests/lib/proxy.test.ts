@@ -21,6 +21,12 @@ const mockResult = (output: any): jest.Mock => {
 
 describe('when getting session proxy', () => {
     class ResourceModel extends BaseModel {
+        constructor(partial?: unknown) {
+            super();
+            if (partial) {
+                Object.assign(this, partial);
+            }
+        }
         public static readonly TYPE_NAME: string = 'Test::Resource::Model';
 
         public somekey: Optional<string>;

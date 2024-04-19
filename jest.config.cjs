@@ -1,10 +1,14 @@
 module.exports = {
     preset: 'ts-jest',
     testEnvironment: 'node',
-    globals: {
-        'ts-jest': {
-            ignoreCoverageForAllDecorators: true,
-        },
+    transform: {
+        '^.+\\.ts?$': [
+            'ts-jest',
+            {
+                ignoreCoverageForAllDecorators: true,
+                tsconfig: 'tsconfig.test.json',
+            },
+        ],
     },
     testRegex: '\\.test.ts$',
     testRunner: 'jest-circus/runner',
