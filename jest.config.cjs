@@ -1,4 +1,4 @@
-const { ignorePatterns } = require("./.eslintrc");
+const { ignorePatterns } = require('./.eslintrc');
 
 module.exports = {
     preset: 'ts-jest',

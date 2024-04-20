@@ -11,7 +11,6 @@ import {
     Exclude,
     Expose,
     instanceToPlain,
-    plainToClass,
     plainToInstance,
 } from 'class-transformer';
 
@@ -67,8 +66,9 @@ export interface Callable<R extends Array<any>, T> {
     (...args: R): T;
 }
 
-// @ts-expect-error extending bigint
-interface Integer extends bigint {
+// @ts-ignore
+// eslint-disable-next-line
+interface Integer extends BigInt {
     /**
      * Defines the default JSON representation of
      * Integer (BigInt) to be a number.
@@ -77,11 +77,13 @@ interface Integer extends bigint {
 
     /** Returns the primitive value of the specified object. */
     valueOf(): integer;
+
+    readonly [Symbol.toStringTag]: 'Integer';
 }
 
-// @ts-expect-error extending bigint
+// @ts-ignore
 interface IntegerConstructor extends BigIntConstructor {
-    (value?: bigint | boolean | number | string): integer;
+    (value?: bigint | integer | boolean | number | string): bigint;
     readonly prototype: Integer;
     /**
      * Returns true if the value passed is a safe integer
@@ -94,9 +96,9 @@ interface IntegerConstructor extends BigIntConstructor {
 /**
  * Wrapper with additional JSON serialization for bigint type
  */
-// @ts-expect-error extending bigint
+// @ts-ignore
 export const Integer: IntegerConstructor = new Proxy(BigInt, {
-    // @ts-expect-error extending bigint
+    // @ts-ignore
     apply(
         target: IntegerConstructor,
         _thisArg: unknown,
