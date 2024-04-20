@@ -67,7 +67,7 @@ describe('when getting session proxy', () => {
             const proxy = new SessionProxy(AWS_CONFIG);
             const modifiedConfig = { ...AWS_CONFIG, region: 'us-east-2' };
             const mockMakeRequest = mockResult(true);
-            ((STS as unknown) as jest.Mock).mockImplementation(() => {
+            (STS as unknown as jest.Mock).mockImplementation(() => {
                 const ctor = STS;
                 ctor['serviceIdentifier'] = 'sts';
                 return {

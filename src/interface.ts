@@ -22,12 +22,12 @@ export type integer = bigint;
 
 export type InstanceProperties<
     T extends object = Service,
-    C extends Constructor<T> = Constructor<T>
+    C extends Constructor<T> = Constructor<T>,
 > = keyof InstanceType<C>;
 
 export type ServiceProperties<
     S extends Service = Service,
-    C extends Constructor<S> = Constructor<S>
+    C extends Constructor<S> = Constructor<S>,
 > = Exclude<
     InstanceProperties<S, C>,
     InstanceProperties<Service, Constructor<Service>>
@@ -40,13 +40,13 @@ export type OverloadedArguments<T> = T extends {
 }
     ? P
     : T extends {
-          (params: infer P, callback: any): any;
-          (callback: any): any;
-      }
-    ? P
-    : T extends (params: infer P, callback: any) => any
-    ? P
-    : any;
+            (params: infer P, callback: any): any;
+            (callback: any): any;
+        }
+      ? P
+      : T extends (params: infer P, callback: any) => any
+        ? P
+        : any;
 
 export type OverloadedReturnType<T> = T extends {
     (...args: any[]): any;
@@ -55,20 +55,20 @@ export type OverloadedReturnType<T> = T extends {
 }
     ? R
     : T extends {
-          (params: any, callback: any): infer R;
-          (callback: any): any;
-      }
-    ? R
-    : T extends (callback: any) => infer R
-    ? R
-    : any;
+            (params: any, callback: any): infer R;
+            (callback: any): any;
+        }
+      ? R
+      : T extends (callback: any) => infer R
+        ? R
+        : any;
 
 export interface Callable<R extends Array<any>, T> {
     (...args: R): T;
 }
 
-
-interface Integer extends BigInt {
+// @ts-expect-error extending bigint
+interface Integer extends bigint {
     /**
      * Defines the default JSON representation of
      * Integer (BigInt) to be a number.
@@ -79,6 +79,7 @@ interface Integer extends BigInt {
     valueOf(): integer;
 }
 
+// @ts-expect-error extending bigint
 interface IntegerConstructor extends BigIntConstructor {
     (value?: bigint | boolean | number | string): integer;
     readonly prototype: Integer;
@@ -93,7 +94,9 @@ interface IntegerConstructor extends BigIntConstructor {
 /**
  * Wrapper with additional JSON serialization for bigint type
  */
+// @ts-expect-error extending bigint
 export const Integer: IntegerConstructor = new Proxy(BigInt, {
+    // @ts-expect-error extending bigint
     apply(
         target: IntegerConstructor,
         _thisArg: unknown,

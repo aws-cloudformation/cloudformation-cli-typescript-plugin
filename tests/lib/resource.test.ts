@@ -191,9 +191,8 @@ describe('when getting resource', () => {
         );
         resource.addHandler(Action.Create, jest.fn());
         const mockPublishException = jest.fn();
-        MetricsPublisherProxy.prototype[
-            'publishExceptionMetric'
-        ] = mockPublishException;
+        MetricsPublisherProxy.prototype['publishExceptionMetric'] =
+            mockPublishException;
         const mockLog = jest.fn();
         resource['platformLoggerProxy']['log'] = mockLog;
         await resource['publishExceptionMetric'](Action.Create, Error('Sorry'));
@@ -211,9 +210,8 @@ describe('when getting resource', () => {
             MockTypeConfigurationModel
         );
         const mockPublishException = jest.fn();
-        MetricsPublisherProxy.prototype[
-            'publishExceptionMetric'
-        ] = mockPublishException;
+        MetricsPublisherProxy.prototype['publishExceptionMetric'] =
+            mockPublishException;
         const spyInvokeHandler = jest.spyOn<typeof resource, any>(
             resource,
             'invokeHandler'
@@ -457,9 +455,8 @@ describe('when getting resource', () => {
         const callbackContext = { a: 'b' };
         entrypointPayload['callbackContext'] = { a: 'b' };
         const resource = getResource();
-        const [credentials, action, callback, request] = resource.constructor[
-            'parseRequest'
-        ](entrypointPayload);
+        const [credentials, action, callback, request] =
+            resource.constructor['parseRequest'](entrypointPayload);
         expect(credentials).toBeDefined();
         expect(action).toBeDefined();
         expect(callback).toMatchObject(callbackContext);
@@ -470,9 +467,8 @@ describe('when getting resource', () => {
         const callbackContext = { a: 'b' };
         entrypointPayload['callbackContext'] = callbackContext;
         const resource = getResource();
-        const [credentials, action, callback, request] = resource.constructor[
-            'parseRequest'
-        ](entrypointPayload);
+        const [credentials, action, callback, request] =
+            resource.constructor['parseRequest'](entrypointPayload);
         expect(credentials).toBeDefined();
         expect(action).toBeDefined();
         expect(callback).toMatchObject(callbackContext);
@@ -506,12 +502,8 @@ describe('when getting resource', () => {
             MockTypeConfigurationModel
         );
 
-        const [
-            [callerCredentials, providerCredentials],
-            action,
-            callback,
-            request,
-        ] = resource.constructor['parseRequest'](entrypointPayload);
+        const [[callerCredentials, providerCredentials], action, callback, request] =
+            resource.constructor['parseRequest'](entrypointPayload);
 
         // Credentials are used when rescheduling, so can't zero them out (for now).
         expect(callerCredentials).toBeTruthy();
@@ -806,9 +798,8 @@ describe('when getting resource', () => {
             null,
             MockTypeConfigurationModel
         );
-        const [request, action, callback] = resource['parseTestRequest'](
-            testEntrypointPayload
-        );
+        const [request, action, callback] =
+            resource['parseTestRequest'](testEntrypointPayload);
         expect(action).toBeDefined();
         expect(callback).toMatchObject(callbackContext);
         expect(request).toBeDefined();
@@ -824,9 +815,8 @@ describe('when getting resource', () => {
             null,
             MockTypeConfigurationModel
         );
-        const [request, action, callback] = resource['parseTestRequest'](
-            testEntrypointPayload
-        );
+        const [request, action, callback] =
+            resource['parseTestRequest'](testEntrypointPayload);
         expect(action).toBeDefined();
         expect(callback).toMatchObject(callbackContext);
         expect(request).toBeDefined();
@@ -841,9 +831,8 @@ describe('when getting resource', () => {
             MockTypeConfigurationModel
         );
         resource.addHandler(Action.Create, jest.fn());
-        const [request, action, callback] = resource['parseTestRequest'](
-            testEntrypointPayload
-        );
+        const [request, action, callback] =
+            resource['parseTestRequest'](testEntrypointPayload);
 
         expect(request).toMatchObject({
             clientRequestToken: 'ecba020e-b2e6-4742-a7d0-8a06ae7c4b2b',

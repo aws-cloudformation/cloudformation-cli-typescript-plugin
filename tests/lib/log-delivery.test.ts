@@ -107,7 +107,7 @@ describe('when delivering logs', () => {
             ResponseMetadata: { RequestId: 'mock-request' },
         });
         putLogEvents = mockResult({ ResponseMetadata: { RequestId: 'mock-request' } });
-        cwLogs = (CloudWatchLogs as unknown) as jest.Mock;
+        cwLogs = CloudWatchLogs as unknown as jest.Mock;
         cwLogs.mockImplementation((config = {}) => {
             const returnValue: jest.Mocked<Partial<CloudWatchLogs>> = {
                 createLogGroup,
@@ -133,7 +133,7 @@ describe('when delivering logs', () => {
         createBucket = mockResult({ ResponseMetadata: { RequestId: 'mock-request' } });
         putObject = mockResult({ ResponseMetadata: { RequestId: 'mock-request' } });
         listObjectsV2 = mockResult({ ResponseMetadata: { RequestId: 'mock-request' } });
-        s3 = (S3 as unknown) as jest.Mock;
+        s3 = S3 as unknown as jest.Mock;
         s3.mockImplementation((config = {}) => {
             const returnValue: jest.Mocked<Partial<S3>> = {
                 createBucket,
@@ -159,7 +159,8 @@ describe('when delivering logs', () => {
         publishExceptionMetric = mockResult({
             ResponseMetadata: { RequestId: 'mock-request' },
         });
-        metricsPublisherProxy.publishLogDeliveryExceptionMetric = publishExceptionMetric;
+        metricsPublisherProxy.publishLogDeliveryExceptionMetric =
+            publishExceptionMetric;
         spyPublishLogEvent = jest.spyOn<any, any>(
             LogPublisher.prototype,
             'publishLogEvent'
@@ -284,8 +285,7 @@ describe('when delivering logs', () => {
                     logGroups: [
                         {
                             logGroupName: LOG_GROUP_NAME,
-                            arn:
-                                'arn:aws:loggers:us-east-1:123456789012:log-group:/aws/lambda/testLogGroup-X:*',
+                            arn: 'arn:aws:loggers:us-east-1:123456789012:log-group:/aws/lambda/testLogGroup-X:*',
                             creationTime: 4567898765,
                             storedBytes: 456789,
                         },
@@ -321,7 +321,9 @@ describe('when delivering logs', () => {
                 await cloudWatchLogHelper.prepareLogStream();
             } catch (e) {
                 if (e instanceof Error) {
-                    expect(e.message).toMatch(/CloudWatchLogs client was not initialized/);
+                    expect(e.message).toMatch(
+                        /CloudWatchLogs client was not initialized/
+                    );
                 }
             }
         });
@@ -632,7 +634,9 @@ describe('when delivering logs', () => {
                 await cloudWatchLogger.publishLogEvent('How is it going?');
             } catch (e) {
                 if (e instanceof Error) {
-                    expect(e.message).toMatch(/CloudWatchLogs client was not initialized/);
+                    expect(e.message).toMatch(
+                        /CloudWatchLogs client was not initialized/
+                    );
                 }
             }
         });

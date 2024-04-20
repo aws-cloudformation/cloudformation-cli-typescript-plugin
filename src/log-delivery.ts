@@ -630,7 +630,10 @@ export class LoggerProxy implements Logger {
                         // @ts-expect-error fix in aws sdk v3
                         if (err.retryable === true) {
                             try {
-                                await logPublisher.publishLogEvent(formatted, eventTime);
+                                await logPublisher.publishLogEvent(
+                                    formatted,
+                                    eventTime
+                                );
                                 this.tracker.addCompleted();
                             } catch (err) {
                                 console.error(err);

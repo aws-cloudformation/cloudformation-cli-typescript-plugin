@@ -49,7 +49,7 @@ describe('when getting metrics', () => {
 
     beforeEach(() => {
         putMetricData = mockResult({ ResponseMetadata: { RequestId: 'mock-request' } });
-        cloudwatch = (CloudWatch as unknown) as jest.Mock;
+        cloudwatch = CloudWatch as unknown as jest.Mock;
         cloudwatch.mockImplementation((config = {}) => {
             const returnValue: jest.Mocked<Partial<CloudWatch>> = {
                 putMetricData,

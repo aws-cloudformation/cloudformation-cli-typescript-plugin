@@ -47,14 +47,14 @@ const MUTATING_ACTIONS: [Action, Action, Action] = [
 
 export type HandlerSignature<
     T extends BaseModel,
-    TypeConfiguration extends BaseModel
+    TypeConfiguration extends BaseModel,
 > = Callable<
     [Optional<SessionProxy>, any, Dict, LoggerProxy, TypeConfiguration],
     Promise<ProgressEvent<T>>
 >;
 export class HandlerSignatures<
     T extends BaseModel,
-    TypeConfiguration extends BaseModel
+    TypeConfiguration extends BaseModel,
 > extends Map<Action, HandlerSignature<T, TypeConfiguration>> {}
 class HandlerEvents extends Map<Action, string | symbol> {}
 
@@ -98,7 +98,7 @@ function ensureSerialize<T extends BaseModel>(toResponse = false): MethodDecorat
 
 export abstract class BaseResource<
     T extends BaseModel = BaseModel,
-    TypeConfiguration extends BaseModel = BaseModel
+    TypeConfiguration extends BaseModel = BaseModel,
 > {
     protected loggerProxy: LoggerProxy;
     protected metricsPublisherProxy: MetricsPublisherProxy;
@@ -327,9 +327,8 @@ export abstract class BaseResource<
         if (!this.handlers.has(action)) {
             throw new Error(`Unknown action ${actionName}`);
         }
-        const handleRequest: HandlerSignature<T, TypeConfiguration> = this.handlers.get(
-            action
-        );
+        const handleRequest: HandlerSignature<T, TypeConfiguration> =
+            this.handlers.get(action);
         // We will make the callback context and resource states readonly
         // to avoid modification at a later time
         deepFreeze(callbackContext);
@@ -541,9 +540,8 @@ export abstract class BaseResource<
                     'Missing Model class to be used to deserialize JSON data.'
                 );
             }
-            const [credentials, action, callback, event] = BaseResource.parseRequest(
-                eventData
-            );
+            const [credentials, action, callback, event] =
+                BaseResource.parseRequest(eventData);
             bearerToken = event.bearerToken;
             const [callerCredentials, providerCredentials] = credentials;
             const request = this.castResourceRequest(event);

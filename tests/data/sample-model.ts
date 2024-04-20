@@ -87,14 +87,20 @@ export class ResourceModel extends BaseModel {
 
 export class NestedList extends BaseModel {
     @Expose({ name: 'NestedListBool' })
-    @Transform(({ value, obj }) => transformValue(Boolean, 'nestedListBool', value, obj), {
-        toClassOnly: true,
-    })
+    @Transform(
+        ({ value, obj }) => transformValue(Boolean, 'nestedListBool', value, obj),
+        {
+            toClassOnly: true,
+        }
+    )
     nestedListBool?: Optional<boolean>;
     @Expose({ name: 'NestedListList' })
-    @Transform(({ value, obj }) => transformValue(Number, 'nestedListList', value, obj), {
-        toClassOnly: true,
-    })
+    @Transform(
+        ({ value, obj }) => transformValue(Number, 'nestedListList', value, obj),
+        {
+            toClassOnly: true,
+        }
+    )
     nestedListList?: Optional<number>;
 }
 
