@@ -31,7 +31,7 @@ export class {{ model|uppercase_first_letter }} extends BaseModel {
     @Type(() => {{ inner_type.type }})
     {% else %}
     @Transform(
-        ({value: any, obj: any}) =>
+        ({value, obj}) =>
             transformValue({{ inner_type.wrapper_type }}, '{{ name|lowercase_first_letter|safe_reserved }}', value, obj, [{{ inner_type.classes|join(', ') }}]),
         {
             toClassOnly: true,

@@ -275,7 +275,7 @@ class TypescriptLanguagePlugin(LanguagePlugin):
         command = command + " " + MAIN_HANDLER_FUNCTION
 
         LOG.debug("command is '%s'", command)
-
+        LOG.warning("command is '%s'", command)
         LOG.warning("Starting build.")
         try:
             # On windows get the default CLI in environment variable comspec
@@ -305,6 +305,7 @@ class TypescriptLanguagePlugin(LanguagePlugin):
                 )
 
         except (FileNotFoundError, CalledProcessError) as e:
+            LOG.warning(e.stderr)
             raise DownstreamError("local build failed") from e
 
         LOG.debug("--- build stdout:\n%s", completed_proc.stdout)
