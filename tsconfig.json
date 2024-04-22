@@ -8,7 +8,7 @@
         "allowJs": true,
         "declaration": true,
         "removeComments": true,
-        "sourceMap": true,
+        "sourceMap": false,
         "experimentalDecorators": true,
         "emitDecoratorMetadata": true,
         "outDir": "dist",
