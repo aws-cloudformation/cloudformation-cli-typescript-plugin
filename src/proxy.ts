@@ -6,7 +6,7 @@ import { PromiseResult } from 'aws-sdk/lib/request';
 import { Service, ServiceConfigurationOptions } from 'aws-sdk/lib/service';
 import { EventEmitter } from 'events';
 import { builder, IBuilder } from '@org-formation/tombok';
-import { Exclude, Expose } from 'class-transformer';
+import { Exclude, Expose, Type } from 'class-transformer';
 
 import {
     BaseDto,
@@ -33,7 +33,7 @@ export type ServiceOperation<
     S extends Service = Service,
     C extends Constructor<S> = Constructor<S>,
     O extends ServiceProperties<S, C> = ServiceProperties<S, C>,
-    E extends Error = AWSError
+    E extends Error = AWSError,
 > = InstanceType<C>[O] & {
     promise(): Promise<PromiseResult<any, E>>;
 };
@@ -42,7 +42,7 @@ export type InferredResult<
     C extends Constructor<S> = Constructor<S>,
     O extends ServiceProperties<S, C> = ServiceProperties<S, C>,
     E extends Error = AWSError,
-    N extends ServiceOperation<S, C, O, E> = ServiceOperation<S, C, O, E>
+    N extends ServiceOperation<S, C, O, E> = ServiceOperation<S, C, O, E>,
 > = Input<Input<Result<Result<N>['promise']>['then']>[0]>[0];
 
 type AwsTaskSignature = <
@@ -50,7 +50,7 @@ type AwsTaskSignature = <
     C extends Constructor<S> = Constructor<S>,
     O extends ServiceProperties<S, C> = ServiceProperties<S, C>,
     E extends Error = AWSError,
-    N extends ServiceOperation<S, C, O, E> = ServiceOperation<S, C, O, E>
+    N extends ServiceOperation<S, C, O, E> = ServiceOperation<S, C, O, E>,
 >(
     params: any
 ) => Promise<InferredResult<S, C, O, E, N>>;
@@ -70,7 +70,7 @@ export type ExtendedClient<S extends Service = Service> = S & {
         C extends Constructor<S> = Constructor<S>,
         O extends ServiceProperties<S, C> = ServiceProperties<S, C>,
         E extends Error = AWSError,
-        N extends ServiceOperation<S, C, O, E> = ServiceOperation<S, C, O, E>
+        N extends ServiceOperation<S, C, O, E> = ServiceOperation<S, C, O, E>,
     >(
         operation: O,
         input?: OverloadedArguments<N>,
@@ -98,7 +98,7 @@ export class SessionProxy implements Session {
         C extends Constructor<S> = Constructor<S>,
         O extends ServiceProperties<S, C> = ServiceProperties<S, C>,
         E extends Error = AWSError,
-        N extends ServiceOperation<S, C, O, E> = ServiceOperation<S, C, O, E>
+        N extends ServiceOperation<S, C, O, E> = ServiceOperation<S, C, O, E>,
     >(
         service: S,
         options?: ServiceConfigurationOptions,
@@ -166,7 +166,7 @@ export class SessionProxy implements Session {
         if (typeof service === 'string') {
             // Kept for backward compatibility
             const clients: { [K in ClientName]: ClientMap[K] } = Aws;
-            ctor = (clients[service] as unknown) as Constructor<S>;
+            ctor = clients[service] as unknown as Constructor<S>;
         } else if (typeof service === 'function') {
             ctor = service as Constructor<S>;
         } else {
@@ -203,7 +203,7 @@ export class SessionProxy implements Session {
 @builder
 export class ProgressEvent<
     ResourceT extends BaseModel = BaseModel,
-    CallbackT = Dict
+    CallbackT = Dict,
 > extends BaseDto {
     /**
      * The status indicates whether the handler has reached a terminal state or is
@@ -318,5 +318,5 @@ export class ProgressEvent<
  * @param <T> Type of resource model being provisioned
  */
 export class ResourceHandlerRequest<
-    T extends BaseModel
+    T extends BaseModel,
 > extends BaseResourceHandlerRequest<T> {}

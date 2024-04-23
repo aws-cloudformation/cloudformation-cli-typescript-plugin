@@ -7,11 +7,11 @@ import {
 } from 'aws-sdk/clients/cloudformation';
 import { Service } from 'aws-sdk/lib/service';
 import {
-    classToPlain,
     ClassTransformOptions,
     Exclude,
     Expose,
-    plainToClass,
+    instanceToPlain,
+    plainToInstance,
 } from 'class-transformer';
 
 export type Optional<T> = T | undefined | null;
@@ -21,12 +21,12 @@ export type integer = bigint;
 
 export type InstanceProperties<
     T extends object = Service,
-    C extends Constructor<T> = Constructor<T>
+    C extends Constructor<T> = Constructor<T>,
 > = keyof InstanceType<C>;
 
 export type ServiceProperties<
     S extends Service = Service,
-    C extends Constructor<S> = Constructor<S>
+    C extends Constructor<S> = Constructor<S>,
 > = Exclude<
     InstanceProperties<S, C>,
     InstanceProperties<Service, Constructor<Service>>
@@ -39,13 +39,13 @@ export type OverloadedArguments<T> = T extends {
 }
     ? P
     : T extends {
-          (params: infer P, callback: any): any;
-          (callback: any): any;
-      }
-    ? P
-    : T extends (params: infer P, callback: any) => any
-    ? P
-    : any;
+            (params: infer P, callback: any): any;
+            (callback: any): any;
+        }
+      ? P
+      : T extends (params: infer P, callback: any) => any
+        ? P
+        : any;
 
 export type OverloadedReturnType<T> = T extends {
     (...args: any[]): any;
@@ -54,18 +54,20 @@ export type OverloadedReturnType<T> = T extends {
 }
     ? R
     : T extends {
-          (params: any, callback: any): infer R;
-          (callback: any): any;
-      }
-    ? R
-    : T extends (callback: any) => infer R
-    ? R
-    : any;
+            (params: any, callback: any): infer R;
+            (callback: any): any;
+        }
+      ? R
+      : T extends (callback: any) => infer R
+        ? R
+        : any;
 
 export interface Callable<R extends Array<any>, T> {
     (...args: R): T;
 }
 
+// @ts-ignore
+// eslint-disable-next-line
 interface Integer extends BigInt {
     /**
      * Defines the default JSON representation of
@@ -75,23 +77,28 @@ interface Integer extends BigInt {
 
     /** Returns the primitive value of the specified object. */
     valueOf(): integer;
+
+    readonly [Symbol.toStringTag]: 'Integer';
 }
 
+// @ts-ignore
 interface IntegerConstructor extends BigIntConstructor {
-    (value?: unknown): integer;
+    (value?: bigint | integer | boolean | number | string): bigint;
     readonly prototype: Integer;
     /**
      * Returns true if the value passed is a safe integer
      * to be parsed as number.
      * @param value An integer value.
      */
-    isSafeInteger(value: unknown): boolean;
+    isSafeInteger(value: integer): boolean;
 }
 
 /**
  * Wrapper with additional JSON serialization for bigint type
  */
+// @ts-ignore
 export const Integer: IntegerConstructor = new Proxy(BigInt, {
+    // @ts-ignore
     apply(
         target: IntegerConstructor,
         _thisArg: unknown,
@@ -100,7 +107,7 @@ export const Integer: IntegerConstructor = new Proxy(BigInt, {
         target.prototype.toJSON = function (): number {
             return Number(this.valueOf());
         };
-        const isSafeInteger = (value: unknown): boolean => {
+        const isSafeInteger = (value: bigint): boolean => {
             if (
                 value &&
                 (value < BigInt(Number.MIN_SAFE_INTEGER) ||
@@ -111,6 +118,7 @@ export const Integer: IntegerConstructor = new Proxy(BigInt, {
             return true;
         };
         target.isSafeInteger = isSafeInteger;
+        // @ts-expect-error argArray is unknown
         const value = target(...argArray);
         if (value && !isSafeInteger(value)) {
             throw new RangeError(`Value is not a safe integer: ${value.toString()}`);
@@ -175,6 +183,9 @@ export interface Credentials {
  */
 export abstract class BaseDto {
     constructor(partial?: unknown) {
+        if (partial === undefined) {
+            return this;
+        }
         if (partial) {
             Object.assign(this, partial);
         }
@@ -182,13 +193,13 @@ export abstract class BaseDto {
 
     @Exclude()
     static serializer = {
-        classToPlain,
-        plainToClass,
+        instanceToPlain,
+        plainToInstance,
     };
 
     @Exclude()
     public serialize(removeNull = true): Dict {
-        const data: Dict = JSON.parse(JSON.stringify(classToPlain(this)));
+        const data: Dict = JSON.parse(JSON.stringify(instanceToPlain(this)));
         // To match Java serialization, which drops 'null' values, and the
         // contract tests currently expect this also.
         if (removeNull) {
@@ -210,7 +221,7 @@ export abstract class BaseDto {
         if (jsonData == null) {
             return null;
         }
-        return plainToClass(this, jsonData, {
+        return plainToInstance(this, jsonData, {
             enableImplicitConversion: false,
             excludeExtraneousValues: true,
             ...options,
@@ -231,7 +242,12 @@ export interface RequestContext<T> {
 }
 
 export class BaseModel extends BaseDto {
-    ['constructor']: typeof BaseModel;
+    constructor(partial?: unknown) {
+        super();
+        if (partial) {
+            Object.assign(this, partial);
+        }
+    }
 
     @Exclude()
     protected static readonly TYPE_NAME?: string;

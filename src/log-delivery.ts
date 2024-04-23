@@ -136,34 +136,38 @@ export class CloudWatchLogPublisher extends LogPublisher {
                 );
                 return;
             } catch (err) {
-                const errorCode = err.code || err.name;
-                this.platformLogger.log(
-                    `Error from "putLogEvents" with sequence token ${this.nextSequenceToken}`,
-                    JSON.stringify(err)
-                );
-                if (
-                    errorCode === 'DataAlreadyAcceptedException' ||
-                    errorCode === 'InvalidSequenceTokenException' ||
-                    errorCode === 'ThrottlingException'
-                ) {
-                    await delay(0.25);
-                    const result = (err.message || '').match(
-                        /sequencetoken( is)?: (.+)/i
+                if (err instanceof Error) {
+                    // @ts-expect-error fix in aws sdk v3
+                    const errorCode = err.code || err.name;
+                    this.platformLogger.log(
+                        `Error from "putLogEvents" with sequence token ${this.nextSequenceToken}`,
+                        JSON.stringify(err)
                     );
-                    if (result?.length === 3 && result[2]) {
-                        this.nextSequenceToken = result[2];
+                    if (
+                        errorCode === 'DataAlreadyAcceptedException' ||
+                        errorCode === 'InvalidSequenceTokenException' ||
+                        errorCode === 'ThrottlingException'
+                    ) {
+                        await delay(0.25);
+                        const result = (err.message || '').match(
+                            /sequencetoken( is)?: (.+)/i
+                        );
+                        if (result?.length === 3 && result[2]) {
+                            this.nextSequenceToken = result[2];
+                        } else {
+                            await this.populateSequenceToken();
+                        }
+                        await this.emitMetricsForLoggingFailure(err);
+                        // @ts-expect-error fix in aws sdk v3
+                        err.retryable = true;
+                        err.message = `Publishing this log event should be retried. ${err.message}`;
                     } else {
-                        await this.populateSequenceToken();
+                        this.platformLogger.log(
+                            `An error occurred while putting log events [${message}] to resource owner account, with error: ${err.toString()}`
+                        );
                     }
                     await this.emitMetricsForLoggingFailure(err);
-                    err.retryable = true;
-                    err.message = `Publishing this log event should be retried. ${err.message}`;
-                } else {
-                    this.platformLogger.log(
-                        `An error occurred while putting log events [${message}] to resource owner account, with error: ${err.toString()}`
-                    );
                 }
-                await this.emitMetricsForLoggingFailure(err);
                 throw err;
             }
         });
@@ -269,10 +273,12 @@ export class CloudWatchLogHelper {
             }
             return await this.createLogStream();
         } catch (err) {
-            this.log(
-                `Initializing logging group setting failed with error: ${err.toString()}`
-            );
-            await this.emitMetricsForLoggingFailure(err);
+            if (err instanceof Error) {
+                this.log(
+                    `Initializing logging group setting failed with error: ${err.toString()}`
+                );
+                await this.emitMetricsForLoggingFailure(err);
+            }
         }
         return Promise.resolve(null);
     }
@@ -290,8 +296,10 @@ export class CloudWatchLogHelper {
                 });
             }
         } catch (err) {
-            this.log(err);
-            await this.emitMetricsForLoggingFailure(err);
+            if (err instanceof Error) {
+                this.log(err);
+                await this.emitMetricsForLoggingFailure(err);
+            }
         }
         this.log(
             `Log group with name ${this.logGroupName} does${
@@ -309,6 +317,7 @@ export class CloudWatchLogHelper {
             });
             this.log('Response from "createLogGroup"', response);
         } catch (err) {
+            // @ts-expect-error fix in aws sdk v3
             const errorCode = err.code || err.name;
             if (errorCode !== 'ResourceAlreadyExistsException') {
                 throw err;
@@ -328,6 +337,7 @@ export class CloudWatchLogHelper {
             });
             this.log('Response from "createLogStream"', response);
         } catch (err) {
+            // @ts-expect-error fix in aws sdk v3
             const errorCode = err.code || err.name;
             if (errorCode !== 'ResourceAlreadyExistsException') {
                 throw err;
@@ -402,11 +412,13 @@ export class S3LogPublisher extends LogPublisher {
             this.platformLogger.log('Response from "putObject"', response);
             return;
         } catch (err) {
-            this.platformLogger.log(
-                `An error occurred while putting log events [${message}] to resource owner account, with error: ${err.toString()}`
-            );
-            await this.emitMetricsForLoggingFailure(err);
-            throw err;
+            if (err instanceof Error) {
+                this.platformLogger.log(
+                    `An error occurred while putting log events [${message}] to resource owner account, with error: ${err.toString()}`
+                );
+                await this.emitMetricsForLoggingFailure(err);
+                throw err;
+            }
         }
     }
 
@@ -469,10 +481,12 @@ export class S3LogHelper {
                 return await this.createFolder();
             }
         } catch (err) {
-            this.log(
-                `Initializing S3 bucket and folder failed with error: ${err.toString()}`
-            );
-            await this.emitMetricsForLoggingFailure(err);
+            if (err instanceof Error) {
+                this.log(
+                    `Initializing S3 bucket and folder failed with error: ${err.toString()}`
+                );
+                await this.emitMetricsForLoggingFailure(err);
+            }
         }
         return null;
     }
@@ -495,6 +509,7 @@ export class S3LogHelper {
             );
             return Promise.resolve(folderExists);
         } catch (err) {
+            // @ts-expect-error fix in aws sdk v3
             const errorCode = err.code || err.name;
             if (errorCode === 'NoSuchBucket') {
                 this.log(
@@ -502,6 +517,7 @@ export class S3LogHelper {
                 );
             }
             this.log(err);
+            // @ts-expect-error fix in aws sdk v3
             await this.emitMetricsForLoggingFailure(err);
             return Promise.resolve(null);
         }
@@ -515,6 +531,7 @@ export class S3LogHelper {
             });
             this.log('Response from "createBucket"', response);
         } catch (err) {
+            // @ts-expect-error fix in aws sdk v3
             const errorCode = err.code || err.name;
             if (
                 errorCode !== 'BucketAlreadyOwnedByYou' &&
@@ -609,13 +626,20 @@ export class LoggerProxy implements Logger {
                     await logPublisher.publishLogEvent(formatted, eventTime);
                     this.tracker.addCompleted();
                 } catch (err) {
-                    console.error(err);
-                    if (err.retryable === true) {
-                        try {
-                            await logPublisher.publishLogEvent(formatted, eventTime);
-                            this.tracker.addCompleted();
-                        } catch (err) {
-                            console.error(err);
+                    if (err instanceof Error) {
+                        // @ts-expect-error fix in aws sdk v3
+                        if (err.retryable === true) {
+                            try {
+                                await logPublisher.publishLogEvent(
+                                    formatted,
+                                    eventTime
+                                );
+                                this.tracker.addCompleted();
+                            } catch (err) {
+                                console.error(err);
+                                this.tracker.addFailed();
+                            }
+                        } else {
                             this.tracker.addFailed();
                         }
                     } else {

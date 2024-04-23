@@ -49,7 +49,7 @@ describe('when getting metrics', () => {
 
     beforeEach(() => {
         putMetricData = mockResult({ ResponseMetadata: { RequestId: 'mock-request' } });
-        cloudwatch = (CloudWatch as unknown) as jest.Mock;
+        cloudwatch = CloudWatch as unknown as jest.Mock;
         cloudwatch.mockImplementation((config = {}) => {
             const returnValue: jest.Mocked<Partial<CloudWatch>> = {
                 putMetricData,
@@ -305,7 +305,9 @@ describe('when getting metrics', () => {
                 MOCK_DATE
             );
         } catch (e) {
-            expect(e.message).toMatch(/CloudWatch client was not initialized/);
+            if (e instanceof Error) {
+                expect(e.message).toMatch(/CloudWatch client was not initialized/);
+            }
         }
     });
 

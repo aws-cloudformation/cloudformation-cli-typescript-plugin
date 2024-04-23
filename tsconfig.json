@@ -1,5 +1,5 @@
 {
-    "extends": "@tsconfig/node14/tsconfig.json",
+    "extends": "@tsconfig/node20/tsconfig.json",
     "compilerOptions": {
         "strict": true,
         "noImplicitAny": false,
@@ -17,10 +17,10 @@
             "~/*": [
                 "src/*"
             ]
-        }
+        },
     },
     "include": [
-        "src/**/*.ts"
+        "src/**/*.ts",
     ],
     "exclude": [
         "node_modules"

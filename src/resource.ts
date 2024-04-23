@@ -47,14 +47,14 @@ const MUTATING_ACTIONS: [Action, Action, Action] = [
 
 export type HandlerSignature<
     T extends BaseModel,
-    TypeConfiguration extends BaseModel
+    TypeConfiguration extends BaseModel,
 > = Callable<
     [Optional<SessionProxy>, any, Dict, LoggerProxy, TypeConfiguration],
     Promise<ProgressEvent<T>>
 >;
 export class HandlerSignatures<
     T extends BaseModel,
-    TypeConfiguration extends BaseModel
+    TypeConfiguration extends BaseModel,
 > extends Map<Action, HandlerSignature<T, TypeConfiguration>> {}
 class HandlerEvents extends Map<Action, string | symbol> {}
 
@@ -98,7 +98,7 @@ function ensureSerialize<T extends BaseModel>(toResponse = false): MethodDecorat
 
 export abstract class BaseResource<
     T extends BaseModel = BaseModel,
-    TypeConfiguration extends BaseModel = BaseModel
+    TypeConfiguration extends BaseModel = BaseModel,
 > {
     protected loggerProxy: LoggerProxy;
     protected metricsPublisherProxy: MetricsPublisherProxy;
@@ -231,8 +231,10 @@ export abstract class BaseResource<
                 this.providerEventsLogger.refreshClient();
                 await this.providerEventsLogger.populateSequenceToken();
             } catch (err) {
-                this.log(err);
-                this.providerEventsLogger = providerS3Logger;
+                if (err instanceof Error) {
+                    this.log(err);
+                    this.providerEventsLogger = providerS3Logger;
+                }
             }
         }
     }
@@ -325,9 +327,8 @@ export abstract class BaseResource<
         if (!this.handlers.has(action)) {
             throw new Error(`Unknown action ${actionName}`);
         }
-        const handleRequest: HandlerSignature<T, TypeConfiguration> = this.handlers.get(
-            action
-        );
+        const handleRequest: HandlerSignature<T, TypeConfiguration> =
+            this.handlers.get(action);
         // We will make the callback context and resource states readonly
         // to avoid modification at a later time
         deepFreeze(callbackContext);
@@ -381,7 +382,9 @@ export abstract class BaseResource<
             callbackContext = event.callbackContext || {};
         } catch (err) {
             this.log('Invalid request');
-            throw new InternalFailure(`${err} (${err.name})`);
+            if (err instanceof Error) {
+                throw new InternalFailure(`${err} (${err.name})`);
+            }
         }
 
         return [request, action, callbackContext];
@@ -418,20 +421,22 @@ export abstract class BaseResource<
                 callbackContext
             );
         } catch (err) {
-            if (!err.stack) {
-                Error.captureStackTrace(err);
-            }
-            err.stack = `${new Error().stack}\n${err.stack}`;
-            if (err instanceof BaseHandlerException) {
-                this.log(`Handler error: ${err.message}`, err);
-                progress = err.toProgressEvent<T>();
-            } else {
-                this.log(`Exception caught: ${err.message}`, err);
-                msg = err.message || msg;
-                progress = ProgressEvent.failed<ProgressEvent<T>>(
-                    HandlerErrorCode.InternalFailure,
-                    msg
-                );
+            if (err instanceof Error) {
+                if (!err.stack) {
+                    Error.captureStackTrace(err);
+                }
+                err.stack = `${new Error().stack}\n${err.stack}`;
+                if (err instanceof BaseHandlerException) {
+                    this.log(`Handler error: ${err.message}`, err);
+                    progress = err.toProgressEvent<T>();
+                } else {
+                    this.log(`Exception caught: ${err.message}`, err);
+                    msg = err.message || msg;
+                    progress = ProgressEvent.failed<ProgressEvent<T>>(
+                        HandlerErrorCode.InternalFailure,
+                        msg
+                    );
+                }
             }
         }
         this.log(`END RequestId: ${context?.awsRequestId}`);
@@ -459,7 +464,9 @@ export abstract class BaseResource<
             action = event.action;
             callbackContext = event.callbackContext || {};
         } catch (err) {
-            throw new InvalidRequest(`${err} (${err.name})`);
+            if (err instanceof Error) {
+                throw new InvalidRequest(`${err} (${err.name})`);
+            }
         }
         return [
             [callerCredentials, providerCredentials],
@@ -487,6 +494,7 @@ export abstract class BaseResource<
             return unmodeled.toModeled<T>(this.modelTypeReference);
         } catch (err) {
             this.log('Invalid request');
+            // @ts-expect-error fix with v3 sdk
             throw new InvalidRequest(`${err} (${err.name})`);
         }
     };
@@ -508,11 +516,11 @@ export abstract class BaseResource<
             );
         } catch (err) {
             this.log('Invalid Type Configuration');
+            // @ts-expect-error fix with v3 sdk
             throw new InvalidTypeConfiguration(this.typeName, `${err} (${err.name}`);
         }
     };
 
-    // @ts-ignore
     public async entrypoint(
         eventData: any | Dict,
         context: LambdaContext
@@ -532,9 +540,8 @@ export abstract class BaseResource<
                     'Missing Model class to be used to deserialize JSON data.'
                 );
             }
-            const [credentials, action, callback, event] = BaseResource.parseRequest(
-                eventData
-            );
+            const [credentials, action, callback, event] =
+                BaseResource.parseRequest(eventData);
             bearerToken = event.bearerToken;
             const [callerCredentials, providerCredentials] = credentials;
             const request = this.castResourceRequest(event);
@@ -594,7 +601,9 @@ export abstract class BaseResource<
                     typeConfiguration
                 );
             } catch (err) {
-                error = err;
+                if (err instanceof Error) {
+                    error = err;
+                }
             }
             const endTime = new Date(Date.now());
             milliseconds = endTime.getTime() - startTime.getTime();
@@ -608,19 +617,21 @@ export abstract class BaseResource<
                 throw error;
             }
         } catch (err) {
-            if (!err.stack) {
-                Error.captureStackTrace(err);
-            }
-            err.stack = `${new Error().stack}\n${err.stack}`;
-            if (err instanceof BaseHandlerException) {
-                this.log(`Handler error: ${err.message}`, err);
-                progress = err.toProgressEvent<T>();
-            } else {
-                this.log(`Exception caught: ${err.message}`, err);
-                progress = ProgressEvent.failed<ProgressEvent<T>>(
-                    HandlerErrorCode.InternalFailure,
-                    err.message
-                );
+            if (err instanceof Error) {
+                if (!err.stack) {
+                    Error.captureStackTrace(err);
+                }
+                err.stack = `${new Error().stack}\n${err.stack}`;
+                if (err instanceof BaseHandlerException) {
+                    this.log(`Handler error: ${err.message}`, err);
+                    progress = err.toProgressEvent<T>();
+                } else {
+                    this.log(`Exception caught: ${err.message}`, err);
+                    progress = ProgressEvent.failed<ProgressEvent<T>>(
+                        HandlerErrorCode.InternalFailure,
+                        err.message
+                    );
+                }
             }
         }
         this.log(`END RequestId: ${context?.awsRequestId}`);
@@ -630,14 +641,16 @@ export abstract class BaseResource<
         try {
             await this.waitRunningProcesses();
         } catch (err) {
-            this.lambdaLogger.log(err);
-            await delay(2);
-            /* TODO: Check if the real remaining time from CloudFormation can be calculated
-            // Wait for as long as possible (basically until the end of the lambda process)
-            const remainingTime = context ? context.getRemainingTimeInMillis() : 0;
-            if (remainingTime > 200) {
-                await delay((remainingTime - 200) / 100);
-            } */
+            if (err instanceof Error) {
+                this.lambdaLogger.log(err);
+                await delay(2);
+                /* TODO: Check if the real remaining time from CloudFormation can be calculated
+                // Wait for as long as possible (basically until the end of the lambda process)
+                const remainingTime = context ? context.getRemainingTimeInMillis() : 0;
+                if (remainingTime > 200) {
+                    await delay((remainingTime - 200) / 100);
+                } */
+            }
         }
         return progress;
     }

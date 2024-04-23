@@ -5,14 +5,12 @@ import { BaseModel, integer, Integer, Optional, transformValue } from '../../src
 import { Exclude, Expose, Transform, Type } from 'class-transformer';
 
 export class ResourceModel extends BaseModel {
-    ['constructor']: typeof ResourceModel;
-
     @Exclude()
     public static readonly TYPE_NAME: string = 'Organization::Service::ComplexResource';
 
     @Expose({ name: 'ListListAny' })
     @Transform(
-        (value, obj) =>
+        ({ value, obj }) =>
             transformValue(Object, 'listListAny', value, obj, [Array, Array]),
         {
             toClassOnly: true,
@@ -21,7 +19,8 @@ export class ResourceModel extends BaseModel {
     listListAny?: Optional<Array<Array<object>>>;
     @Expose({ name: 'ListSetInt' })
     @Transform(
-        (value, obj) => transformValue(Integer, 'listSetInt', value, obj, [Array, Set]),
+        ({ value, obj }) =>
+            transformValue(Integer, 'listSetInt', value, obj, [Array, Set]),
         {
             toClassOnly: true,
         }
@@ -29,7 +28,7 @@ export class ResourceModel extends BaseModel {
     listSetInt?: Optional<Array<Set<integer>>>;
     @Expose({ name: 'ListListInt' })
     @Transform(
-        (value, obj) =>
+        ({ value, obj }) =>
             transformValue(Integer, 'listListInt', value, obj, [Array, Array]),
         {
             toClassOnly: true,
@@ -37,13 +36,13 @@ export class ResourceModel extends BaseModel {
     )
     listListInt?: Optional<Array<Array<integer>>>;
     @Expose({ name: 'ASet' })
-    @Transform((value, obj) => transformValue(Object, 'aSet', value, obj, [Set]), {
+    @Transform(({ value, obj }) => transformValue(Object, 'aSet', value, obj, [Set]), {
         toClassOnly: true,
     })
     aSet?: Optional<Set<object>>;
     @Expose({ name: 'AnotherSet' })
     @Transform(
-        (value, obj) => transformValue(String, 'anotherSet', value, obj, [Set]),
+        ({ value, obj }) => transformValue(String, 'anotherSet', value, obj, [Set]),
         {
             toClassOnly: true,
         }
@@ -51,7 +50,7 @@ export class ResourceModel extends BaseModel {
     anotherSet?: Optional<Set<string>>;
     @Expose({ name: 'AFreeformDict' })
     @Transform(
-        (value, obj) => transformValue(Object, 'aFreeformDict', value, obj, [Map]),
+        ({ value, obj }) => transformValue(Object, 'aFreeformDict', value, obj, [Map]),
         {
             toClassOnly: true,
         }
@@ -59,19 +58,19 @@ export class ResourceModel extends BaseModel {
     aFreeformDict?: Optional<Map<string, object>>;
     @Expose({ name: 'ANumberDict' })
     @Transform(
-        (value, obj) => transformValue(Number, 'aNumberDict', value, obj, [Map]),
+        ({ value, obj }) => transformValue(Number, 'aNumberDict', value, obj, [Map]),
         {
             toClassOnly: true,
         }
     )
     aNumberDict?: Optional<Map<string, number>>;
     @Expose({ name: 'AnInt' })
-    @Transform((value, obj) => transformValue(Integer, 'anInt', value, obj), {
+    @Transform(({ value, obj }) => transformValue(Integer, 'anInt', value, obj), {
         toClassOnly: true,
     })
     anInt?: Optional<integer>;
     @Expose({ name: 'ABool' })
-    @Transform((value, obj) => transformValue(Boolean, 'aBool', value, obj), {
+    @Transform(({ value, obj }) => transformValue(Boolean, 'aBool', value, obj), {
         toClassOnly: true,
     })
     aBool?: Optional<boolean>;
@@ -87,31 +86,33 @@ export class ResourceModel extends BaseModel {
 }
 
 export class NestedList extends BaseModel {
-    ['constructor']: typeof NestedList;
-
     @Expose({ name: 'NestedListBool' })
-    @Transform((value, obj) => transformValue(Boolean, 'nestedListBool', value, obj), {
-        toClassOnly: true,
-    })
+    @Transform(
+        ({ value, obj }) => transformValue(Boolean, 'nestedListBool', value, obj),
+        {
+            toClassOnly: true,
+        }
+    )
     nestedListBool?: Optional<boolean>;
     @Expose({ name: 'NestedListList' })
-    @Transform((value, obj) => transformValue(Number, 'nestedListList', value, obj), {
-        toClassOnly: true,
-    })
+    @Transform(
+        ({ value, obj }) => transformValue(Number, 'nestedListList', value, obj),
+        {
+            toClassOnly: true,
+        }
+    )
     nestedListList?: Optional<number>;
 }
 
 export class AList extends BaseModel {
-    ['constructor']: typeof AList;
-
     @Expose({ name: 'DeeperBool' })
-    @Transform((value, obj) => transformValue(Boolean, 'deeperBool', value, obj), {
+    @Transform(({ value, obj }) => transformValue(Boolean, 'deeperBool', value, obj), {
         toClassOnly: true,
     })
     deeperBool?: Optional<boolean>;
     @Expose({ name: 'DeeperList' })
     @Transform(
-        (value, obj) => transformValue(Integer, 'deeperList', value, obj, [Array]),
+        ({ value, obj }) => transformValue(Integer, 'deeperList', value, obj, [Array]),
         {
             toClassOnly: true,
         }
@@ -123,16 +124,14 @@ export class AList extends BaseModel {
 }
 
 export class DeeperDictInList extends BaseModel {
-    ['constructor']: typeof DeeperDictInList;
-
     @Expose({ name: 'DeepestBool' })
-    @Transform((value, obj) => transformValue(Boolean, 'deepestBool', value, obj), {
+    @Transform(({ value, obj }) => transformValue(Boolean, 'deepestBool', value, obj), {
         toClassOnly: true,
     })
     deepestBool?: Optional<boolean>;
     @Expose({ name: 'DeepestList' })
     @Transform(
-        (value, obj) => transformValue(Integer, 'deepestList', value, obj, [Array]),
+        ({ value, obj }) => transformValue(Integer, 'deepestList', value, obj, [Array]),
         {
             toClassOnly: true,
         }
@@ -141,16 +140,14 @@ export class DeeperDictInList extends BaseModel {
 }
 
 export class ADict extends BaseModel {
-    ['constructor']: typeof ADict;
-
     @Expose({ name: 'DeepBool' })
-    @Transform((value, obj) => transformValue(Boolean, 'deepBool', value, obj), {
+    @Transform(({ value, obj }) => transformValue(Boolean, 'deepBool', value, obj), {
         toClassOnly: true,
     })
     deepBool?: Optional<boolean>;
     @Expose({ name: 'DeepList' })
     @Transform(
-        (value, obj) => transformValue(Integer, 'deepList', value, obj, [Array]),
+        ({ value, obj }) => transformValue(Integer, 'deepList', value, obj, [Array]),
         {
             toClassOnly: true,
         }
@@ -162,16 +159,14 @@ export class ADict extends BaseModel {
 }
 
 export class DeepDict extends BaseModel {
-    ['constructor']: typeof DeepDict;
-
     @Expose({ name: 'DeeperBool' })
-    @Transform((value, obj) => transformValue(Boolean, 'deeperBool', value, obj), {
+    @Transform(({ value, obj }) => transformValue(Boolean, 'deeperBool', value, obj), {
         toClassOnly: true,
     })
     deeperBool?: Optional<boolean>;
     @Expose({ name: 'DeeperList' })
     @Transform(
-        (value, obj) => transformValue(Integer, 'deeperList', value, obj, [Array]),
+        ({ value, obj }) => transformValue(Integer, 'deeperList', value, obj, [Array]),
         {
             toClassOnly: true,
         }
@@ -183,16 +178,14 @@ export class DeepDict extends BaseModel {
 }
 
 export class DeeperDict extends BaseModel {
-    ['constructor']: typeof DeeperDict;
-
     @Expose({ name: 'DeepestBool' })
-    @Transform((value, obj) => transformValue(Boolean, 'deepestBool', value, obj), {
+    @Transform(({ value, obj }) => transformValue(Boolean, 'deepestBool', value, obj), {
         toClassOnly: true,
     })
     deepestBool?: Optional<boolean>;
     @Expose({ name: 'DeepestList' })
     @Transform(
-        (value, obj) => transformValue(Integer, 'deepestList', value, obj, [Array]),
+        ({ value, obj }) => transformValue(Integer, 'deepestList', value, obj, [Array]),
         {
             toClassOnly: true,
         }
@@ -201,18 +194,14 @@ export class DeeperDict extends BaseModel {
 }
 
 export class TagsModel extends BaseModel {
-    ['constructor']: typeof TagsModel;
-
     @Expose({ name: 'Tags' })
-    @Transform((value, obj) => transformValue(Tag, 'tags', value, obj, [Set]), {
+    @Transform(({ value, obj }) => transformValue(Tag, 'tags', value, obj, [Set]), {
         toClassOnly: true,
     })
     tags?: Optional<Set<Tag>>;
 }
 
 class Tag extends BaseModel {
-    ['constructor']: typeof Tag;
-
     @Expose({ name: 'Name' })
     name: string;
     @Expose({ name: 'Value' })
@@ -220,45 +209,40 @@ class Tag extends BaseModel {
 }
 
 export class SimpleResourceModel extends BaseModel {
-    ['constructor']: typeof SimpleResourceModel;
-
     @Exclude()
     public static readonly TYPE_NAME: string = 'Organization::Service::SimpleResource';
 
     @Expose({ name: 'ANumber' })
-    @Transform((value, obj) => transformValue(Number, 'aNumber', value, obj), {
+    @Transform(({ value, obj }) => transformValue(Number, 'aNumber', value, obj), {
         toClassOnly: true,
     })
     aNumber?: Optional<number>;
     @Expose({ name: 'ABoolean' })
-    @Transform((value, obj) => transformValue(Boolean, 'aBoolean', value, obj), {
+    @Transform(({ value, obj }) => transformValue(Boolean, 'aBoolean', value, obj), {
         toClassOnly: true,
     })
     aBoolean?: Optional<boolean>;
 }
 
 export class SimpleStateModel extends BaseModel {
-    ['constructor']: typeof SimpleStateModel;
-
     @Exclude()
     public static readonly TYPE_NAME: string = 'Organization::Service::SimpleState';
 
     @Expose()
-    @Transform((value, obj) => transformValue(String, 'state', value, obj), {
+    @Transform(({ value, obj }) => transformValue(String, 'state', value, obj), {
         toClassOnly: true,
     })
     state?: Optional<string>;
 }
 
 export class SerializableModel extends BaseModel {
-    ['constructor']: typeof SerializableModel;
     public static readonly TYPE_NAME: string = 'Organization::Service::Serializable';
 
     @Expose() somekey?: Optional<string>;
     @Expose() somestring?: Optional<string>;
     @Expose() someotherkey?: Optional<string>;
     @Expose({ name: 'SomeInt' })
-    @Transform((value, obj) => transformValue(Integer, 'someint', value, obj), {
+    @Transform(({ value, obj }) => transformValue(Integer, 'someint', value, obj), {
         toClassOnly: true,
     })
     someint?: Optional<integer>;

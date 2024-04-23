@@ -19,6 +19,7 @@ repos:
           - --fix=lf
       - id: trailing-whitespace
       - id: pretty-format-json
+        exclude: ^tsconfig.*.json
         args:
           - --autofix
           - --indent=4
@@ -56,7 +57,7 @@ repos:
         types: []
         files: (.*.js$|.*.ts$)
         additional_dependencies:
-          - eslint@6.8.0
+          - eslint@8.21.0
   - repo: local
     hooks:
       - id: pylint-local

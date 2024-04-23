@@ -4,7 +4,7 @@ import { SerializableModel } from '../data/sample-model';
 describe('when getting interface', () => {
     test('base resource model get type name', () => {
         const model = new SerializableModel();
-        expect(model.getTypeName()).toBe(model.constructor.TYPE_NAME);
+        expect(model.getTypeName()).toBe(SerializableModel.TYPE_NAME);
     });
 
     test('base resource model deserialize', () => {
