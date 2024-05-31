@@ -47,7 +47,7 @@ jobs:
         id: install_mac_docker
         if: runner.os == 'macOS'
         run: |
-          brew install docker
+          brew install docker --cask
           # Docker engine is no longer available because of licensing
           # Alternative Colima is part of the github macOS runner
           # SAM v1.47.0+ needed for colima support, unable to use Python 3.6
