@@ -17,7 +17,7 @@ jobs:
       matrix:
         os:
          - ubuntu-latest
-         - macos-13 # Later versions of ARM-based macOS runners fail because the hypervisor framework required for Docker is not supported
+         - macos-12 # Later versions of ARM-based macOS runners fail because the hypervisor framework required for Docker is not supported
         python: [ "3.8", "3.9", "3.10", "3.11"]
         node: [ 20 ]
     env:
