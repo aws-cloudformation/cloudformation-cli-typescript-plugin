@@ -1,6 +1,6 @@
 // This is a generated file. Modifications will be overwritten.
 import { BaseModel, Dict, integer, Integer, Optional, transformValue } from '{{lib_name}}';
-import { Exclude, Expose, Type, Transform } from 'class-transformer';
+import { Exclude, Expose, Type, Transform, TransformFnParams } from 'class-transformer';
 
 {% for model, properties in models.items() %}
 export class {{ model|uppercase_first_letter }} extends BaseModel {
@@ -31,8 +31,8 @@ export class {{ model|uppercase_first_letter }} extends BaseModel {
     @Type(() => {{ inner_type.type }})
     {% else %}
     @Transform(
-        ({value, obj}) =>
-            transformValue({{ inner_type.wrapper_type }}, '{{ name|lowercase_first_letter|safe_reserved }}', value, obj, [{{ inner_type.classes|join(', ') }}]),
+        (params: TransformFnParams) =>
+            transformValue({{ inner_type.wrapper_type }}, '{{ name|lowercase_first_letter|safe_reserved }}', params.value, params.obj, [{{ inner_type.classes|join(', ') }}]),
         {
             toClassOnly: true,
         }

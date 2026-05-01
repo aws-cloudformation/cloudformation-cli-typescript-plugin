@@ -26,7 +26,7 @@ EXECUTABLE = "cfn"
 SUPPORT_LIB_NAME = (
     "@amazon-web-services-cloudformation/cloudformation-cli-typescript-lib"
 )
-SUPPORT_LIB_VERSION = "^1.0.1"
+SUPPORT_LIB_VERSION = "^1.0.6"
 MAIN_HANDLER_FUNCTION = "TypeFunction"
 
 
