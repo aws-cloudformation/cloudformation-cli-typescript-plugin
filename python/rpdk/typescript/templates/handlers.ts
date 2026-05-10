@@ -21,6 +21,8 @@ class Resource extends BaseResource<ResourceModel> {
      * CloudFormation invokes this handler when the resource is initially created
      * during stack create operations.
      *
+     * See rules: https://docs.aws.amazon.com/cloudformation-cli/latest/userguide/resource-type-test-contract.html#resource-type-test-contract-create
+     *
      * @param session Current AWS session passed through from caller
      * @param request The request object for the provisioning request passed to the implementor
      * @param callbackContext Custom context object to allow the passing through of additional
@@ -62,6 +64,8 @@ class Resource extends BaseResource<ResourceModel> {
      * CloudFormation invokes this handler when the resource is updated
      * as part of a stack update operation.
      *
+     * See rules: https://docs.aws.amazon.com/cloudformation-cli/latest/userguide/resource-type-test-contract.html#resource-type-test-contract-update
+     *
      * @param session Current AWS session passed through from caller
      * @param request The request object for the provisioning request passed to the implementor
      * @param callbackContext Custom context object to allow the passing through of additional
@@ -90,6 +94,8 @@ class Resource extends BaseResource<ResourceModel> {
      * the resource is deleted from the stack as part of a stack update operation,
      * or the stack itself is deleted.
      *
+     * See rules: https://docs.aws.amazon.com/cloudformation-cli/latest/userguide/resource-type-test-contract.html#resource-type-test-contract-delete
+     *
      * @param session Current AWS session passed through from caller
      * @param request The request object for the provisioning request passed to the implementor
      * @param callbackContext Custom context object to allow the passing through of additional
@@ -117,6 +123,8 @@ class Resource extends BaseResource<ResourceModel> {
      * CloudFormation invokes this handler as part of a stack update operation when
      * detailed information about the resource's current state is required.
      *
+     * See rules: https://docs.aws.amazon.com/cloudformation-cli/latest/userguide/resource-type-test-contract.html#resource-type-test-contract-read
+     *
      * @param session Current AWS session passed through from caller
      * @param request The request object for the provisioning request passed to the implementor
      * @param callbackContext Custom context object to allow the passing through of additional
@@ -134,14 +142,25 @@ class Resource extends BaseResource<ResourceModel> {
         typeConfiguration: TypeConfigurationModel,
     ): Promise<ProgressEvent<ResourceModel, CallbackContext>> {
         const model = new ResourceModel(request.desiredResourceState);
-        // TODO: put code here
-        const progress = ProgressEvent.success<ProgressEvent<ResourceModel, CallbackContext>>(model);
+        /**
+         * TODO: put code for getting the specific model from here from just your primary identifier
+         * Example:
+         * 
+         * const model = new ResourceModel(request.desiredResourceState);
+         * const modelProps = myModelSource.getById(model.getPrimaryIdentifier());
+         * 
+         * const retrievedModel = new ResourceModel(modelProps);
+         */
+        const retrievedModel = new ResourceModel();
+        const progress = ProgressEvent.success<ProgressEvent<ResourceModel, CallbackContext>>(retrievedModel);
         return progress;
     }
 
     /**
      * CloudFormation invokes this handler when summary information about multiple
      * resources of this resource provider is required.
+     *
+     * See rules: https://docs.aws.amazon.com/cloudformation-cli/latest/userguide/resource-type-test-contract.html#resource-type-test-contract-list
      *
      * @param session Current AWS session passed through from caller
      * @param request The request object for the provisioning request passed to the implementor
@@ -159,11 +178,26 @@ class Resource extends BaseResource<ResourceModel> {
         logger: LoggerProxy,
         typeConfiguration: TypeConfigurationModel,
     ): Promise<ProgressEvent<ResourceModel, CallbackContext>> {
-        const model = new ResourceModel(request.desiredResourceState);
-        // TODO: put code here
+        const nextToken = new ResourceModel(request.nextToken);
+        const models: ResourceModel[] = []
+        /**
+         * TODO: put code for getting all models controlled by this handler
+         * Example:
+         * 
+         * const { modelsProps, nextTokenFromMyService } = await myModelSource.getN(10, request.nextToken);
+         * const models = modelsProps.map((mProps) => {
+         *   return new ResourceModel(mProps);
+         * });
+         * 
+         * const progress = ProgressEvent.builder<ProgressEvent<ResourceModel, CallbackContext>>()
+         *  .status(OperationStatus.Success)
+         *  .resourceModels(models)
+         *  .nextToken(nextTokenFromMyService)
+         *  .build();
+         */
         const progress = ProgressEvent.builder<ProgressEvent<ResourceModel, CallbackContext>>()
             .status(OperationStatus.Success)
-            .resourceModels([model])
+            .resourceModels(models)
             .build();
         return progress;
     }
